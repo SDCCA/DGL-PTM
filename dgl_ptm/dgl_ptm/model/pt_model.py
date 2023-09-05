@@ -2,6 +2,7 @@ import dgl
 import networkx as nx
 import torch
 
+from dgl_ptm.model.base_model import Model
 from dgl_ptm.network.network_creation import network_creation
 
 def sample_distribution_tensor(type, distParameters, nSamples, round=False, decimals=None):
@@ -31,17 +32,6 @@ def sample_distribution_tensor(type, distParameters, nSamples, round=False, deci
     else:
         return dist
 
-class Model(object):
-    """
-    Abstract model class
-    """
-
-    def __init__(self,model_identifier=None):
-        self._model_identifier = model_identifier
-        self.number_agents = None
-        
-    def create_network(self):
-        raise NotImplementedError('network creaion is not implemented for this class.')
 
 class PovertyTrapModel(Model):
     """
@@ -59,17 +49,22 @@ class PovertyTrapModel(Model):
     'capital_dist': {'type':'uniform','parameters':[0.1,10.],'round':False,'decimals':None}, 
     'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
     'lam_dist': {'type':'uniform','parameters':[0.1,0.9],'round':True,'decimals':1},
-    'initial_graph_type': 'barabasi-albert'}
+    'initial_graph_type': 'barabasi-albert',
+    'number_of_steps':100,
+    'restart_step':0,
+    '_step_counter':0}
 
     def __init__(self,*, model_identifier=None, restart=False, savestate=None):
         """
         restore from a savestate (TODO) or create a PVT model instance.
         Checks whether a model indentifier has been specified.
         """
+        self.restart = restart
         if restart:
             if savestate==None:
                 raise ValueError('When restarting a simulation an intial savestate must be supplied')
             else:
+                self.restart = restart
                 #TODO implement restart
                 pass
         else:
@@ -87,6 +82,10 @@ class PovertyTrapModel(Model):
             self.lam_dist = None 
             self.initial_graph_type = None
             self.model_graph = None
+            self.number_of_steps = None
+            self.restart_step = None
+            self._step_counter = None
+
 
     def set_model_parameters(self,*,parameterFilePath=None, default=True, **kwargs):
         """
@@ -120,6 +119,29 @@ class PovertyTrapModel(Model):
                             self.__dict__[modelpar] = self.default_model_parameters[modelpar]
                 else:
                     raise ValueError('default model has not been selected, but no model parameters have been supplied')
+
+    def initialize_model(self):
+        self.create_network()
+        self.initialize_agent_properties()
+
+    def step(self,step_num,stepnum_resume=None):
+        """
+        TODO
+        """
+        pass
+
+    def run(self):
+        goal_step_count = self.number_of_steps
+        if self.restart:
+            step_counter = self.restart_step
+        else:
+            step_counter = 0    
+        while step_counter < goal_step_count:
+            self._step_counter = step_counter
+            self.step()
+            step_counter += 1
+
+
 
 
     def create_network(self):

@@ -1,7 +1,7 @@
 """Documentation about dgl_ptm"""
 import logging
 
-from dgl_ptm.model.initialize_model import PovertyTrapModel
+from dgl_ptm.model.pt_model import PovertyTrapModel
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
