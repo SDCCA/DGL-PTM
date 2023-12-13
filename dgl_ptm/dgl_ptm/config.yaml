@@ -21,7 +21,7 @@ steering_parameters:
   characteristic_distance: 35
   homophily_parameter: 0.69
   perception_method: default
-  adapt_m:  
+  adapt_m:
     - 0.
     - 0.5
     - 0.9
@@ -31,20 +31,20 @@ steering_parameters:
     - 0.45
   depreciation: 0.6
   discount: 0.95
-  m_theta_dist: 
+  m_theta_dist:
     type: multinomial
     parameters:
     - [0.02 ,0.03, 0.05, 0.9]
     - [0.7, 0.8, 0.9, 1]
     round:  False
-    decimals: None
+    decimals: null
   weight_a: 0.69
   weight_b: 35
-  tech_gamma: 
+  tech_gamma:
     - 0.3
     - 0.35
     - 0.45
-  tech_cost:  
+  tech_cost:
     - 0.
     - 0.15
     - 0.65
@@ -77,7 +77,7 @@ lambda_dist:
   - 0.9
   round: true
   type: uniform
-sigma_dist: 
+sigma_dist:
   type: uniform
   parameters:
   - 0.1
@@ -108,7 +108,7 @@ sensitivity_dist:
     - 1
   round: false
   type: uniform
-adapt_m: 
+adapt_m:
   - 0.
   - 0.5
   - 0.9
