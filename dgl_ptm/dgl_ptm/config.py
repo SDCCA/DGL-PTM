@@ -247,11 +247,23 @@ class Config(BaseModel):
         """Write configs to a config.yaml file."""
         if Path(config_file).exists():
             logger.warning(f"Overwriting config file {config_file}.")
+
         cfg = self.model_dump()
-        # if there are tensors, convert them to lists
-        for k, v in cfg.items():
-            if isinstance(v, torch.Tensor):
-                cfg[k] = v.tolist()
+        # if there are tensors, convert them to listsdef find_value(nested_dict, target_value):
+        def find_value(nested_dict):
+            for key, value in nested_dict.items():
+                if isinstance(value, torch.Tensor):
+                    nested_dict[key] = value.tolist()
+
+                elif isinstance(value, List):
+                    nested_dict[key] = [i.tolist() if isinstance(i, torch.Tensor) else i for i in value]
+
+                elif isinstance(value, dict):
+                    nested_dict[key] = find_value(value)
+
+            return nested_dict
+
+        cfg = find_value(cfg)
         with open(config_file, "w") as f:
             yaml.dump(cfg, f)
 
