@@ -3,6 +3,7 @@ import networkx as nx
 import torch
 import yaml
 import logging
+from pathlib import Path
 
 from dgl_ptm.network.network_creation import network_creation
 from dgl_ptm.model.step import ptm_step
@@ -133,8 +134,10 @@ class PovertyTrapModel(Model):
 
         # update model parameters
         self.__dict__ = cfg.model_dump()
-        self.steering_parameters['npath'] = f"./{cfg._model_identifier}{cfg.steering_parameters.npath}"
-        self.steering_parameters['epath'] = f"./{cfg._model_identifier}{cfg.steering_parameters.epath}"
+
+        parent_dir = "." / Path(cfg._model_identifier)
+        self.steering_parameters['npath'] = str(parent_dir / Path(cfg.steering_parameters.npath))
+        self.steering_parameters['epath'] = str(parent_dir / Path(cfg.steering_parameters.epath))
 
 
     def initialize_model(self):
