@@ -50,7 +50,6 @@ class Model(object):
 
     def __init__(self,model_identifier=None):
         self._model_identifier = model_identifier
-        self.number_agents = None  # TODO check this!
 
     def create_network(self):
         raise NotImplementedError('network creaion is not implemented for this class.')
@@ -85,23 +84,23 @@ class PovertyTrapModel(Model):
                 raise ValueError('A model identifier must be specified')
 
             # default values
-            self.number_agents = None
-            self.gamma_vals = None
-            self.sigma_dist = None
-            self.cost_vals = None
-            self.technology_levels = None
-            self.technology_dist = None
-            self.a_theta_dist = None
-            self.sensitivity_dist = None
-            self.capital_dist = None
-            self.alpha_dist = None
-            self.lambda_dist = None
-            self.initial_graph_type = None
-            self.model_graph = None
-            self.step_count = None
-            self.step_target = None
-            self.steering_parameters = None
-            self.model_data = None
+            self.number_agents = CONFIG.number_agents
+            self.gamma_vals = CONFIG.gamma_vals
+            self.sigma_dist = CONFIG.sigma_dist
+            self.cost_vals = CONFIG.cost_vals
+            self.technology_levels = CONFIG.technology_levels
+            self.technology_dist = CONFIG.technology_dist
+            self.a_theta_dist = CONFIG.a_theta_dist
+            self.sensitivity_dist = CONFIG.sensitivity_dist
+            self.capital_dist = CONFIG.capital_dist
+            self.alpha_dist = CONFIG.alpha_dist
+            self.lambda_dist = CONFIG.lambda_dist
+            self.initial_graph_type = CONFIG.initial_graph_type
+            self.model_graph = CONFIG.model_graph
+            self.step_count = CONFIG.step_count
+            self.step_target = CONFIG.step_target
+            self.steering_parameters = CONFIG.steering_parameters
+            self.model_data = CONFIG.model_data
 
     def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
         """
@@ -124,18 +123,17 @@ class PovertyTrapModel(Model):
         if parameterFilePath is None or not kwargs:
             logger.warning('no model parameters have been provided, Default values are used')
 
-        cfg._model_identifier = self._model_identifier
-        cfg.model_graph = self.model_graph
+        cfg.model_identifier = self._model_identifier # see config.py for why cfg.model_identifier
 
         # save updated config to yaml file
-        cfg_filename = f'./{cfg._model_identifier}.yaml'
+        cfg_filename = f'./{self._model_identifier}.yaml'
         cfg.to_yaml(cfg_filename)
         logger.warning(f'We have saved the model parameters to {cfg_filename}.')
 
         # update model parameters
-        self.__dict__ = cfg.model_dump(by_alias=True)
+        self.__dict__ = cfg.model_dump(by_alias=True, warnings=False)
 
-        parent_dir = "." / Path(cfg._model_identifier)
+        parent_dir = "." / Path(self._model_identifier)
         self.steering_parameters['npath'] = str(parent_dir / Path(cfg.steering_parameters.npath))
         self.steering_parameters['epath'] = str(parent_dir / Path(cfg.steering_parameters.epath))
 
