@@ -133,7 +133,7 @@ class PovertyTrapModel(Model):
         logger.warning(f'We have saved the model parameters to {cfg_filename}.')
 
         # update model parameters
-        self.__dict__ = cfg.model_dump()
+        self.__dict__ = cfg.model_dump(by_alias=True)
 
         parent_dir = "." / Path(cfg._model_identifier)
         self.steering_parameters['npath'] = str(parent_dir / Path(cfg.steering_parameters.npath))
