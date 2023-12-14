@@ -1,10 +1,9 @@
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, Field, validator
 from typing import List, Optional, Union
 import torch
 from pathlib import Path
 import yaml
 import logging
-import warnings
 
 logger = logging.getLogger(__name__)
 
@@ -181,11 +180,7 @@ class SensitivityDist(BaseModel):
 
 class Config(BaseModel):
     """Base class for configuration parameters."""
-
-    # suppress userwarnings of protected namespace in pydantic
-    warnings.filterwarnings("ignore", category=UserWarning)
-
-    _model_identifier: str = "test"
+    model_identifier: str = Field("test", alias='_model_identifier') # because pydantic does not like underscores
     number_agents: int = 100
     initial_graph_type: str = "barabasi-albert"
     model_data: dict = {}
@@ -218,6 +213,8 @@ class Config(BaseModel):
 
     class Config:
         validate_default = True
+        protected_namespaces = () # because model_ is used internally
+        populate_by_name = True
 
     @classmethod
     def from_yaml(cls, config_file):
@@ -248,23 +245,22 @@ class Config(BaseModel):
         if Path(config_file).exists():
             logger.warning(f"Overwriting config file {config_file}.")
 
-        cfg = self.model_dump()
-        # if there are tensors, convert them to listsdef find_value(nested_dict, target_value):
-        def find_value(nested_dict):
+        cfg = self.model_dump(by_alias=True)
+        # if there are tensors, convert them to lists before saving
+        def _convert_value(nested_dict):
             for key, value in nested_dict.items():
                 if isinstance(value, torch.Tensor):
                     nested_dict[key] = value.tolist()
-
                 elif isinstance(value, List):
-                    nested_dict[key] = [i.tolist() if isinstance(i, torch.Tensor) else i for i in value]
-
+                    nested_dict[key] = [
+                        i.tolist() if isinstance(i, torch.Tensor) else i for i in value
+                        ]
                 elif isinstance(value, dict):
-                    nested_dict[key] = find_value(value)
-
+                    nested_dict[key] = _convert_value(value)
             return nested_dict
 
-        cfg = find_value(cfg)
+        cfg = _convert_value(cfg)
         with open(config_file, "w") as f:
-            yaml.dump(cfg, f)
+            yaml.dump(cfg, f, sort_keys=False)
 
 CONFIG = Config()
