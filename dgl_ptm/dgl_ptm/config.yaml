@@ -118,4 +118,3 @@ adapt_cost:
   - 0.45
 depreciation: 0.6
 discount: 0.95
-model_data: {}
