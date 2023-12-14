@@ -245,7 +245,7 @@ class Config(BaseModel):
         if Path(config_file).exists():
             logger.warning(f"Overwriting config file {config_file}.")
 
-        cfg = self.model_dump(by_alias=True)
+        cfg = self.model_dump(by_alias=True, warnings=False)
         # if there are tensors, convert them to lists before saving
         def _convert_value(nested_dict):
             for key, value in nested_dict.items():
