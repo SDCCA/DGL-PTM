@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict, PositiveInt
 from typing import List, Optional, Union
 import torch
 from pathlib import Path
@@ -14,15 +14,16 @@ class MThetaDist(BaseModel):
     round: bool = False
     decimals: Optional[int] = None
 
-    @validator("parameters")
+    @field_validator("parameters")
     def _convert_parameters(cls, v):
         for i in v:
             if not isinstance(i, list):
                 raise TypeError("parameters must be a list of lists")
         return [torch.tensor(i) for i in v]
 
-    class Config:
-        validate_default = True
+    # Make sure pydantic validates the default values
+    model_config = ConfigDict(validate_default = True)
+
 
 class SteeringParams(BaseModel):
     """Base class for steering parameters."""
@@ -53,24 +54,24 @@ class SteeringParams(BaseModel):
     truncation_weight: float = 1.0e-10
     step_type: str = "custom"
 
-    @validator("adapt_m")
+    @field_validator("adapt_m")
     def _convert_adapt_m(cls, v):
         return torch.tensor(v)
 
-    @validator("adapt_cost")
+    @field_validator("adapt_cost")
     def _convert_adapt_cost(cls, v):
         return torch.tensor(v)
 
-    @validator("tech_gamma")
+    @field_validator("tech_gamma")
     def _convert_tech_gamma(cls, v):
         return torch.tensor(v)
 
-    @validator("tech_cost")
+    @field_validator("tech_cost")
     def _convert_tech_cost(cls, v):
         return torch.tensor(v)
 
-    class Config:
-        validate_default = True
+    # Make sure pydantic validates the default values
+    model_config = ConfigDict(validate_default = True)
 
 
 class AlphaDist(BaseModel):
@@ -80,12 +81,12 @@ class AlphaDist(BaseModel):
     round: bool = False
     decimals: Optional[int] = None
 
-    @validator("parameters")
+    @field_validator("parameters")
     def _convert_parameters(cls, v):
         return torch.tensor(v)
 
-    class Config:
-        validate_default = True
+    # Make sure pydantic validates the default values
+    model_config = ConfigDict(validate_default = True)
 
 
 class CapitalDist(BaseModel):
@@ -95,12 +96,12 @@ class CapitalDist(BaseModel):
     round: bool = False
     decimals: Optional[int] = None
 
-    @validator("parameters")
+    @field_validator("parameters")
     def _convert_parameters(cls, v):
         return torch.tensor(v)
 
-    class Config:
-        validate_default = True
+    # Make sure pydantic validates the default values
+    model_config = ConfigDict(validate_default = True)
 
 
 class LambdaDist(BaseModel):
@@ -110,12 +111,12 @@ class LambdaDist(BaseModel):
     round: bool = True
     decimals: Optional[int] = 1
 
-    @validator("parameters")
+    @field_validator("parameters")
     def _convert_parameters(cls, v):
         return torch.tensor(v)
 
-    class Config:
-        validate_default = True
+    # Make sure pydantic validates the default values
+    model_config = ConfigDict(validate_default = True)
 
 
 class SigmaDist(BaseModel):
@@ -125,12 +126,12 @@ class SigmaDist(BaseModel):
     round: bool = True
     decimals: Optional[int] = 1
 
-    @validator("parameters")
+    @field_validator("parameters")
     def _convert_parameters(cls, v):
         return torch.tensor(v)
 
-    class Config:
-        validate_default = True
+    # Make sure pydantic validates the default values
+    model_config = ConfigDict(validate_default = True)
 
 
 class TechnologyDist(BaseModel):
@@ -140,12 +141,12 @@ class TechnologyDist(BaseModel):
     round: bool = False
     decimals: Optional[int] = None
 
-    @validator("parameters")
+    @field_validator("parameters")
     def _convert_parameters(cls, v):
         return v if None in v else torch.tensor(v)
 
-    class Config:
-        validate_default = True
+    # Make sure pydantic validates the default values
+    model_config = ConfigDict(validate_default = True)
 
 
 class AThetaDist(BaseModel):
@@ -155,12 +156,12 @@ class AThetaDist(BaseModel):
     round: bool = False
     decimals: Optional[int] = None
 
-    @validator("parameters")
+    @field_validator("parameters")
     def _convert_parameters(cls, v):
         return torch.tensor(v)
 
-    class Config:
-        validate_default = True
+    # Make sure pydantic validates the default values
+    model_config = ConfigDict(validate_default = True)
 
 
 class SensitivityDist(BaseModel):
@@ -170,23 +171,23 @@ class SensitivityDist(BaseModel):
     round: bool = False
     decimals: Optional[int] = None
 
-    @validator("parameters")
+    @field_validator("parameters")
     def _convert_parameters(cls, v):
         return torch.tensor(v)
 
-    class Config:
-        validate_default = True
+    # Make sure pydantic validates the default values
+    model_config = ConfigDict(validate_default = True)
 
 
 class Config(BaseModel):
     """Base class for configuration parameters."""
     model_identifier: str = Field("test", alias='_model_identifier') # because pydantic does not like underscores
-    number_agents: int = 100
+    number_agents: PositiveInt = 100
     initial_graph_type: str = "barabasi-albert"
     model_data: dict = {}
     model_graph: object = None # TODO confirm that model_graph is a class obj
     step_count: int = 0
-    step_target: int = 5
+    step_target: PositiveInt = 5
     steering_parameters: SteeringParams = SteeringParams()
     alpha_dist: AlphaDist = AlphaDist()
     capital_dist: CapitalDist = CapitalDist()
@@ -203,18 +204,28 @@ class Config(BaseModel):
     depreciation: float = 0.6
     discount: float = 0.95
 
-    @validator("adapt_m")
+    @field_validator("step_count")
+    def _validate_step_count(cls, v):
+        if v < 0:
+            raise ValueError("step_count must be equal or greater than 0")
+        return v
+
+    @field_validator("adapt_m")
     def _convert_adapt_m(cls, v):
         return torch.tensor(v)
 
-    @validator("adapt_cost")
+    @field_validator("adapt_cost")
     def _convert_adapt_cost(cls, v):
         return torch.tensor(v)
 
-    class Config:
-        validate_default = True
-        protected_namespaces = () # because model_ is used internally
-        populate_by_name = True
+    # Make sure pydantic validates the default values
+    model_config = ConfigDict(
+        validate_default = True,
+        protected_namespaces = (), # because _model is a protected namespace
+        populate_by_name = True,
+        validate_assignment = True,
+        extra = "forbid",
+        )
 
     @classmethod
     def from_yaml(cls, config_file):
@@ -232,20 +243,20 @@ class Config(BaseModel):
                 raise SyntaxError(f"Error parsing config file {config_file}.") from exc
         return cls(**cfg)
 
-    # add a class method to read configs from a dict
     @classmethod
     def from_dict(cls, cfg):
         """Read configs from a dict."""
         if not isinstance(cfg, dict):
-            raise TypeError("Input must be a dict.")
+            raise TypeError("Input must be a dictionary.")
         return cls(**cfg)
 
     def to_yaml(self, config_file):
-        """Write configs to a config.yaml file."""
+        """Write configs to a yaml config_file."""
         if Path(config_file).exists():
             logger.warning(f"Overwriting config file {config_file}.")
 
         cfg = self.model_dump(by_alias=True, warnings=False)
+
         # if there are tensors, convert them to lists before saving
         def _convert_value(nested_dict):
             for key, value in nested_dict.items():
