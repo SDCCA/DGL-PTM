@@ -140,7 +140,7 @@ class PovertyTrapModel(Model):
                 '**kwargs will overwrite parameterFilePath'
                 )
 
-        if parameterFilePath is None or not kwargs:
+        if parameterFilePath is None and not kwargs:
             logger.warning('no model parameters have been provided, Default values are used')
 
         cfg.model_identifier = self._model_identifier # see config.py for why cfg.model_identifier
