@@ -114,11 +114,22 @@ class PovertyTrapModel(Model):
 
         cfg = CONFIG # default values
 
-        if parameterFilePath != None:
+        if parameterFilePath:
             cfg = Config.from_yaml(parameterFilePath)
 
         if kwargs:
             cfg = Config.from_dict(kwargs)
+
+        # if both parameterFilePath and kwargs are set, combine them into one.
+        # if fields are duplicated, kwargs will overwrite parameterFilePath
+        if parameterFilePath and kwargs:
+            cfg = Config.from_yaml(parameterFilePath)
+            for key, value in kwargs.items():
+                setattr(cfg, key, value)
+            logger.warning(
+                'model parameters have been provided via parameterFilePath and **kwargs. '
+                '**kwargs will overwrite parameterFilePath'
+                )
 
         if parameterFilePath is None or not kwargs:
             logger.warning('no model parameters have been provided, Default values are used')
