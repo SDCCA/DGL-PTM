@@ -23,14 +23,23 @@ def sample_distribution_tensor(type, distParameters, nSamples, round=False, deci
     :param round: optional, whether the samples are to be rounded
     :param decimals: optional, required if round is specified. decimal places to round to
     """
+    # check if each item in distParameters are torch tensors, if not convert them
+    for i, item in enumerate(distParameters):
+        # if item has dtype NoneType, raise error
+        if item != None and not isinstance(item, torch.Tensor):
+                distParameters[i] = torch.tensor(item)
+
+    if not isinstance(nSamples, torch.Tensor):
+        nSamples = torch.tensor(nSamples)
+
     if type == 'uniform':
-        dist = torch.distributions.uniform.Uniform(torch.tensor(distParameters[0]),torch.tensor(distParameters[1])).sample(torch.tensor([nSamples]))
+        dist = torch.distributions.uniform.Uniform(distParameters[0], distParameters[1]).sample([nSamples])
     elif type == 'normal':
-        dist = torch.distributions.normal.Normal(torch.tensor(distParameters[0]),torch.tensor(distParameters[1])).sample(torch.tensor([nSamples]))
+        dist = torch.distributions.normal.Normal(distParameters[0], distParameters[1]).sample([nSamples])
     elif type == 'bernoulli':
-        dist = torch.distributions.bernoulli.Bernoulli(probs=distParameters[0],logits=distParameters[1],validate_args=None).sample(torch.tensor([nSamples]))
+        dist = torch.distributions.bernoulli.Bernoulli(probs=distParameters[0],logits=distParameters[1],validate_args=None).sample([nSamples])
     elif type == 'multinomial':
-        dist = torch.gather(torch.Tensor(distParameters[1]), 0, torch.multinomial(torch.tensor(distParameters[0]), nSamples, replacement=True))
+        dist = torch.gather(distParameters[1], 0, torch.multinomial(distParameters[0], nSamples, replacement=True))
 
     else:
         raise NotImplementedError('Currently only uniform, normal, multinomial, and bernoulli distributions are supported')
