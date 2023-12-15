@@ -1,3 +1,11 @@
+"""Configuration parameters for DGL_PTM model.
+
+The configuration parameters are stored in a pydantic object. The model is
+initialized with default values. The default values can be overwritten by
+providing a yaml file or a dictionary. The keys and values are validated by
+pydantic.
+"""
+
 from pydantic import BaseModel, Field, field_validator, ConfigDict, PositiveInt
 from typing import List, Optional, Union
 import torch
