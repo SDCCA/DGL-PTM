@@ -211,8 +211,6 @@ class PovertyTrapModel(Model):
         self.inputs = {
             self.step_count: {
                 'model_graph': copy.deepcopy(self.model_graph),
-                'model_data': copy.deepcopy(self.model_data),
-                'steering_parameters': copy.deepcopy(self.steering_parameters),
                 'generator_state': generator.get_state(),
             }
         }
@@ -350,8 +348,6 @@ class PovertyTrapModel(Model):
             # store each step
             self.inputs[self.step_count] = {
                 'model_graph': copy.deepcopy(self.model_graph),
-                'model_data': copy.deepcopy(self.model_data),
-                'steering_parameters': copy.deepcopy(self.steering_parameters),
                 'generator_state': generator.get_state(),
             }
 
@@ -374,15 +370,13 @@ class PovertyTrapModel(Model):
         #     self.inputs = _load_model(self._model_identifier)
         #     logger.info(f'A model_log found, loaded model {self._model_identifier}')
 
-        if from_step != None:
+        if from_step not in [None, 0]:
 
             self.step_count = from_step - 1
             if not self.inputs.get(self.step_count):
                 raise ValueError(f'No inputs for previous step {self.step_count} found')
 
             self.model_graph = self.inputs[self.step_count]['model_graph']
-            self.model_data = self.inputs[self.step_count]['model_data']
-            self.steering_parameters = self.inputs[self.step_count]['steering_parameters']
             generator.set_state(self.inputs[self.step_count]['generator_state'])
 
         while self.step_count < self.step_target:
