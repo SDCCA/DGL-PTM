@@ -1,3 +1,6 @@
+import copy
+from logging import Logger
+from pathlib import Path
 import dgl
 import networkx as nx
 import torch
@@ -7,6 +10,12 @@ from dgl_ptm.network.network_creation import network_creation
 from dgl_ptm.model.step import ptm_step
 from dgl_ptm.agentInteraction.weight_update import weight_update
 from dgl_ptm.model.data_collection import data_collection
+
+logger = Logger(__name__)
+
+# Set the seed of the random number generator
+# this is global and will affect all random number generators
+generator = torch.manual_seed(0)
 
 
 def sample_distribution_tensor(type, distParameters, nSamples, round=False, decimals=None):
@@ -19,6 +28,7 @@ def sample_distribution_tensor(type, distParameters, nSamples, round=False, deci
     :param round: optional, whether the samples are to be rounded
     :param decimals: optional, required if round is specified. decimal places to round to
     """
+
     if type == 'uniform':
         dist = torch.distributions.uniform.Uniform(torch.tensor(distParameters[0]),torch.tensor(distParameters[1])).sample(torch.tensor([nSamples]))
     elif type == 'normal':
@@ -47,13 +57,13 @@ class Model(object):
     def __init__(self,model_identifier=None):
         self._model_identifier = model_identifier
         self.number_agents = None
-        
+
     def create_network(self):
         raise NotImplementedError('network creaion is not implemented for this class.')
-    
+
     def step(self):
         raise NotImplementedError('step function is not implemented for this class.')
-    
+
     def run(self):
         raise NotImplementedError('run method is not implemented for this class.')
 
@@ -63,16 +73,16 @@ class PovertyTrapModel(Model):
 
     """
 
-    #default values as class variable 
-    default_model_parameters = {'number_agents': 100 , 
+    #default values as class variable
+    default_model_parameters = {'number_agents': 100 ,
     'gamma_vals':torch.tensor([0.3,0.45]) , #for pseudo income
     'sigma_dist': {'type':'uniform','parameters':[0.1,1.9],'round':True,'decimals':1},
     'cost_vals': torch.tensor([0.,0.45]), #for pseudo income
     'technology_levels': torch.tensor([0,1]), #check if deletable
     'a_theta_dist': {'type':'uniform','parameters':[0.1,1],'round':False,'decimals':None},
     'sensitivity_dist':{'type':'uniform','parameters':[0.0,1],'round':False,'decimals':None},
-    'technology_dist': {'type':'bernoulli','parameters':[0.5,None],'round':False,'decimals':None}, 
-    'capital_dist': {'type':'uniform','parameters':[0.1,10.],'round':False,'decimals':None}, 
+    'technology_dist': {'type':'bernoulli','parameters':[0.5,None],'round':False,'decimals':None},
+    'capital_dist': {'type':'uniform','parameters':[0.1,10.],'round':False,'decimals':None},
     'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
     'lambda_dist': {'type':'uniform','parameters':[0.1,0.9],'round':True,'decimals':1},
     'initial_graph_type': 'barabasi-albert',
@@ -80,7 +90,7 @@ class PovertyTrapModel(Model):
     'step_target':20,
     'model_data':{},
     'steering_parameters':{'npath':'./agent_data.zarr',
-                            'epath':'./edge_data', 
+                            'epath':'./edge_data',
                             'ndata':['all_except',['a_table']],
                             'edata':['all'],
                             'format':'xarray',
@@ -100,7 +110,7 @@ class PovertyTrapModel(Model):
                             'deletion_prob':0.05,
                             'ratio':0.1,
                             'homophily_parameter':0.69,
-                            'characteristic_distance':35, 
+                            'characteristic_distance':35,
                             'truncation_weight':1.0e-10,}
     }
 
@@ -129,7 +139,7 @@ class PovertyTrapModel(Model):
             self.sensitivity_dist = None
             self.capital_dist = None
             self.alpha_dist = None
-            self.lambda_dist = None 
+            self.lambda_dist = None
             self.initial_graph_type = None
             self.model_graph = None
             self.step_count = None
@@ -154,7 +164,7 @@ class PovertyTrapModel(Model):
                     self.__dict__ = yaml.safe_load(readfile)
                 except yaml.YAMLError as exc:
                     raise SyntaxError(exc)
-                
+
             for modelpar in modelpars:
                 if modelpar not in ['_model_identifier','model_graph','steering_parameters']:
                     if type(self.__dict__[modelpar]) is list:
@@ -165,7 +175,7 @@ class PovertyTrapModel(Model):
                             if type(self.steering_parameters[params][0]) is not str:
                                 self.steering_parameters[params] = torch.tensor(self.steering_parameters[params])
 
-        else:   
+        else:
             if default:
                 for modelpar in modelpars:
                     if modelpar not in ['_model_identifier','model_graph']:
@@ -173,7 +183,7 @@ class PovertyTrapModel(Model):
                 self.steering_parameters['npath'] = './'+self._model_identifier+'/agent_data.zarr'
                 self.steering_parameters['epath'] = './'+self._model_identifier+'/edge_data'
             else:
-                if kwargs:  
+                if kwargs:
                     kwpars = kwargs.keys()
                     for kwpar in kwpars:
                         if kwpar in modelpars:
@@ -195,15 +205,28 @@ class PovertyTrapModel(Model):
         self.initialize_agent_properties()
         self.initialize_model_properties()
         weight_update(self.model_graph, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
-        data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'], 
+        data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
                     edata = self.steering_parameters['edata'], format = self.steering_parameters['format'], mode = self.steering_parameters['mode'])
+
+        self.inputs = {
+            self.step_count: {
+                'model_graph': copy.deepcopy(self.model_graph),
+                'model_data': copy.deepcopy(self.model_data),
+                'steering_parameters': copy.deepcopy(self.steering_parameters),
+                'generator_state': generator.get_state(),
+            }
+        }
+
+        # TODO: how to save Graph object!
+        # path = f'./{self._model_identifier}/model_log.yaml'
+        # _save_model(path, self.inputs)
 
     def create_network(self):
         """
         Create intial network connecting agents. Makes use of intial graph type specified as model parameter
         """
 
-        agent_graph = network_creation(self.number_agents, self.initial_graph_type)
+        agent_graph = network_creation(self.number_agents, self.initial_graph_type, seed=1)
         self.model_graph = agent_graph
 
     def initialize_model_properties(self):
@@ -274,7 +297,7 @@ class PovertyTrapModel(Model):
         """
         agentsSensitivity = sample_distribution_tensor(self.sensitivity_dist['type'],self.sensitivity_dist['parameters'],self.number_agents,round=self.sensitivity_dist['round'],decimals=self.sensitivity_dist['decimals'])
         return agentsSensitivity
-        
+
     def _initialize_agents_capital(self):
         """
         Initialize agents captial as a 1d tensor sampled from the specified intial capital distribution
@@ -298,7 +321,7 @@ class PovertyTrapModel(Model):
 
     def _initialize_agents_sigma(self):
         """
-        Initialize agents sigma as a 1d tensor 
+        Initialize agents sigma as a 1d tensor
         """
         agentsSigma = sample_distribution_tensor(self.sigma_dist['type'],self.sigma_dist['parameters'],self.number_agents,round=self.sigma_dist['round'],decimals=self.sigma_dist['decimals'])
         return agentsSigma
@@ -315,21 +338,64 @@ class PovertyTrapModel(Model):
         for i in range(len(self.technology_levels)):
             technology_mask = agentsTecLevel == i
             agentsGamma[technology_mask] = self.gamma_vals[i]
-            agentsCost[technology_mask] = self.cost_vals[i]   
+            agentsCost[technology_mask] = self.cost_vals[i]
         return agentsTecLevel, agentsGamma, agentsCost
 
     def step(self):
         try:
             self.step_count +=1
-            ptm_step(self.model_graph,self.model_data,self.step_count,self.steering_parameters)
+            print(f'performing step {self.step_count} of {self.step_target}')
+            ptm_step(self.model_graph, self.model_data, self.step_count, self.steering_parameters)
+
+            # store each step
+            self.inputs[self.step_count] = {
+                'model_graph': copy.deepcopy(self.model_graph),
+                'model_data': copy.deepcopy(self.model_data),
+                'steering_parameters': copy.deepcopy(self.steering_parameters),
+                'generator_state': generator.get_state(),
+            }
+
         except:
             #TODO add model dump here. Also check against previous save to avoid overwriting
-
-
             raise RuntimeError(f'execution of step failed for step {self.step_count}')
 
+    def run(self, save=False, from_step=None):
+        """ run the model for each step until the step_target is reached.
 
-    def run(self):
+        By default, the results of each step are stored as a dictionary.
+
+        param: save: bool, optional. If True, the results are saved to a yaml file.
+        param: from_step: int, optional. If specified, the model is run from
+        this step.
+        """
+        # check if the model_log exists
+        # TODO: how to save
+        # if Path(f'./{self._model_identifier}/model_log.yaml').is_file():
+        #     self.inputs = _load_model(self._model_identifier)
+        #     logger.info(f'A model_log found, loaded model {self._model_identifier}')
+
+        if from_step != None:
+
+            self.step_count = from_step - 1
+            if not self.inputs.get(self.step_count):
+                raise ValueError(f'No inputs for previous step {self.step_count} found')
+
+            self.model_graph = self.inputs[self.step_count]['model_graph']
+            self.model_data = self.inputs[self.step_count]['model_data']
+            self.steering_parameters = self.inputs[self.step_count]['steering_parameters']
+            generator.set_state(self.inputs[self.step_count]['generator_state'])
+
         while self.step_count < self.step_target:
-            print(f'performing step {self.step_count+1} of {self.step_target}')
             self.step()
+
+        # TODO: how to save
+        # if save:
+        #     _save_model(path)
+
+def _save_model(path, dictionary):
+    with open(path, 'w') as file:
+        yaml.dump(dictionary, file)
+
+def _load_model(path):
+    with open(path, 'r') as file:
+        return yaml.safe_load(file)
