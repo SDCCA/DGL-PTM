@@ -2,14 +2,15 @@ import copy
 from logging import Logger
 from pathlib import Path
 import dgl
-import networkx as nx
 import torch
 import yaml
+import pickle
 
 from dgl_ptm.network.network_creation import network_creation
 from dgl_ptm.model.step import ptm_step
 from dgl_ptm.agentInteraction.weight_update import weight_update
 from dgl_ptm.model.data_collection import data_collection
+from dgl.data.utils import save_graphs, load_graphs
 
 logger = Logger(__name__)
 
@@ -215,10 +216,6 @@ class PovertyTrapModel(Model):
             }
         }
 
-        # TODO: how to save Graph object!
-        # path = f'./{self._model_identifier}/model_log.yaml'
-        # _save_model(path, self.inputs)
-
     def create_network(self):
         """
         Create intial network connecting agents. Makes use of intial graph type specified as model parameter
@@ -364,14 +361,16 @@ class PovertyTrapModel(Model):
         param: from_step: int, optional. If specified, the model is run from
         this step.
         """
-        # check if the model_log exists
-        # TODO: how to save
-        # if Path(f'./{self._model_identifier}/model_log.yaml').is_file():
-        #     self.inputs = _load_model(self._model_identifier)
-        #     logger.info(f'A model_log found, loaded model {self._model_identifier}')
+        path_model_graph = f'./{self._model_identifier}/model_graphs.bin'
+        path_generator_state = f'./{self._model_identifier}/generator_state.bin'
+        if Path(path_model_graph).is_file() and Path(path_generator_state).is_file():
+            try:
+                self.inputs = _load_model(f'./{self._model_identifier}')
+                logger.info(f'Some model logs found, model {self._model_identifier} loaded')
+            except:
+                raise ValueError(f'Loading model from files {path_model_graph} and {path_generator_state} failed')
 
         if from_step not in [None, 0]:
-
             self.step_count = from_step - 1
             if not self.inputs.get(self.step_count):
                 raise ValueError(f'No inputs for previous step {self.step_count} found')
@@ -382,14 +381,35 @@ class PovertyTrapModel(Model):
         while self.step_count < self.step_target:
             self.step()
 
-        # TODO: how to save
-        # if save:
-        #     _save_model(path)
+        if save:
+            path = f'./{self._model_identifier}'
+            _save_model(path, self.inputs)
 
 def _save_model(path, dictionary):
-    with open(path, 'w') as file:
-        yaml.dump(dictionary, file)
+    """ save the model_graph and generator_state in files."""
+
+    # save all the model_graphs
+    graph_list = [val.get('model_graph') for val in dictionary.values()]
+    save_graphs(str(Path(path) / "model_graphs.bin"), graph_list)
+
+    # save the generator_state
+    generator_list = [val.get('generator_state') for val in dictionary.values()]
+    with open(Path(path) / "generator_state.bin", 'wb') as file:
+        pickle.dump(generator_list, file)
+
 
 def _load_model(path):
-    with open(path, 'r') as file:
-        return yaml.safe_load(file)
+    graph_list = load_graphs(str(Path(path) / "model_graphs.bin"))[0]
+
+    with open(Path(path) / "generator_state.bin", 'rb') as file:
+        generator_list = pickle.load(file)
+
+    # create a dictionary with the model_graphs and generator_state
+    inputs = {}
+    for i, graph in enumerate(graph_list):
+        inputs[i] = {
+            'model_graph': graph,
+            'generator_state': generator_list[i],
+        }
+
+    return inputs
