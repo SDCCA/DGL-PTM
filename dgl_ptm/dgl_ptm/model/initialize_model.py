@@ -115,38 +115,59 @@ class PovertyTrapModel(Model):
                             'truncation_weight':1.0e-10,}
     }
 
-    def __init__(self,*, model_identifier=None, restart=False, savestate=None):
+    def __init__(self,*, model_identifier, restart=None, savestate=True):
         """
-        restore from a savestate (TODO) or create a PVT model instance.
+        restore from a savestate or create a PVT model instance.
         Checks whether a model indentifier has been specified.
+
+        param: model_identifier: str, required. Identifier for the model. Used to save and load model states.
+        param: restart: int, optional. If specified, the model is run from
+        this step. Default None.
+        param: savestate: bool, optional. If True, the states are saved to files. Default True.
         """
-        if restart:
-            if savestate==None:
-                raise ValueError('When restarting a simulation an intial savestate must be supplied')
-            else:
-                #TODO implement restart
-                pass
-        else:
-            super().__init__(model_identifier = model_identifier)
-            if self._model_identifier == None:
-                raise ValueError('A model identifier must be specified')
-            self.number_agents = None
-            self.gamma_vals = None
-            self.sigma_dist = None
-            self.cost_vals = None
-            self.technology_levels = None
-            self.technology_dist = None
-            self.a_theta_dist = None
-            self.sensitivity_dist = None
-            self.capital_dist = None
-            self.alpha_dist = None
-            self.lambda_dist = None
-            self.initial_graph_type = None
-            self.model_graph = None
-            self.step_count = None
-            self.step_target = None
-            self.steering_parameters = None
-            self.model_data  = None
+        super().__init__(model_identifier = model_identifier)
+
+        self.restart = restart
+        if self.restart == 0:
+            raise ValueError('restart step should be greater than 0. '
+                             'If you want to start from the beginning, '
+                             'do not specify restart step and run intialize_model()')
+
+
+        if self.restart:
+            path_model_graph = f'./{self._model_identifier}/model_graphs.bin'
+            path_generator_state = f'./{self._model_identifier}/generator_state.bin'
+
+            if Path(path_model_graph).is_file() and Path(path_generator_state).is_file():
+                try:
+                    self.inputs = _load_model(f'./{self._model_identifier}')
+                    logger.info(f'Some model logs found, model {self._model_identifier} loaded')
+                except:
+                    raise ValueError(f'Loading model from files {path_model_graph} and {path_generator_state} failed')
+
+            self.step_count = self.restart - 1
+            if not self.inputs.get(self.step_count):
+                raise ValueError(f'No inputs for previous step {self.step_count} found')
+
+        self.savestate = savestate
+
+        self.number_agents = None
+        self.gamma_vals = None
+        self.sigma_dist = None
+        self.cost_vals = None
+        self.technology_levels = None
+        self.technology_dist = None
+        self.a_theta_dist = None
+        self.sensitivity_dist = None
+        self.capital_dist = None
+        self.alpha_dist = None
+        self.lambda_dist = None
+        self.initial_graph_type = None
+        self.model_graph = None
+        self.step_target = None
+        self.steering_parameters = None
+        self.model_data  = None
+        self.step_count = None
 
     def set_model_parameters(self,*,parameterFilePath=None, default=True, **kwargs):
         """
@@ -159,6 +180,9 @@ class PovertyTrapModel(Model):
 
         """
         modelpars = self.__dict__.keys()
+        # remove savestate and restart from modelpars
+        modelpars = [par for par in modelpars if par not in ['savestate','restart', 'inputs']]
+
         if parameterFilePath != None:
             with open(parameterFilePath, 'r') as readfile:
                 try:
@@ -197,6 +221,8 @@ class PovertyTrapModel(Model):
                 else:
                     raise ValueError('default model has not been selected, but no model parameters have been supplied')
 
+        if self.restart:
+            self.step_count = self.restart - 1
 
     def initialize_model(self):
         """
@@ -215,6 +241,7 @@ class PovertyTrapModel(Model):
                 'generator_state': generator.get_state(),
             }
         }
+
 
     def create_network(self):
         """
@@ -352,38 +379,19 @@ class PovertyTrapModel(Model):
             #TODO add model dump here. Also check against previous save to avoid overwriting
             raise RuntimeError(f'execution of step failed for step {self.step_count}')
 
-    def run(self, save=False, from_step=None):
-        """ run the model for each step until the step_target is reached.
+    def run(self):
+        """ run the model for each step until the step_target is reached."""
 
-        By default, the results of each step are stored as a dictionary.
-
-        param: save: bool, optional. If True, the results are saved to a yaml file.
-        param: from_step: int, optional. If specified, the model is run from
-        this step.
-        """
-        path_model_graph = f'./{self._model_identifier}/model_graphs.bin'
-        path_generator_state = f'./{self._model_identifier}/generator_state.bin'
-        if Path(path_model_graph).is_file() and Path(path_generator_state).is_file():
-            try:
-                self.inputs = _load_model(f'./{self._model_identifier}')
-                logger.info(f'Some model logs found, model {self._model_identifier} loaded')
-            except:
-                raise ValueError(f'Loading model from files {path_model_graph} and {path_generator_state} failed')
-
-        if from_step not in [None, 0]:
-            self.step_count = from_step - 1
-            if not self.inputs.get(self.step_count):
-                raise ValueError(f'No inputs for previous step {self.step_count} found')
-
-            self.model_graph = self.inputs[self.step_count]['model_graph']
-            generator.set_state(self.inputs[self.step_count]['generator_state'])
+        self.model_graph = copy.deepcopy(self.inputs[self.step_count]['model_graph'])
+        generator.set_state(self.inputs[self.step_count]['generator_state'])
 
         while self.step_count < self.step_target:
             self.step()
 
-        if save:
+        if self.savestate:
             path = f'./{self._model_identifier}'
             _save_model(path, self.inputs)
+
 
 def _save_model(path, dictionary):
     """ save the model_graph and generator_state in files."""
