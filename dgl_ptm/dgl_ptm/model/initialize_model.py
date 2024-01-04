@@ -237,7 +237,8 @@ class PovertyTrapModel(Model):
 
         self.inputs = {
             self.step_count: {
-                'model_graph': copy.deepcopy(self.model_graph),
+                'model_graph': copy.deepcopy(self.model_graph),  # it gets updated in the step function
+                'model_data': self.model_data,  # it does not get updated, but it is needed for the step function
                 'generator_state': generator.get_state(),
             }
         }
@@ -372,6 +373,7 @@ class PovertyTrapModel(Model):
             # store each step
             self.inputs[self.step_count] = {
                 'model_graph': copy.deepcopy(self.model_graph),
+                'model_data': self.model_data,
                 'generator_state': generator.get_state(),
             }
 
@@ -383,6 +385,7 @@ class PovertyTrapModel(Model):
         """ run the model for each step until the step_target is reached."""
 
         self.model_graph = copy.deepcopy(self.inputs[self.step_count]['model_graph'])
+        self.model_data = self.inputs[self.step_count]['model_data']
         generator.set_state(self.inputs[self.step_count]['generator_state'])
 
         while self.step_count < self.step_target:
@@ -405,6 +408,11 @@ def _save_model(path, dictionary):
     with open(Path(path) / "generator_state.bin", 'wb') as file:
         pickle.dump(generator_list, file)
 
+    # save model_data
+    model_data = dictionary.get(0).get('model_data')
+    with open(Path(path) / "model_data.bin", 'wb') as file:
+        pickle.dump(model_data, file)
+
 
 def _load_model(path):
     graph_list = load_graphs(str(Path(path) / "model_graphs.bin"))[0]
@@ -412,11 +420,15 @@ def _load_model(path):
     with open(Path(path) / "generator_state.bin", 'rb') as file:
         generator_list = pickle.load(file)
 
+    with open(Path(path) / "model_data.bin", 'rb') as file:
+        model_data = pickle.load(file)
+
     # create a dictionary with the model_graphs and generator_state
     inputs = {}
     for i, graph in enumerate(graph_list):
         inputs[i] = {
             'model_graph': graph,
+            'model_data': model_data,
             'generator_state': generator_list[i],
         }
 
