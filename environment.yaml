@@ -15,5 +15,5 @@ dependencies:
   - pyyaml
   - zarr
   - pip:
-    - -e ../dgl_ptm
+    - -e ./dgl_ptm
 
