@@ -8,6 +8,6 @@ dependencies:
   - pytorch::pytorch==2.0.0
   - pytorch::torchvision==0.15.0
   - pytorch::torchaudio==2.0.0
-  - dglteam::dgl
+#  - dglteam::dgl #use "pip install dgl" instead.
   - xarray
   - zarr
