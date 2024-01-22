@@ -5,6 +5,7 @@ dependencies:
   - python>=3.10
   - numpy
   - scipy=1.10.1
+  - pydantic
   - pytorch::pytorch==2.0.0
   - pytorch::torchvision==0.15.0
   - pytorch::torchaudio==2.0.0
