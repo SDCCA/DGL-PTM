@@ -87,7 +87,7 @@ class PovertyTrapModel(Model):
 
         param: model_identifier: str, required. Identifier for the model. Used to save and load model states.
         param: restart: int, optional. If specified, the model is run from
-        this step. Default None.
+        this step. Default None. If -1, the model is run from the last saved step.
         param: savestate: bool, optional. If True, the states are saved to files. Default True.
         """
         super().__init__(model_identifier = model_identifier)
@@ -101,30 +101,15 @@ class PovertyTrapModel(Model):
         if self.restart:
             self.inputs = _load_model(f'./{self._model_identifier}')
 
+            # if restart is -1, restart from the last saved step
+            if self.restart == -1:
+                self.restart = max(self.inputs.keys())
+
             self.step_count = self.restart - 1
             if not self.inputs.get(self.step_count):
                 raise ValueError(f'No inputs for previous step {self.step_count} found')
 
         self.savestate = savestate
-
-        # default values
-        self.number_agents = CONFIG.number_agents
-        self.gamma_vals = CONFIG.gamma_vals
-        self.sigma_dist = CONFIG.sigma_dist
-        self.cost_vals = CONFIG.cost_vals
-        self.technology_levels = CONFIG.technology_levels
-        self.technology_dist = CONFIG.technology_dist
-        self.a_theta_dist = CONFIG.a_theta_dist
-        self.sensitivity_dist = CONFIG.sensitivity_dist
-        self.capital_dist = CONFIG.capital_dist
-        self.alpha_dist = CONFIG.alpha_dist
-        self.lambda_dist = CONFIG.lambda_dist
-        self.initial_graph_type = CONFIG.initial_graph_type
-        self.model_graph = CONFIG.model_graph
-        self.step_count = CONFIG.step_count
-        self.step_target = CONFIG.step_target
-        self.steering_parameters = CONFIG.steering_parameters
-        self.model_data = CONFIG.model_data
 
     def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
         """
@@ -164,9 +149,12 @@ class PovertyTrapModel(Model):
         cfg.to_yaml(cfg_filename)
         logger.warning(f'We have saved the model parameters to {cfg_filename}.')
 
-        # update model parameters
-        self.__dict__ = cfg.model_dump(by_alias=True, warnings=False)
+        # update model parameters/ attributes
+        cfg_dict = cfg.model_dump(by_alias=True, warnings=False)
+        for key, value in cfg_dict.items():
+            setattr(self, key, value)
 
+        # Correct the paths
         parent_dir = "." / Path(self._model_identifier)
         self.steering_parameters['npath'] = str(parent_dir / Path(cfg.steering_parameters.npath))
         self.steering_parameters['epath'] = str(parent_dir / Path(cfg.steering_parameters.epath))
