@@ -1,8 +1,6 @@
 _model_identifier: test
 number_agents: 100
 initial_graph_type: barabasi-albert
-model_data: {}
-model_graph: null
 step_count: 0
 step_target: 5
 steering_parameters:
