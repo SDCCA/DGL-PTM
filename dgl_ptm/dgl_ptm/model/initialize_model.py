@@ -2,7 +2,6 @@ import copy
 from pathlib import Path
 import dgl
 import torch
-import yaml
 import pickle
 import logging
 from pathlib import Path
@@ -100,15 +99,7 @@ class PovertyTrapModel(Model):
                              'do not specify restart step and run intialize_model()')
 
         if self.restart:
-            path_model_graph = f'./{self._model_identifier}/model_graphs.bin'
-            path_generator_state = f'./{self._model_identifier}/generator_state.bin'
-
-            if Path(path_model_graph).is_file() and Path(path_generator_state).is_file():
-                try:
-                    self.inputs = _load_model(f'./{self._model_identifier}')
-                    logger.info(f'Some model logs found, model {self._model_identifier} loaded')
-                except:
-                    raise ValueError(f'Loading model from files {path_model_graph} and {path_generator_state} failed')
+            self.inputs = _load_model(f'./{self._model_identifier}')
 
             self.step_count = self.restart - 1
             if not self.inputs.get(self.step_count):
@@ -374,12 +365,27 @@ def _save_model(path, dictionary):
 
 
 def _load_model(path):
-    graph_list = load_graphs(str(Path(path) / "model_graphs.bin"))[0]
+    # Load model graphs
+    path_model_graph = Path(path) / "model_graphs.bin"
+    if not path_model_graph.is_file():
+        raise ValueError(f'The path {path_model_graph} is not a file.')
 
-    with open(Path(path) / "generator_state.bin", 'rb') as file:
+    graph_list = load_graphs(str(path_model_graph))[0]
+
+    # Load generator_state
+    path_generator_state = Path(path) / "generator_state.bin"
+    if not path_generator_state.is_file():
+        raise ValueError(f'The path {path_generator_state} is not a file.')
+
+    with open(path_generator_state, 'rb') as file:
         generator_list = pickle.load(file)
 
-    with open(Path(path) / "model_data.bin", 'rb') as file:
+    # Load model_data
+    path_model_data = Path(path) / "model_data.bin"
+    if not path_model_data.is_file():
+        raise ValueError(f'The path {path_model_data} is not a file.')
+
+    with open(path_model_data, 'rb') as file:
         model_data = pickle.load(file)
 
     # create a dictionary with the model_graphs and generator_state
