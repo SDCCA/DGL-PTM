@@ -36,8 +36,6 @@ steering_parameters:
     - [0.7, 0.8, 0.9, 1]
     round:  False
     decimals: null
-  weight_a: 0.69
-  weight_b: 35
   tech_gamma:
     - 0.3
     - 0.35

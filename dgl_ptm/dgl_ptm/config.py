@@ -55,8 +55,6 @@ class SteeringParams(BaseModel):
     depreciation: float = 0.6
     discount: float = 0.95
     m_theta_dist: MThetaDist = MThetaDist()
-    weight_a: float = 0.69
-    weight_b: int = 35
     tech_gamma: List[float] = [0.3, 0.35, 0.45]
     tech_cost: List[float] = [0.0, 0.15, 0.65]
     truncation_weight: float = 1.0e-10
