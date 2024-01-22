@@ -190,6 +190,8 @@ class Config(BaseModel):
     model_identifier: str = Field("test", alias='_model_identifier') # because pydantic does not like underscores
     number_agents: PositiveInt = 100
     initial_graph_type: str = "barabasi-albert"
+    model_data: dict = {} # TODO: might be possible to move it from config to model
+    model_graph: object = None # TODO: might be possible to move it from config to model
     step_count: int = 0
     step_target: PositiveInt = 5
     steering_parameters: SteeringParams = SteeringParams()
