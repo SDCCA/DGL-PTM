@@ -139,7 +139,7 @@ class PovertyTrapModel(Model):
         # save updated config to yaml file
         cfg_filename = f'./{self._model_identifier}.yaml'
         cfg.to_yaml(cfg_filename)
-        logger.warning(f'The model parametersare saved to {cfg_filename}.')
+        logger.warning(f'The model parameters are saved to {cfg_filename}.')
 
         # update model parameters/ attributes
         cfg_dict = cfg.model_dump(by_alias=True, warnings=False)
@@ -349,6 +349,7 @@ def _load_model(path):
 
     graph, graph_lebel = load_graphs(str(path_model_graph))
     graph = graph[0]
+    graph_step = graph_lebel['step_count'].tolist()[0]
 
     # Load generator_state
     path_generator_state = Path(path) / "generator_state.bin"
@@ -366,8 +367,14 @@ def _load_model(path):
     with open(path_model_data, 'rb') as file:
         data, data_step = pickle.load(file)
 
-    # TODO: check all steps are the same
-    # TODO: logger info which step is loaded
+    # Check if graph_step, generator_step and data_step are the same
+    if graph_step != generator_step or graph_step != data_step:
+        msg = 'The step count in the model_graph, generator_state and model_data are not the same.'
+        raise ValueError(msg)
+
+    # Show which step is loaded
+    logger.warning(f'Loading model state from step {data_step}.')
+
     inputs = {
         'model_graph': graph,
         'model_data': data,
