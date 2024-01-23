@@ -80,34 +80,21 @@ class PovertyTrapModel(Model):
     Poverty Trap model as derived model class
 
     """
-    def __init__(self,*, model_identifier, restart=None, savestate=True):
+    def __init__(self,*, model_identifier, restart=False, savestate=1):
         """
         restore from a savestate or create a PVT model instance.
         Checks whether a model indentifier has been specified.
 
         param: model_identifier: str, required. Identifier for the model. Used to save and load model states.
-        param: restart: int, optional. If specified, the model is run from
-        this step. Default None. If -1, the model is run from the last saved step.
-        param: savestate: bool, optional. If True, the states are saved to files. Default True.
+        param: restart: boolean, optional. If True, the model is run from last
+        saved step. Default False.
+        param: savestate: int, optional. If provided, the model state is saved
+        on this frequency. Default is 1 i.e. every time step.
         """
         super().__init__(model_identifier = model_identifier)
 
-        self.restart = restart
-        if self.restart == 0:
-            raise ValueError('restart step should be greater than 0. '
-                             'If you want to start from the beginning, '
-                             'do not specify restart step and run intialize_model()')
-
-        if self.restart:
+        if restart:
             self.inputs = _load_model(f'./{self._model_identifier}')
-
-            # if restart is -1, restart from the last saved step
-            if self.restart == -1:
-                self.restart = max(self.inputs.keys())
-
-            self.step_count = self.restart - 1
-            if not self.inputs.get(self.step_count):
-                raise ValueError(f'No inputs for previous step {self.step_count} found')
 
         self.savestate = savestate
 
@@ -142,6 +129,7 @@ class PovertyTrapModel(Model):
         if parameterFilePath is None and not kwargs:
             logger.warning('no model parameters have been provided, Default values are used')
 
+        # TODO: warn user that model_identifier is being overwritten
         cfg.model_identifier = self._model_identifier # see config.py for why cfg.model_identifier
 
         # save updated config to yaml file
@@ -159,9 +147,6 @@ class PovertyTrapModel(Model):
         self.steering_parameters['npath'] = str(parent_dir / Path(cfg.steering_parameters.npath))
         self.steering_parameters['epath'] = str(parent_dir / Path(cfg.steering_parameters.epath))
 
-        if self.restart:
-            self.step_count = self.restart - 1
-
     def initialize_model(self):
         """
         convenience fucntion to create network and initiliize agent properties in correct order, thereby initializing a model
@@ -173,14 +158,13 @@ class PovertyTrapModel(Model):
         data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
                     edata = self.steering_parameters['edata'], format = self.steering_parameters['format'], mode = self.steering_parameters['mode'])
 
+        # store the initial state in a dictionary
         self.inputs = {
-            self.step_count: {
-                'model_graph': copy.deepcopy(self.model_graph),  # it gets updated in the step function
-                'model_data': self.model_data,  # it does not get updated, but it is needed for the step function
-                'generator_state': generator.get_state(),
-            }
+            'model_graph': copy.deepcopy(self.model_graph), # it gets updated in the step function
+            'model_data': copy.deepcopy(self.model_data), # it does not get updated, but it is needed for the step function
+            'generator_state': generator.get_state(),
+            'step_count': self.step_count
         }
-
 
     def create_network(self):
         """
@@ -308,11 +292,12 @@ class PovertyTrapModel(Model):
             print(f'performing step {self.step_count} of {self.step_target}')
             ptm_step(self.model_graph, self.model_data, self.step_count, self.steering_parameters)
 
-            # store each step
-            self.inputs[self.step_count] = {
+            # store the current state in a dictionary
+            self.inputs = {
                 'model_graph': copy.deepcopy(self.model_graph),
-                'model_data': self.model_data,
+                'model_data': copy.deepcopy(self.model_data),
                 'generator_state': generator.get_state(),
+                'step_count': self.step_count
             }
 
         except:
@@ -322,34 +307,34 @@ class PovertyTrapModel(Model):
     def run(self):
         """ run the model for each step until the step_target is reached."""
 
-        self.model_graph = copy.deepcopy(self.inputs[self.step_count]['model_graph'])
-        self.model_data = self.inputs[self.step_count]['model_data']
-        generator.set_state(self.inputs[self.step_count]['generator_state'])
+        self.model_graph = copy.deepcopy(self.inputs["model_graph"])
+        self.model_data = self.inputs["model_data"]
+        generator.set_state(self.inputs["generator_state"])
+        self.step_count = self.inputs["step_count"]
+
+        path = f'./{self._model_identifier}'
 
         while self.step_count < self.step_target:
             self.step()
+            # save the model state every step reported by savestate
+            if self.savestate and self.step_count % self.savestate == 0:
+                _save_model(path, self.inputs)
 
-        if self.savestate:
-            path = f'./{self._model_identifier}'
-            _save_model(path, self.inputs)
 
+def _save_model(path, inputs):
+    """ save the model_graph, generator_state and model_data in files."""
 
-def _save_model(path, dictionary):
-    """ save the model_graph and generator_state in files."""
-
-    # save all the model_graphs
-    graph_list = [val.get('model_graph') for val in dictionary.values()]
-    save_graphs(str(Path(path) / "model_graphs.bin"), graph_list)
+    # save the model_graph with a label
+    graph_label = {'step_count': torch.tensor([inputs["step_count"]])}
+    save_graphs(str(Path(path) / "model_graphs.bin"), inputs["model_graph"], graph_label)
 
     # save the generator_state
-    generator_list = [val.get('generator_state') for val in dictionary.values()]
     with open(Path(path) / "generator_state.bin", 'wb') as file:
-        pickle.dump(generator_list, file)
+        pickle.dump([inputs["generator_state"], inputs["step_count"]], file)
 
     # save model_data
-    model_data = dictionary.get(0).get('model_data')
     with open(Path(path) / "model_data.bin", 'wb') as file:
-        pickle.dump(model_data, file)
+        pickle.dump([inputs["model_data"], inputs["step_count"]], file)
 
 
 def _load_model(path):
@@ -358,7 +343,8 @@ def _load_model(path):
     if not path_model_graph.is_file():
         raise ValueError(f'The path {path_model_graph} is not a file.')
 
-    graph_list = load_graphs(str(path_model_graph))[0]
+    graph, graph_lebel = load_graphs(str(path_model_graph))
+    graph = graph[0]
 
     # Load generator_state
     path_generator_state = Path(path) / "generator_state.bin"
@@ -366,7 +352,7 @@ def _load_model(path):
         raise ValueError(f'The path {path_generator_state} is not a file.')
 
     with open(path_generator_state, 'rb') as file:
-        generator_list = pickle.load(file)
+        generator, generator_step = pickle.load(file)
 
     # Load model_data
     path_model_data = Path(path) / "model_data.bin"
@@ -374,15 +360,14 @@ def _load_model(path):
         raise ValueError(f'The path {path_model_data} is not a file.')
 
     with open(path_model_data, 'rb') as file:
-        model_data = pickle.load(file)
+        data, data_step = pickle.load(file)
 
-    # create a dictionary with the model_graphs and generator_state
-    inputs = {}
-    for i, graph in enumerate(graph_list):
-        inputs[i] = {
-            'model_graph': graph,
-            'model_data': model_data,
-            'generator_state': generator_list[i],
-        }
-
+    # TODO: check all steps are the same
+    # TODO: logger info which step is loaded
+    inputs = {
+        'model_graph': graph,
+        'model_data': data,
+        'generator_state': generator,
+        'step_count': data_step
+    }
     return inputs
