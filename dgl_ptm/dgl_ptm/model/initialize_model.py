@@ -129,13 +129,17 @@ class PovertyTrapModel(Model):
         if parameterFilePath is None and not kwargs:
             logger.warning('no model parameters have been provided, Default values are used')
 
-        # TODO: warn user that model_identifier is being overwritten
+        if cfg.model_identifier != self._model_identifier:
+            logger.warning(f'A model identifier has been set as "{self._model_identifier}". '
+                           f'But another identifier "{cfg.model_identifier}" is provided (perhaps by default). '
+                           f'The identifier "{self._model_identifier}" will be used.')
+
         cfg.model_identifier = self._model_identifier # see config.py for why cfg.model_identifier
 
         # save updated config to yaml file
         cfg_filename = f'./{self._model_identifier}.yaml'
         cfg.to_yaml(cfg_filename)
-        logger.warning(f'We have saved the model parameters to {cfg_filename}.')
+        logger.warning(f'The model parametersare saved to {cfg_filename}.')
 
         # update model parameters/ attributes
         cfg_dict = cfg.model_dump(by_alias=True, warnings=False)
