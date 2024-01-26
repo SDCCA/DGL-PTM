@@ -11,7 +11,7 @@ from dgl_ptm.agent.agent_update import agent_update
 from dgl_ptm.model.data_collection import data_collection
 from dgl_ptm.agentInteraction.weight_update import weight_update
 
-def ptm_step(agent_graph, model_data, timestep, params):
+def ptm_step(agent_graph, device, model_data, timestep, params, ):
     '''
         step - time-stepping module for the poverty-trap model
 
@@ -27,20 +27,20 @@ def ptm_step(agent_graph, model_data, timestep, params):
         agent_update(agent_graph, params, model_data, timestep, method = 'capital')
     
     #Wealth transfer
-    trade_money(agent_graph, method = params['wealth_method'])
+    trade_money(agent_graph, device, method = params['wealth_method'])
     
     #Link/edge manipulation
     local_attachment(agent_graph, n_FoF_links = 1, edge_prop = 'weight', p_attach=1.  )
     link_deletion(agent_graph, deletion_prob = params['deletion_prob'])
-    global_attachment(agent_graph, ratio = params['ratio'])
+    global_attachment(agent_graph, device, ratio = params['ratio'])
     
     #Update agent states
-    agent_update(agent_graph, params, model_data, timestep, method ='theta')
-    agent_update(agent_graph, params, method ='consumption')
-    agent_update(agent_graph, params, method ='income')
+    agent_update(agent_graph, device, params, model_data, timestep, method ='theta')
+    agent_update(agent_graph, device, params, method ='consumption')
+    agent_update(agent_graph, device, params, method ='income')
     
     #Weight update
-    weight_update(agent_graph, homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
+    weight_update(agent_graph, device, homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
     
     #Data collection and storage
     data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 

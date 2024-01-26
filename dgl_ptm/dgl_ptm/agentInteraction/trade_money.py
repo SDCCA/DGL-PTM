@@ -3,7 +3,7 @@ import torch
 import dgl 
 import dgl.function as fn
 
-def trade_money(agent_graph, method: str):
+def trade_money(agent_graph, device, method: str):
     """ Trades money between the different connected agents based on 
         wealth (k) and savings propensity (lambda). 
         
@@ -30,14 +30,14 @@ def trade_money(agent_graph, method: str):
     
     # Transfer of wealth
     if method == 'weighted_transfer':
-        _weighted_transfer(agent_graph)
+        _weighted_transfer(agent_graph, device)
     elif method == 'singular_transfer':
-        _singular_transfer(agent_graph)
+        _singular_transfer(agent_graph, device)
     else:
         raise NotImplementedError("Incorrect method received. \
                          Method needs to be either 'weighted_transfer' or 'singular_transfer'")
     
-def _weighted_transfer(agent_graph):
+def _weighted_transfer(agent_graph, device):
     """
         Weighted transfer of wealth from each agent (node) to every connected 
         neighbour agent based on pre-defined edge weights.
@@ -56,17 +56,17 @@ def _weighted_transfer(agent_graph):
     # Sum total income from wealth exchange
     agent_graph.update_all(fn.v_add_e('zeros','trfr_wealth','net_trade_msg'), fn.sum('net_trade_msg', 'net_trade'))
 
-def _singular_transfer(agent_graph):
+def _singular_transfer(agent_graph, device):
     """
         Singular transfer of wealth from each agent (node) to one randomly
         selected, connected neighbour.
     """
 
     # Subsample graph to one random edge per node
-    graph_subset = dgl.sampling.sample_neighbors(agent_graph, agent_graph.nodes(), 1, edge_dir='out', copy_ndata = True, output_device = 'cuda')
+    graph_subset = dgl.sampling.sample_neighbors(agent_graph, agent_graph.nodes(), 1, edge_dir='out', copy_ndata = True, output_device = device)
     
     # Calculate incoming wealth for each agent in subgraph
-    graph_subset.ndata['net_trade'] = torch.zeros(agent_graph.num_nodes()).to('cuda')
+    graph_subset.ndata['net_trade'] = torch.zeros(agent_graph.num_nodes()).to(device)
     graph_subset.update_all(fn.u_add_v('disposable_wealth','zeros','net_trade_msg'), fn.sum('net_trade_msg', 'net_trade'))
 
     # Update wealth delta in agent graph

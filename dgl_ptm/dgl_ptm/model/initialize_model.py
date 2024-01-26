@@ -93,6 +93,7 @@ class PovertyTrapModel(Model):
                 raise ValueError('A model identifier must be specified')
 
             # default values
+            self.device = CONFIG.device
             self.number_agents = CONFIG.number_agents
             self.gamma_vals = CONFIG.gamma_vals
             self.sigma_dist = CONFIG.sigma_dist
@@ -164,9 +165,9 @@ class PovertyTrapModel(Model):
         """
         self.create_network()
         self.initialize_agent_properties()
-        self.model_graph = self.model_graph.to('cuda')
+        self.model_graph = self.model_graph.to(self.device)
         self.initialize_model_properties()
-        self.model_data['modelTheta'] = self.model_data['modelTheta'].to('cuda')
+        self.model_data['modelTheta'] = self.model_data['modelTheta'].to(self.device)
 
         weight_update(self.model_graph, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
         data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
@@ -295,7 +296,7 @@ class PovertyTrapModel(Model):
     def step(self):
         try:
             self.step_count +=1
-            ptm_step(self.model_graph,self.model_data,self.step_count,self.steering_parameters)
+            ptm_step(self.model_graph,self.device,self.model_data,self.step_count,self.steering_parameters)
         except:
             #TODO add model dump here. Also check against previous save to avoid overwriting
 
