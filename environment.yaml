@@ -9,6 +9,7 @@ dependencies:
   - pytorch::pytorch==2.0.0
   - pytorch::torchvision==0.15.0
   - pytorch::torchaudio==2.0.0
-  - dglteam::dgl
+  - dglteam::dgl==1.1.3
   - xarray
   - zarr
+  - dask

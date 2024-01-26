@@ -169,7 +169,7 @@ class PovertyTrapModel(Model):
         self.initialize_model_properties()
         self.model_data['modelTheta'] = self.model_data['modelTheta'].to(self.device)
 
-        weight_update(self.model_graph, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
+        weight_update(self.model_graph, self.device, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
         data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
                     edata = self.steering_parameters['edata'], format = self.steering_parameters['format'], mode = self.steering_parameters['mode'])
 
