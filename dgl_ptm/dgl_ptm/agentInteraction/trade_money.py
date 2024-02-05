@@ -44,7 +44,7 @@ def _weighted_transfer(agent_graph, device):
     """
 
     # Sum all incoming weights
-    agent_graph.ndata['total_weight'] = torch.zeros(agent_graph.num_nodes())
+    agent_graph.ndata['total_weight'] = torch.zeros(agent_graph.num_nodes()).to(device)
     agent_graph.update_all(fn.u_add_e('total_weight','weight','total_weight_msg'), fn.sum('total_weight_msg', 'total_weight'))
 
     # Calculating outgoing weight %s
