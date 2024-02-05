@@ -22,5 +22,8 @@ def global_attachment(agent_graph, device, ratio: float):
     agent_graph = AddReverse()(agent_graph)
 
     # Remove duplicate edges
+    # dgl.to_simple works only on device=cpu hence we move the graph to cpu:
     agent_graph = dgl.to_simple(agent_graph.to('cpu'), return_counts='cnt')
+    # move the graph back to user choice of device.
+    # This is necessary for running on cuda or other hardware.
     agent_graph = agent_graph.to(device)
