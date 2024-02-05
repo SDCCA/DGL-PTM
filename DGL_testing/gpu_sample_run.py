@@ -17,7 +17,7 @@ for i in nagents:
 
     # Set the model and simulation parameters
     # Using DEFAULT values
-    model.set_model_parameters(default=True)
+    model.set_model_parameters(**{"device": "cuda"})
     model.number_agents = i
     model.step_target = 100
     model.steering_parameters['mode'] = 'w'
