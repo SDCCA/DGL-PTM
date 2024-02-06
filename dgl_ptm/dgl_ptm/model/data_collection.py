@@ -2,6 +2,7 @@ import xarray as xr
 from pathlib import Path
 import os
 import dgl
+import dask.array as da
 from os.path import exists
 
 def data_collection(agent_graph, timestep, npath='./agent_data', epath='./edge_data', ndata = ['all'], edata = ['all'], format = 'xarray', mode = 'w-'):
@@ -41,7 +42,7 @@ def _node_property_collector(agent_graph, npath, ndata, timestep, format, mode):
             agent_data_instance = xr.Dataset()
             for prop in ndata:
                 _check_nprop_in_graph(agent_graph, prop)
-                agent_data_instance = agent_data_instance.assign(prop=(['n_agents','n_time'], agent_graph.ndata[prop][:,None].numpy()))
+                agent_data_instance = agent_data_instance.assign(prop=(['n_agents','n_time'], da.from_array(agent_graph.ndata[prop][:,None].cpu().numpy())))
                 agent_data_instance = agent_data_instance.rename(name_dict={'prop':prop})
             if timestep == 0:
                 agent_data_instance.to_zarr(npath, mode = mode)
@@ -57,12 +58,12 @@ def _edge_property_collector(agent_graph, epath, edata, timestep, format, mode):
     if os.environ["DGLBACKEND"] == "pytorch":
         if format == 'xarray':
             edge_data_instance = xr.Dataset(coords=dict(
-                                            source=(["n_edges"], agent_graph.edges()[0]),
-                                            dest=(["n_edges"], agent_graph.edges()[1]),
+                                            source=(["n_edges"], agent_graph.edges()[0].cpu()),
+                                            dest=(["n_edges"], agent_graph.edges()[1].cpu()),
                                             ))
             for prop in edata:
                 _check_eprop_in_graph(agent_graph, prop)
-                edge_data_instance = edge_data_instance.assign(property=(['n_edges','time'], agent_graph.edata[prop][:,None].numpy()))
+                edge_data_instance = edge_data_instance.assign(property=(['n_edges','time'], da.from_array(agent_graph.edata[prop][:,None].cpu().numpy())))
                 edge_data_instance = edge_data_instance.rename_vars(name_dict={'property':prop})
             edge_data_instance.to_zarr(Path(epath)/(str(timestep)+'.zarr'), mode = mode)
         else:

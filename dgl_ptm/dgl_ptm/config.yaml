@@ -1,4 +1,5 @@
 _model_identifier: test
+device: cuda
 number_agents: 100
 initial_graph_type: barabasi-albert
 step_count: 0

@@ -188,6 +188,7 @@ class SensitivityDist(BaseModel):
 class Config(BaseModel):
     """Base class for configuration parameters."""
     model_identifier: str = Field("test", alias='_model_identifier') # because pydantic does not like underscores
+    device: str = "cpu"
     number_agents: PositiveInt = 100
     initial_graph_type: str = "barabasi-albert"
     model_data: dict = {} # TODO: might be possible to move it from config to model
