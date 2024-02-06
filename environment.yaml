@@ -15,7 +15,7 @@ dependencies:
   - zarr
   - dask
   - pip
-  - dglteam::dgl=1.1.3 #for CPU
-  # - dglteam/label/cu121::dgl #for GPU
+  - dglteam::dgl=1.1.3 #for infra without NVIDIA GPUs
+  # - dglteam/label/cu121::dgl #for infra with NVIDIA GPUs
   - pip:
     - -e ./dgl_ptm
