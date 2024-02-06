@@ -1,15 +1,14 @@
 # Running DGL-PTM on GPU (snellius)
 
-### Import required modules
+### Import required modules (if needed)
 module load 2023 CUDA/12.1.1 cuDNN/8.9.2.26-CUDA-12.1.1 
 
 ### Create environment from file 
-cd DGL_testing/
 mamba env create -f environment.yaml
 * This assumes that the user already has mamba installed on the machine. Conda can also be used but at the cost of speed.
 
 ### Test GPU run
-python gpu_test.py
+python gpu_sample_run.py
 * Note that access to a GPU node is required to run on GPU. This can be done on snellius using the following command:
 salloc --ntasks=1 -t 2:00:00 -p gpu --gpus-per-node=1
 
@@ -19,7 +18,7 @@ salloc --ntasks=1 -t 2:00:00 -p gpu --gpus-per-node=1
 mamba create -n dgl_ptm_gpu
 
 ### Install dependencies
-mamba install python=3.11, numpy, scipy-1.10.1, xarray, zarr, pytorch=2.1.1, torchvision, torchaudio, pytorch-cuda=12.1 -c pytorch -c nvidia
+mamba install python=3.11, numpy, pydantic>=2, scipy-1.10.1, xarray, zarr, pytorch=2.1.1, torchvision, torchaudio, pytorch-cuda=12.1 -c pytorch -c nvidia
 
 ### Install dgl from wheel
 pip install  dgl -f https://data.dgl.ai/wheels/cu121/repo.html
@@ -29,6 +28,6 @@ pip install  dgl -f https://data.dgl.ai/wheels/cu121/repo.html
 pip install -e ../dgl_ptm
 
 ### Test GPU run
-python gpu_test.py 
+python gpu_sample_run.py 
 * Note that access to a GPU node is required to run on GPU. This can be done on snellius using the following command: 
 salloc --ntasks=1 -t 2:00:00 -p gpu --gpus-per-node=1
