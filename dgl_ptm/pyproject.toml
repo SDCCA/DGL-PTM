@@ -1,21 +1,103 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
+[project]
+name = "dgl_ptm"
+version = "0.1.0"
+requires-python = ">=3.9"
+dependencies = [
+    "numpy",
+    "scipy==1.10.1",
+    "pydantic>=2",
+    "torch==2.1.1",
+    "torchvision",
+    "torchaudio",
+    "xarray",
+    "zarr",
+    "dask",
+    "dgl==1.1.3",  # pip will install cuda for infra wit NVIDIA GPUs
+]
+description = "The deep graph library reimplementation of the poverty trap model."
+readme = "README.md"
+license = {file = "LICENSE"}
+authors = [
+    {name = "Meiert Willem Grootes", email = "m.grootes@esciencecenter.nl"},
+    {name = "Pranav Chandramouli"},
+    {name = "Thijs van Lankveld"},
+    {name = "Fakhereh Sarah Alidoost"},
+    {name = "Debraj Roy"},
+    {name = "Sonja Georgievska"},
+]
+keywords = ["graph", "poverty", "trap", "Agent-based model"]
+classifiers=[
+    'Development Status :: 3 - Alpha',
+    'Intended Audience :: Developers',
+    'License :: OSI Approved :: Apache Software License',
+    'Natural Language :: English',
+    'Programming Language :: Python :: 3.9',
+    'Programming Language :: Python :: 3.10',
+    'Programming Language :: Python :: 3.11',
+]
+
+[project.urls]
+repository = "https://github.com/SDCCA/DGL-PTM/"
+# doi = ""
+documentation = "https://github.com/SDCCA/DGL-PTM/blob/master/README.md"
+changelog = "https://github.com/SDCCA/DGL-PTM/CHANGELOG/"
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pycodestyle",
+    "ruff",
+]
+docs = [
+    "mkdocs",
+    "mkdocs-material",
+    "mkdocs-jupyter",
+    "mkdocstrings[python]",
+    "mkdocs-gen-files",
+]
+demo = [
+    "jupyterlab",
+]
+
+[tool.setuptools]
+packages = ["dgl_ptm"]
+
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+minversion = "6.0"
+addopts = "--cov --cov-report term"
+testpaths = [
+    "tests",
+]
 
 [tool.coverage.run]
 branch = true
 source = ["dgl_ptm"]
-command_line = "-m pytest"
 
-[tool.tox]
-legacy_tox_ini = """
-[tox]
-envlist = py37,py38,py39,py310,py311
-skip_missing_interpreters = true
-[testenv]
-commands = pytest
-extras = dev
-"""
+[tool.ruff]
+select = [
+  "E",  # pycodestyle
+  "F",  # pyflakes
+  "B",  # flake8-bugbear
+  "D",  # pydocstyle
+  "I",  # isort
+  "N",  # PEP8-naming
+  "UP",  # pyupgrade (upgrade syntax to current syntax)
+  "PLE",  # Pylint error https://github.com/charliermarsh/ruff#error-ple
+]
+ignore = [
+"D100", "D101", "D104", "D105", "D106", "D107", "D203", "D213"
+] # docstring style
+
+line-length = 88
+exclude = ["docs", "build"]
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+target-version = "py39"
+
+[tool.ruff.per-file-ignores]
+"tests/**" = ["D"]
