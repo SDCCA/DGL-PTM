@@ -16,7 +16,7 @@ dependencies = [
     "xarray",
     "zarr",
     "dask",
-    "dgl==1.1.3",  # pip will install cuda for infra wit NVIDIA GPUs
+    "dgl",  # pip will install cuda for infra wit NVIDIA GPUs
 ]
 description = "The deep graph library reimplementation of the poverty trap model."
 readme = "README.md"
