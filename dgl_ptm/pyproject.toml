@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "dgl_ptm"
 version = "0.1.0"
-requires-python = ">=3.9"
+requires-python = ">=3.9, <3.12"
 dependencies = [
     "numpy",
     "scipy==1.10.1",
@@ -16,7 +16,7 @@ dependencies = [
     "xarray",
     "zarr",
     "dask",
-    "dgl",  # pip will install cuda for infra wit NVIDIA GPUs
+    "dgl",
 ]
 description = "The deep graph library reimplementation of the poverty trap model."
 readme = "README.md"
