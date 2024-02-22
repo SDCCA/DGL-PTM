@@ -92,10 +92,7 @@ class PovertyTrapModel(Model):
         on this frequency. Default is 1 i.e. every time step.
         """
         super().__init__(model_identifier = model_identifier)
-
-        if restart:
-            self.inputs = _load_model(f'./{self._model_identifier}')
-
+        self.restart = restart
         self.savestate = savestate
 
     def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
@@ -162,13 +159,8 @@ class PovertyTrapModel(Model):
         data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
                     edata = self.steering_parameters['edata'], format = self.steering_parameters['format'], mode = self.steering_parameters['mode'])
 
-        # store the initial state in a dictionary
-        self.inputs = {
-            'model_graph': copy.deepcopy(self.model_graph), # it gets updated in the step function
-            'model_data': copy.deepcopy(self.model_data), # it does not get updated, but it is needed for the step function
-            'generator_state': generator.get_state(),
-            'step_count': self.step_count
-        }
+        # store random generator state
+        self.generator_state = generator.get_state()
 
     def create_network(self):
         """
@@ -296,14 +288,6 @@ class PovertyTrapModel(Model):
             print(f'performing step {self.step_count} of {self.step_target}')
             ptm_step(self.model_graph, self.model_data, self.step_count, self.steering_parameters)
 
-            # store the current state in a dictionary
-            self.inputs = {
-                'model_graph': copy.deepcopy(self.model_graph),
-                'model_data': copy.deepcopy(self.model_data),
-                'generator_state': generator.get_state(),
-                'step_count': self.step_count
-            }
-
         except:
             #TODO add model dump here. Also check against previous save to avoid overwriting
             raise RuntimeError(f'execution of step failed for step {self.step_count}')
@@ -311,18 +295,27 @@ class PovertyTrapModel(Model):
     def run(self):
         """ run the model for each step until the step_target is reached."""
 
-        self.model_graph = copy.deepcopy(self.inputs["model_graph"])
-        self.model_data = self.inputs["model_data"]
-        generator.set_state(self.inputs["generator_state"])
-        self.step_count = self.inputs["step_count"]
+        if self.restart:
+            self.inputs = _load_model(f'./{self._model_identifier}')
+            self.model_graph = copy.deepcopy(self.inputs["model_graph"])
+            self.model_data = self.inputs["model_data"]
+            self.generator_state = self.inputs["generator_state"]
+            self.step_count = self.inputs["step_count"]
 
-        path = f'./{self._model_identifier}'
+        generator.set_state(self.generator_state)
 
         while self.step_count < self.step_target:
             self.step()
+
             # save the model state every step reported by savestate
             if self.savestate and self.step_count % self.savestate == 0:
-                _save_model(path, self.inputs)
+                self.inputs = {
+                    'model_graph': copy.deepcopy(self.model_graph),
+                    'model_data': copy.deepcopy(self.model_data),
+                    'generator_state': generator.get_state(),
+                    'step_count': self.step_count
+                }
+                _save_model(f'./{self._model_identifier}', self.inputs)
 
 
 def _save_model(path, inputs):
