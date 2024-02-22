@@ -3,7 +3,7 @@
 import dgl
 from dgl import AddEdge, AddReverse
 
-def global_attachment(agent_graph, ratio: float):
+def global_attachment(agent_graph, device, ratio: float):
     '''
         global_attachment - randomly connects different agents globally based on a ratio
 
@@ -22,4 +22,8 @@ def global_attachment(agent_graph, ratio: float):
     agent_graph = AddReverse()(agent_graph)
 
     # Remove duplicate edges
-    agent_graph = dgl.to_simple(agent_graph, return_counts='cnt')
+    # dgl.to_simple works only on device=cpu hence we move the graph to cpu:
+    agent_graph = dgl.to_simple(agent_graph.to('cpu'), return_counts='cnt')
+    # move the graph back to user choice of device.
+    # This is necessary for running on cuda or other hardware.
+    agent_graph = agent_graph.to(device)

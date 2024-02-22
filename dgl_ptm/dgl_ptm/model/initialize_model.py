@@ -95,6 +95,26 @@ class PovertyTrapModel(Model):
         self.restart = restart
         self.savestate = savestate
 
+        # default values
+        self.device = CONFIG.device
+        self.number_agents = CONFIG.number_agents
+        self.gamma_vals = CONFIG.gamma_vals
+        self.sigma_dist = CONFIG.sigma_dist
+        self.cost_vals = CONFIG.cost_vals
+        self.technology_levels = CONFIG.technology_levels
+        self.technology_dist = CONFIG.technology_dist
+        self.a_theta_dist = CONFIG.a_theta_dist
+        self.sensitivity_dist = CONFIG.sensitivity_dist
+        self.capital_dist = CONFIG.capital_dist
+        self.alpha_dist = CONFIG.alpha_dist
+        self.lambda_dist = CONFIG.lambda_dist
+        self.initial_graph_type = CONFIG.initial_graph_type
+        self.model_graph = CONFIG.model_graph
+        self.step_count = CONFIG.step_count
+        self.step_target = CONFIG.step_target
+        self.steering_parameters = CONFIG.steering_parameters
+        self.model_data = CONFIG.model_data
+
     def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
         """
         Load or set model parameters
@@ -154,8 +174,11 @@ class PovertyTrapModel(Model):
         """
         self.create_network()
         self.initialize_agent_properties()
+        self.model_graph = self.model_graph.to(self.device)
         self.initialize_model_properties()
-        weight_update(self.model_graph, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
+        self.model_data['modelTheta'] = self.model_data['modelTheta'].to(self.device)
+
+        weight_update(self.model_graph, self.device, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
         data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
                     edata = self.steering_parameters['edata'], format = self.steering_parameters['format'], mode = self.steering_parameters['mode'])
 
@@ -286,7 +309,7 @@ class PovertyTrapModel(Model):
         try:
             self.step_count +=1
             print(f'performing step {self.step_count} of {self.step_target}')
-            ptm_step(self.model_graph, self.model_data, self.step_count, self.steering_parameters)
+            ptm_step(self.model_graph, self.device, self.model_data, self.step_count, self.steering_parameters)
 
         except:
             #TODO add model dump here. Also check against previous save to avoid overwriting
