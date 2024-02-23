@@ -1,7 +1,6 @@
 import pytest
 import dgl_ptm
 import os
-import torch
 
 from dgl_ptm.agentInteraction.trade_money import trade_money
 from dgl_ptm.agentInteraction.weight_update import weight_update
