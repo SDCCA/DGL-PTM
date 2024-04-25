@@ -2,28 +2,35 @@ import torch
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize_scalar
+from ..util.utils import load_model
 
 
-def wealth_consumption(model_graph, model_params=None, method='pseudo_consumption'):
+def wealth_consumption(model_graph, model_params=None, device=None, method='pseudo_consumption'):
     # Calculate wealth consumed
     if method == 'pseudo_consumption':
         _pseudo_wealth_consumption(model_graph)
     elif method == 'fitted_consumption':
         _fitted_wealth_consumption(model_graph)
-    elif method == 'bellman_consumption':
+    elif method == 'calc_bellman_consumption':
         _bellman_wealth_consumption(model_graph,model_params)
+    elif method == 'estimated_bellman_consumption':
+        _nn_bellman_wealth_consumption(model_graph,model_params,device)
     else:
         raise NotImplementedError("Incorrect method received. \
                          Method needs to be 'pseudo_consumption','fitted_consumption', or 'bellman_consumption'")
     
 
 def _pseudo_wealth_consumption(model_graph):
+# Placeholder consumption ratio     
     model_graph.ndata['wealth_consumption'] = model_graph.ndata['wealth']*1./3.
     
 def _fitted_wealth_consumption(model_graph):
+# Estimation based on curve fitted to Bellman equation output
     model_graph.ndata['wealth_consumption'] = 0.64036047*torch.log(model_graph.ndata['wealth'])
 
 
+
+# Miscellenious information needed for _bellman_wealth_consumption, a very slow method comparatively speaking
 def income_function(k,α,tech): 
     f=α * k**tech['gamma'] - tech['cost']
     return torch.max(f)
@@ -206,3 +213,77 @@ def _bellman_wealth_consumption(model_graph, model_params):
     for i in range(model_graph.num_nodes()):
         agentinfo = {'u':utility, 'f':income_function, 'β':model_params['discount'], 'θ':model_graph.ndata['theta'][i], '𝛿':model_params['depreciation'], 'σ':model_graph.ndata['sigma'][i].numpy(), 'α': model_graph.ndata['alpha'][i],'k':model_graph.ndata['wealth'][i],'adapt': model_graph.ndata['a_table'][i]}
         model_graph.ndata['wealth_consumption'][i], model_graph.ndata['i_a'][i], model_graph.ndata['m'][i] = which_bellman(agentinfo)
+
+
+
+def  _nn_bellman_wealth_consumption(model_graph,model_params, device):
+    ''' Estimation of consumption and i_a using a pytorch neural network trained on Bellman equation output. 
+    Currently only works with a single model for all agents under the four input two output configuration. 
+    The entire surrogate model must be saved at nn_path and the architecture of the model specified in nn_arch.py.''' 
+
+
+    estimator,scale = load_model(model_params['nn_path'],device)  
+
+    estimator.eval()
+
+    input = torch.cat((model_graph.ndata['alpha'].unsqueeze(1), model_graph.ndata['wealth'].unsqueeze(1), model_graph.ndata['sigma'].unsqueeze(1), model_graph.ndata['theta'].unsqueeze(1)), dim=1) 
+
+    with torch.no_grad():
+        pred,scale = estimator(input)
+
+    
+    model_graph.ndata['m'],model_graph.ndata['i_a']=model_graph.ndata['a_table'][torch.arange(model_graph.ndata['a_table'].size(0)),:,torch.argmin(torch.abs(pred[:, 0].unsqueeze(1) - model_graph.ndata['a_table'][:,1,:]), dim=1)].unbind(dim=1)
+
+    #Clean Consumption
+    model_graph.ndata['wealth_consumption']=(pred[:,1]*scale).clamp_(min=0)
+
+    #Check for violations
+
+    violation = model_graph.ndata['wealth']-model_graph.ndata['wealth_consumption']-model_graph.ndata['i_a']<0
+
+
+    if torch.sum(violation)!=0:
+
+        violation_i_a = model_graph.ndata['wealth']-model_graph.ndata['i_a']<0
+        violation_consumption = model_graph.ndata['wealth']-model_graph.ndata['wealth_consumption']<0
+
+        print(f"Agents in violation: {torch.sum(violation)}")
+        print(f"...because of i_a: {torch.sum(violation*violation_i_a)}")
+        print(f"...because of consumption: {torch.sum(violation*violation_consumption)}")
+
+        model_graph.ndata['m'][torch.nonzero(violation*violation_i_a, as_tuple=False)]=0
+        model_graph.ndata['i_a'][torch.nonzero(violation*violation_i_a, as_tuple=False)]=0
+
+        model_graph.ndata['wealth_consumption'][torch.nonzero(violation*violation_consumption, as_tuple=False)]=model_graph.ndata['wealth'][torch.nonzero(violation*violation_consumption, as_tuple=False)]*0.999
+
+        #for those with a bad combination, reducing consumption to accomodate choice
+        violation_combo = violation * ~violation_i_a *~violation_consumption
+
+        model_graph.ndata['wealth_consumption'][torch.nonzero(violation_combo, as_tuple=False)]=(model_graph.ndata['wealth'][torch.nonzero(violation_combo, as_tuple=False)]-model_graph.ndata['i_a'][torch.nonzero(violation_combo, as_tuple=False)])*0.999
+
+
+    violation = model_graph.ndata['wealth']-model_graph.ndata['wealth_consumption']-model_graph.ndata['i_a']<0
+    if torch.sum(violation)!=0:
+        print("Something has gone terribly wrong!")
+
+
+
+
+
+
+
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+

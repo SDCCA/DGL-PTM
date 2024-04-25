@@ -2,7 +2,7 @@ from dgl_ptm.agent.income_generation import income_generation
 from dgl_ptm.agent.wealth_consumption import wealth_consumption
 import torch
 
-def agent_update(model_graph, model_params, timestep=None, method='pseudo'):
+def agent_update(model_graph, model_params, device=None, timestep=None, method='pseudo'):
     '''
     agent_update - Updates agent attributes
     '''
@@ -13,12 +13,11 @@ def agent_update(model_graph, model_params, timestep=None, method='pseudo'):
     elif method == 'theta':
         _agent_theta_update(model_graph,model_params,timestep)
     elif method == 'consumption':
-        _agent_consumption_update(model_graph,model_params)
+        _agent_consumption_update(model_graph, model_params,device)
     elif method == 'income':
         _agent_income_update(model_graph,model_params)
     else:
-        raise NotImplementedError("Incorrect method received. \
-                         Method needs to be 'pseudo_consumption' or 'optimized_wealth_consumption'")
+        raise NotImplementedError(f"Unrecognized agent update type {method} attempted during time step implementation.'")
 
 def _pseudo_agent_update(model_graph,model_params): 
     '''
@@ -51,8 +50,10 @@ def _agent_theta_update(model_graph,model_params,timestep):
     global_θ =model_params['modelTheta'][timestep]
     model_graph.ndata['theta'] = model_graph.ndata['theta'] * (1-model_graph.ndata['sensitivity']) + global_θ * model_graph.ndata['sensitivity']
 
-def _agent_consumption_update(model_graph,model_params):
-    wealth_consumption(model_graph, model_params,method=model_params['consume_method'])
+def _agent_consumption_update(model_graph,device, model_params):
+    '''Updates agent consumption based on method specified in model parameters.'''
+    wealth_consumption(model_graph, device, model_params, method=model_params['consume_method'])
 
 def _agent_income_update(model_graph,model_params):
+    '''Updates agent income based on method specified in model parameters.'''
     income_generation(model_graph,model_params,method=model_params['income_method'])

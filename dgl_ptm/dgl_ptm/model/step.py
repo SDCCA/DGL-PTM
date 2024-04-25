@@ -11,7 +11,7 @@ from dgl_ptm.agent.agent_update import agent_update
 from dgl_ptm.model.data_collection import data_collection
 from dgl_ptm.agentInteraction.weight_update import weight_update
 
-def ptm_step(agent_graph, timestep, params):
+def ptm_step(agent_graph, device, timestep, params):
     '''
         step - time-stepping module for the poverty-trap model
 
@@ -57,7 +57,7 @@ def ptm_step(agent_graph, timestep, params):
         
         #Update agent states
         agent_update(agent_graph, params, timestep, method ='theta')
-        agent_update(agent_graph, params, method ='consumption')
+        agent_update(agent_graph, params, device, method ='consumption')
         agent_update(agent_graph, params, method ='income')
 
 

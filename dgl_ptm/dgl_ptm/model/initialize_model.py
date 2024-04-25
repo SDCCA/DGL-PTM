@@ -75,6 +75,7 @@ class PovertyTrapModel(Model):
     'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
     'lam_dist': {'type':'uniform','parameters':[0.1,0.9],'round':True,'decimals':1},
     'initial_graph_type': 'barabasi-albert',
+    'nn_path': None,
     'step_count':0,
     'step_target':20,
     'steering_parameters':{'npath':'./agent_data.zarr',
@@ -127,6 +128,7 @@ class PovertyTrapModel(Model):
             self.lam_dist = None 
             self.initial_graph_type = None
             self.model_graph = None
+            self.nn_path = None
             self.step_count = None
             self.step_target = None
             self.steering_parameters = None
