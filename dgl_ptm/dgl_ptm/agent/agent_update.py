@@ -50,9 +50,9 @@ def _agent_theta_update(model_graph,model_params,timestep):
     global_θ =model_params['modelTheta'][timestep]
     model_graph.ndata['theta'] = model_graph.ndata['theta'] * (1-model_graph.ndata['sensitivity']) + global_θ * model_graph.ndata['sensitivity']
 
-def _agent_consumption_update(model_graph,device, model_params):
+def _agent_consumption_update(model_graph, model_params, device):
     '''Updates agent consumption based on method specified in model parameters.'''
-    wealth_consumption(model_graph, device, model_params, method=model_params['consume_method'])
+    wealth_consumption(model_graph, model_params, device, method=model_params['consume_method'])
 
 def _agent_income_update(model_graph,model_params):
     '''Updates agent income based on method specified in model parameters.'''

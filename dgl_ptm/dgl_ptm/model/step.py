@@ -45,7 +45,7 @@ def ptm_step(agent_graph, device, timestep, params):
 
     if params['step_type']=='custom':
         if timestep!=0:
-            agent_update(agent_graph, params, timestep, method = 'capital')
+            agent_update(agent_graph, params, timestep=timestep, method = 'capital')
 
         #Wealth transfer
         trade_money(agent_graph, method = params['wealth_method'])
@@ -56,8 +56,8 @@ def ptm_step(agent_graph, device, timestep, params):
         global_attachment(agent_graph, ratio = params['ratio'])
         
         #Update agent states
-        agent_update(agent_graph, params, timestep, method ='theta')
-        agent_update(agent_graph, params, device, method ='consumption')
+        agent_update(agent_graph, params, timestep=timestep, method ='theta')
+        agent_update(agent_graph, params, device=device, method ='consumption')
         agent_update(agent_graph, params, method ='income')
 
 

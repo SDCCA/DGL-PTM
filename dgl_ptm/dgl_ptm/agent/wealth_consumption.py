@@ -2,10 +2,12 @@ import torch
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize_scalar
-from ..util.utils import load_model
+from ..util.utils import load_consumption_model
+import dgl_ptm.util.parse_config.parse_config as parse_config
 
 
-def wealth_consumption(model_graph, model_params=None, device=None, method='pseudo_consumption'):
+
+def wealth_consumption(model_graph, model_params, device=None, method='pseudo_consumption'):
     # Calculate wealth consumed
     if method == 'pseudo_consumption':
         _pseudo_wealth_consumption(model_graph)
@@ -220,9 +222,15 @@ def  _nn_bellman_wealth_consumption(model_graph,model_params, device):
     ''' Estimation of consumption and i_a using a pytorch neural network trained on Bellman equation output. 
     Currently only works with a single model for all agents under the four input two output configuration. 
     The entire surrogate model must be saved at nn_path and the architecture of the model specified in nn_arch.py.''' 
+    print(" In the nn consumption equation")
 
-
-    estimator,scale = load_model(model_params['nn_path'],device)  
+    if model_params['nn_path']==None:
+        print("No consumption model path provided!")
+    
+    print(f"attempting to load model at {model_params['nn_path']}")  
+    
+    estimator,scale = load_consumption_model(model_params['nn_path'],device)  
+    print(" attempting forward")
 
     estimator.eval()
 
@@ -230,12 +238,15 @@ def  _nn_bellman_wealth_consumption(model_graph,model_params, device):
 
     with torch.no_grad():
         pred,scale = estimator(input)
+    print(" went forward, writing values")
 
     
     model_graph.ndata['m'],model_graph.ndata['i_a']=model_graph.ndata['a_table'][torch.arange(model_graph.ndata['a_table'].size(0)),:,torch.argmin(torch.abs(pred[:, 0].unsqueeze(1) - model_graph.ndata['a_table'][:,1,:]), dim=1)].unbind(dim=1)
+    print(" cleaning data")
 
     #Clean Consumption
     model_graph.ndata['wealth_consumption']=(pred[:,1]*scale).clamp_(min=0)
+    print(" violation check")
 
     #Check for violations
 

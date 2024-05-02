@@ -75,7 +75,7 @@ class PovertyTrapModel(Model):
     'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
     'lam_dist': {'type':'uniform','parameters':[0.1,0.9],'round':True,'decimals':1},
     'initial_graph_type': 'barabasi-albert',
-    'nn_path': None,
+    'device': 'cpu',
     'step_count':0,
     'step_target':20,
     'steering_parameters':{'npath':'./agent_data.zarr',
@@ -88,6 +88,7 @@ class PovertyTrapModel(Model):
                             'tech_gamma': torch.tensor([0.3,0.35,0.45]),
                             'tech_cost': torch.tensor([0,0.15,0.65]),
                             'consume_method':'pseudo_consumption',
+                            'nn_path': None,
                             'adapt_m':torch.tensor([0,0.5,0.9]),
                             'adapt_cost':torch.tensor([0,0.25,0.45]),
                             'depreciation': 0.6,
@@ -128,7 +129,7 @@ class PovertyTrapModel(Model):
             self.lam_dist = None 
             self.initial_graph_type = None
             self.model_graph = None
-            self.nn_path = None
+            self.device = None
             self.step_count = None
             self.step_target = None
             self.steering_parameters = None
@@ -305,7 +306,7 @@ class PovertyTrapModel(Model):
 
     def step(self):
         try:
-            ptm_step(self.model_graph,self.step_count,self.steering_parameters)
+            ptm_step(self.model_graph, self.device, self.step_count,self.steering_parameters)
             self.step_count +=1
         except:
             #TODO add model dump here. Also check against previous save to avoid overwriting
