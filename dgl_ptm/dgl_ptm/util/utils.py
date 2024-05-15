@@ -1,6 +1,5 @@
 import torch
 import dgl_ptm.util.nn_arch.nn_arch as nn_arch
-import parse_config
 
 
 
@@ -24,8 +23,8 @@ def load_consumption_model(model_path,device):
     print("loaded state dict")
 
 
-    if config['data_loader']['cons_scale']==True:
-        scale=config['data_loader']['scale']
+    if config['data_loader']['args']['cons_scale']==True:
+        scale=config['data_loader']['args']['scale']
     else:
         scale=1
 

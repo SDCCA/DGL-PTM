@@ -44,12 +44,17 @@ def ptm_step(agent_graph, device, timestep, params):
         
 
     if params['step_type']=='custom':
+        print("Initial k")
+        print(agent_graph.ndata['wealth'])
+
         if timestep!=0:
+
             agent_update(agent_graph, params, timestep=timestep, method = 'capital')
+        
 
         #Wealth transfer
         trade_money(agent_graph, method = params['wealth_method'])
-        
+
         #Link/edge manipulation
         local_attachment(agent_graph, n_FoF_links = 1, edge_prop = 'weight', p_attach=1.  )
         link_deletion(agent_graph, del_prob = params['del_prob'])
@@ -57,9 +62,8 @@ def ptm_step(agent_graph, device, timestep, params):
         
         #Update agent states
         agent_update(agent_graph, params, timestep=timestep, method ='theta')
-        agent_update(agent_graph, params, device=device, method ='consumption')
         agent_update(agent_graph, params, method ='income')
-
+        agent_update(agent_graph, params, device=device, method ='consumption')
 
         #Weight update
         weight_update(agent_graph, a = params['weight_a'], b = params['weight_b'],truncation_weight = params['truncation_weight'])

@@ -36,10 +36,12 @@ def _agent_capital_update(model_graph,model_params,timestep):
     #formula for k_t+1 is applied at the beginning of each time step 
     # k_t+1 becomes the new k_t
     
-    k,c,i_a,m,α = model_graph.ndata['wealth'],model_graph.ndata['wealth_consumption'],model_graph.ndata['i_a'],model_graph.ndata['m'],model_graph.ndata['alpha']
+    k,c,i_a,m = model_graph.ndata['wealth'],model_graph.ndata['wealth_consumption'],model_graph.ndata['i_a'],model_graph.ndata['m']
     
     global_θ =model_params['modelTheta'][timestep]
     𝛿=model_params['depreciation']
+
+    # k_t+1 = θ(f(k,α) - c - i_a + (1-𝛿)k_t)
     model_graph.ndata['wealth'] = (global_θ + m * (1-global_θ)) * (model_graph.ndata['income'] - c - i_a + (1-𝛿) * k)
     #self.connections=0
     #self.trades=0
