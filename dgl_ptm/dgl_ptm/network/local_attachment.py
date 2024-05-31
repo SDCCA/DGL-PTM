@@ -7,6 +7,7 @@ import torch
 import dgl
 
 def local_attachment(graph,n_FoF_links,edge_prop=None,p_attach=1.):
+    print(p_attach)
     created_links = 0
     if edge_prop != None:
         src_ids, dst_ids, _ = select_edges(graph,n_FoF_links,edge_prop)

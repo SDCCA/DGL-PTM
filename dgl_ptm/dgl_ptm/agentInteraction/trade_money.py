@@ -37,24 +37,24 @@ def trade_money(agent_graph, method: str):
         raise NotImplementedError("Incorrect method received. \
                          Method needs to be either 'weighted_transfer' or 'singular_transfer'")
     
-def _weighted_transfer(agent_graph):
+def _weighted_transfer(agent_graph, device):
     """
         Weighted transfer of wealth from each agent (node) to every connected 
         neighbour agent based on pre-defined edge weights.
     """
 
     # Sum all incoming weights
-    agent_graph.ndata['total_weight'] = torch.zeros(agent_graph.num_nodes())
-    agent_graph.update_all(fn.u_add_e('total_weight','weight','total_weight'), fn.sum('total_weight', 'total_weight'))
+    agent_graph.ndata['total_weight'] = torch.zeros(agent_graph.num_nodes()).to(device)
+    agent_graph.update_all(fn.u_add_e('total_weight','weight','total_weight_msg'), fn.sum('total_weight_msg', 'total_weight'))
 
     # Calculating outgoing weight %s
     agent_graph.apply_edges(fn.e_div_u('weight','total_weight','percent_weight'))
 
     # Wealth transfer amount on each edge
-    agent_graph.apply_edges(fn.e_mul_u('percent_weight','disp_wealth','trfr_wealth'))
+    agent_graph.apply_edges(fn.e_mul_u('percent_weight','disp_wealth','trfr_wealth'))  # TODO: check what trfr_wealth actually is
 
     # Sum total income from wealth exchange
-    agent_graph.update_all(fn.v_add_e('zeros','trfr_wealth','net_trade'), fn.sum('net_trade', 'net_trade'))
+    agent_graph.update_all(fn.v_add_e('zeros','trfr_wealth','net_trade_msg'), fn.sum('net_trade_msg', 'net_trade'))
 
 def _singular_transfer(agent_graph):
     """

@@ -3,6 +3,7 @@ import dgl
 from dgl.sparse import spmatrix
 
 def local_attachment_tensor(graph,n_FoF_links,edge_prop=None,p_attach=1.):
+    print(p_attach)
     adj_matrix = adjacency_matrix_with_edge_prop(graph,eprop=edge_prop)
     norm_prop = adj_matrix.val/adj_matrix.val.sum()
     selected_links = norm_prop.flatten().multinomial(num_samples=n_FoF_links,replacement=False)

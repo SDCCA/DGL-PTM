@@ -28,7 +28,7 @@ def ptm_step(agent_graph, device, timestep, params):
         trade_money(agent_graph, method = params['wealth_method'])
         
         #Link/edge manipulation
-        local_attachment(agent_graph, n_FoF_links = 1, edge_prop = 'weight', p_attach=1.  )
+        local_attachment(agent_graph, n_FoF_links = 1, edge_prop = 'weight', p_attach=1. )
         link_deletion(agent_graph, del_prob = params['del_prob'])
         global_attachment(agent_graph, ratio = params['ratio'])
         
@@ -56,7 +56,7 @@ def ptm_step(agent_graph, device, timestep, params):
         trade_money(agent_graph, method = params['wealth_method'])
 
         #Link/edge manipulation
-        local_attachment(agent_graph, n_FoF_links = 1, edge_prop = 'weight', p_attach=1.  )
+        local_attachment(agent_graph, n_FoF_links = int(params['ratio']*agent_graph.number_of_nodes()), edge_prop = 'weight', p_attach=params['attachProb'][timestep])
         link_deletion(agent_graph, del_prob = params['del_prob'])
         global_attachment(agent_graph, ratio = params['ratio'])
         

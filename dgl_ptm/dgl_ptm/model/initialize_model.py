@@ -75,6 +75,7 @@ class PovertyTrapModel(Model):
     'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
     'lam_dist': {'type':'uniform','parameters':[0.1,0.9],'round':True,'decimals':1},
     'initial_graph_type': 'barabasi-albert',
+    'initial_graph_args': {'seed': 42, 'new_node_edges':5},
     'device': 'cpu',
     'step_count':0,
     'step_target':20,
@@ -94,6 +95,7 @@ class PovertyTrapModel(Model):
                             'depreciation': 0.6,
                             'discount': 0.95,
                             'm_theta_dist': {'type':'multinomial','parameters':[[0.02 ,0.03, 0.05, 0.9],[0.7, 0.8, 0.9, 1]],'round':False,'decimals':None},
+                            'm_attach_dist': {'type':'uniform','parameters':[0.001,1],'round':False,'decimals':None},
                             'del_prob':0.05,
                             'ratio':0.1,
                             'weight_a':0.69,
@@ -128,6 +130,7 @@ class PovertyTrapModel(Model):
             self.alpha_dist = None
             self.lam_dist = None 
             self.initial_graph_type = None
+            self.initial_graph_args = None
             self.model_graph = None
             self.device = None
             self.step_count = None
@@ -190,8 +193,9 @@ class PovertyTrapModel(Model):
         Create intial network connecting agents. Makes use of intial graph type specified as model parameter
         """
 
-        agent_graph = network_creation(self.number_agents, self.initial_graph_type)
+        agent_graph = network_creation(self.number_agents, self.initial_graph_type, **self.initial_graph_args)
         self.model_graph = agent_graph
+        print(f'Created graph with {self.model_graph.number_of_nodes()} agents.')
 
     def initialize_model_properties(self):
         """
@@ -200,10 +204,16 @@ class PovertyTrapModel(Model):
         """
         modelTheta = self._initialize_model_theta()
         self.steering_parameters['modelTheta'] = modelTheta
+        attachProb = self._initialize_attach_prob()
+        self.steering_parameters['attachProb'] = attachProb
 
     def _initialize_model_theta(self):
         modelTheta = sample_distribution_tensor(self.steering_parameters['m_theta_dist']['type'],self.steering_parameters['m_theta_dist']['parameters'],self.step_target,round=self.steering_parameters['m_theta_dist']['round'],decimals=self.steering_parameters['m_theta_dist']['decimals'])
         return modelTheta
+        
+    def _initialize_attach_prob(self):
+        attachProb = sample_distribution_tensor(self.steering_parameters['m_attach_dist']['type'],self.steering_parameters['m_attach_dist']['parameters'],self.step_target,round=self.steering_parameters['m_attach_dist']['round'],decimals=self.steering_parameters['m_attach_dist']['decimals'])
+        return attachProb
 
     def initialize_agent_properties(self):
         """
