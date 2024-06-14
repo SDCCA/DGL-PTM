@@ -6,13 +6,13 @@ import dgl_ptm.util.nn_arch.nn_arch as nn_arch
 
 def load_consumption_model(model_path,device):
     '''Load a model from a particular .pth file and assemble using structure contained in nn_arch.py'''
-    print("entered load_consumption_model")
+    #print("entered load_consumption_model")
 
     model_path="/Users/victoria/Documents/Scripts/Python/DGL-PTM/DGL_testing/nn_data/both_PudgeFiveLayer_1024/0409_175055/model_best.pth"
     modelinfo = torch.load(model_path, map_location=torch.device('cpu'))
 
 
-    print("loaded info")
+    #print("loaded info")
 
     config = modelinfo['config']
 
@@ -20,7 +20,7 @@ def load_consumption_model(model_path,device):
 
     model.load_state_dict(modelinfo['state_dict'])
 
-    print("loaded state dict")
+    #print("loaded state dict")
 
 
     if config['data_loader']['args']['cons_scale']==True:

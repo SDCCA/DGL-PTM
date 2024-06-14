@@ -2,22 +2,45 @@ import torch
 import dgl 
 from dgl.sparse import spmatrix
 
+# TODO: check readability variables.
+# TODO: confirm that the behavior for sum(weight)=0 agents is the same as for plain local attachment
 def local_attachment_tensor(graph,n_FoF_links,edge_prop=None,p_attach=1.):
-    print(p_attach)
+    print(n_FoF_links)
     adj_matrix = adjacency_matrix_with_edge_prop(graph,eprop=edge_prop)
+    print(f'adj_matrix.shape:{adj_matrix.shape}')
     norm_prop = adj_matrix.val/adj_matrix.val.sum()
-    selected_links = norm_prop.flatten().multinomial(num_samples=n_FoF_links,replacement=False)
+    print(adj_matrix)
+    print(adj_matrix.val.sum())
+    print(f"norm_prop:{norm_prop}")
+
+    #sample n_FoF_links from the entire normalized edge property graph weighted by weight
+    selected_links = norm_prop.multinomial(num_samples=n_FoF_links,replacement=False)
+    print(f'selected_links.shape:{selected_links.shape}')
+    print(selected_links)
+    print(adj_matrix.indices()[:,selected_links])
+    print(f'adj_matrix.row[]{adj_matrix.row[1]}')
+
     selected_links_matrix = sparse_from_mask(adj_matrix, selected_links)
+    print(f'selected_links_matrix.shape:{selected_links_matrix.shape}')
+    print(selected_links_matrix)
     FoF_field_matrix, FoF_field_matrix_norm_eprop = neighbour_field_matrix(selected_links_matrix,adj_matrix)
     new_FoF = FoF_field_matrix.val > 0
     new_FoF_norm_eprop = sparse_from_mask(FoF_field_matrix_norm_eprop, new_FoF)
     if torch.count_nonzero(new_FoF) <= n_FoF_links:
+        print("fine until here")
         probe_p_attach = torch.rand(new_FoF_norm_eprop.val.shape[0]) 
         to_link = probe_p_attach < p_attach
     else:
         new_FoF_renorm = new_FoF_norm_eprop.val/new_FoF_norm_eprop.val.sum()
+        print(f"new_FoF_renorm.shape:{new_FoF_renorm.shape}")
         selected_FoF = new_FoF_renorm.flatten().multinomial(n_FoF_links,replacement=False)
+        print(f"selected_FoF.shape:{selected_FoF.shape}")
+        print("fine until here, too")
         probe_p_attach = torch.rand(new_FoF_norm_eprop.val.shape[0])
+        print(f"new_FoF_norm_eprop.val.shape:{new_FoF_norm_eprop.val.shape}")
+        print(f'probe_p_attach.shape:{probe_p_attach.shape}')
+        print(f'probe_p_attach>p_attach.shape:{(probe_p_attach >p_attach).shape}')
+        print(f'selected_FoF.shape:{selected_FoF.shape}')
         to_link = torch.logical_and((probe_p_attach > p_attach),selected_FoF)
     FoF_to_link_matrix = sparse_from_mask(new_FoF_norm_eprop,to_link)
     graph.add_edges(FoF_to_link_matrix.row,FoF_to_link_matrix.col)

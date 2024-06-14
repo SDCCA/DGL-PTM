@@ -64,6 +64,7 @@ class PovertyTrapModel(Model):
 
     #default values as class variable 
     default_model_parameters = {'number_agents': 100 , 
+    "seed":0,
     'gamma_vals':torch.tensor([0.3,0.45]) , #for pseudo income
     'sigma_dist': {'type':'uniform','parameters':[0.1,1.9],'round':True,'decimals':1},
     'cost_vals': torch.tensor([0.,0.45]), #for pseudo income
@@ -75,7 +76,7 @@ class PovertyTrapModel(Model):
     'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
     'lam_dist': {'type':'uniform','parameters':[0.1,0.9],'round':True,'decimals':1},
     'initial_graph_type': 'barabasi-albert',
-    'initial_graph_args': {'seed': 42, 'new_node_edges':5},
+    'initial_graph_args': {'seed': 42, 'new_node_edges':1},
     'device': 'cpu',
     'step_count':0,
     'step_target':20,
@@ -119,6 +120,7 @@ class PovertyTrapModel(Model):
             if self._model_identifier == None:
                 raise ValueError('A model identifier must be specified')
             self.number_agents = None
+            self.seed = None
             self.gamma_vals = None
             self.sigma_dist = None
             self.cost_vals = None
@@ -183,10 +185,11 @@ class PovertyTrapModel(Model):
         """
         convenience fucntion to create network and initiliize agent properties in correct order, thereby initializing a model
         """
+        torch.manual_seed(self.seed)
         self.create_network()
         self.initialize_agent_properties()
         self.initialize_model_properties()
-        weight_update(self.model_graph, self.steering_parameters['weight_a'], self.steering_parameters['weight_b'], self.steering_parameters['truncation_weight'])
+        weight_update(self.model_graph, self.device, self.steering_parameters['weight_a'], self.steering_parameters['weight_b'], self.steering_parameters['truncation_weight'])
 
     def create_network(self):
         """

@@ -1,6 +1,7 @@
 */__pycache__/*
 .ipynb_checkpoints/
 DGL_testing/edge_data
+DGL_testing/agent_data_s.zarr
 DGL_testing/agent_data.zarr
 dgl_ptm/PosterScalingCodes
 V2*_*Agents_*Steps.csv

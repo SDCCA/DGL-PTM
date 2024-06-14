@@ -23,7 +23,6 @@ def data_collection(agent_graph, timestep, npath='./agent_data', epath='./edge_d
         Output:
 
     '''
-    print("gets to data collection")
 
     if ndata == ['all']:
         ndata = list(agent_graph.node_attr_schemes().keys())
