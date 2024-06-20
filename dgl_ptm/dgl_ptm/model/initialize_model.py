@@ -1,7 +1,8 @@
+import copy
+from pathlib import Path
 import dgl
-import networkx as nx
 import torch
-import yaml
+import pickle
 import logging
 from pathlib import Path
 
@@ -9,7 +10,12 @@ from dgl_ptm.network.network_creation import network_creation
 from dgl_ptm.model.step import ptm_step
 from dgl_ptm.agentInteraction.weight_update import weight_update
 from dgl_ptm.model.data_collection import data_collection
+from dgl.data.utils import save_graphs, load_graphs
 from dgl_ptm.config import Config, CONFIG
+
+# Set the seed of the random number generator
+# this is global and will affect all random number generators
+generator = torch.manual_seed(0)
 
 logger = logging.getLogger(__name__)
 
@@ -74,43 +80,40 @@ class PovertyTrapModel(Model):
     Poverty Trap model as derived model class
 
     """
-
-    def __init__(self,*, model_identifier=None, restart=False, savestate=None):
+    def __init__(self,*, model_identifier, restart=False, savestate=1):
         """
-        restore from a savestate (TODO) or create a PVT model instance.
+        restore from a savestate or create a PVT model instance.
         Checks whether a model indentifier has been specified.
+
+        param: model_identifier: str, required. Identifier for the model. Used to save and load model states.
+        param: restart: boolean, optional. If True, the model is run from last
+        saved step. Default False.
+        param: savestate: int, optional. If provided, the model state is saved
+        on this frequency. Default is 1 i.e. every time step.
         """
+        super().__init__(model_identifier = model_identifier)
+        self.restart = restart
+        self.savestate = savestate
 
-        if restart:
-            if savestate==None:
-                raise ValueError('When restarting a simulation an intial savestate must be supplied')
-            else:
-                #TODO implement restart
-                pass
-        else:
-            super().__init__(model_identifier = model_identifier)
-            if self._model_identifier == None:
-                raise ValueError('A model identifier must be specified')
-
-            # default values
-            self.device = CONFIG.device
-            self.number_agents = CONFIG.number_agents
-            self.gamma_vals = CONFIG.gamma_vals
-            self.sigma_dist = CONFIG.sigma_dist
-            self.cost_vals = CONFIG.cost_vals
-            self.technology_levels = CONFIG.technology_levels
-            self.technology_dist = CONFIG.technology_dist
-            self.a_theta_dist = CONFIG.a_theta_dist
-            self.sensitivity_dist = CONFIG.sensitivity_dist
-            self.capital_dist = CONFIG.capital_dist
-            self.alpha_dist = CONFIG.alpha_dist
-            self.lambda_dist = CONFIG.lambda_dist
-            self.initial_graph_type = CONFIG.initial_graph_type
-            self.model_graph = CONFIG.model_graph
-            self.step_count = CONFIG.step_count
-            self.step_target = CONFIG.step_target
-            self.steering_parameters = CONFIG.steering_parameters
-            self.model_data = CONFIG.model_data
+        # default values
+        self.device = CONFIG.device
+        self.number_agents = CONFIG.number_agents
+        self.gamma_vals = CONFIG.gamma_vals
+        self.sigma_dist = CONFIG.sigma_dist
+        self.cost_vals = CONFIG.cost_vals
+        self.technology_levels = CONFIG.technology_levels
+        self.technology_dist = CONFIG.technology_dist
+        self.a_theta_dist = CONFIG.a_theta_dist
+        self.sensitivity_dist = CONFIG.sensitivity_dist
+        self.capital_dist = CONFIG.capital_dist
+        self.alpha_dist = CONFIG.alpha_dist
+        self.lambda_dist = CONFIG.lambda_dist
+        self.initial_graph_type = CONFIG.initial_graph_type
+        self.model_graph = CONFIG.model_graph
+        self.step_count = CONFIG.step_count
+        self.step_target = CONFIG.step_target
+        self.steering_parameters = CONFIG.steering_parameters
+        self.model_data = CONFIG.model_data
 
     def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
         """
@@ -121,7 +124,6 @@ class PovertyTrapModel(Model):
                          If parameters are passed, non-specifed parameters will be set with defaults.
 
         """
-
         cfg = CONFIG # default values
 
         if parameterFilePath:
@@ -144,20 +146,27 @@ class PovertyTrapModel(Model):
         if parameterFilePath is None and not kwargs:
             logger.warning('no model parameters have been provided, Default values are used')
 
+        if cfg.model_identifier != self._model_identifier:
+            logger.warning(f'A model identifier has been set as "{self._model_identifier}". '
+                           f'But another identifier "{cfg.model_identifier}" is provided (perhaps by default). '
+                           f'The identifier "{self._model_identifier}" will be used.')
+
         cfg.model_identifier = self._model_identifier # see config.py for why cfg.model_identifier
 
         # save updated config to yaml file
         cfg_filename = f'./{self._model_identifier}.yaml'
         cfg.to_yaml(cfg_filename)
-        logger.warning(f'We have saved the model parameters to {cfg_filename}.')
+        logger.warning(f'The model parameters are saved to {cfg_filename}.')
 
-        # update model parameters
-        self.__dict__ = cfg.model_dump(by_alias=True, warnings=False)
+        # update model parameters/ attributes
+        cfg_dict = cfg.model_dump(by_alias=True, warnings=False)
+        for key, value in cfg_dict.items():
+            setattr(self, key, value)
 
+        # Correct the paths
         parent_dir = "." / Path(self._model_identifier)
         self.steering_parameters['npath'] = str(parent_dir / Path(cfg.steering_parameters.npath))
         self.steering_parameters['epath'] = str(parent_dir / Path(cfg.steering_parameters.epath))
-
 
     def initialize_model(self):
         """
@@ -173,12 +182,15 @@ class PovertyTrapModel(Model):
         data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
                     edata = self.steering_parameters['edata'], format = self.steering_parameters['format'], mode = self.steering_parameters['mode'])
 
+        # store random generator state
+        self.generator_state = generator.get_state()
+
     def create_network(self):
         """
         Create intial network connecting agents. Makes use of intial graph type specified as model parameter
         """
 
-        agent_graph = network_creation(self.number_agents, self.initial_graph_type)
+        agent_graph = network_creation(self.number_agents, self.initial_graph_type, seed=1)
         self.model_graph = agent_graph
 
     def initialize_model_properties(self):
@@ -296,15 +308,93 @@ class PovertyTrapModel(Model):
     def step(self):
         try:
             self.step_count +=1
-            ptm_step(self.model_graph,self.device,self.model_data,self.step_count,self.steering_parameters)
+            print(f'performing step {self.step_count} of {self.step_target}')
+            ptm_step(self.model_graph, self.device, self.model_data, self.step_count, self.steering_parameters)
+
         except:
             #TODO add model dump here. Also check against previous save to avoid overwriting
-
-
             raise RuntimeError(f'execution of step failed for step {self.step_count}')
 
-
     def run(self):
+        """ run the model for each step until the step_target is reached."""
+
+        if self.restart:
+            self.inputs = _load_model(f'./{self._model_identifier}')
+            self.model_graph = copy.deepcopy(self.inputs["model_graph"])
+            self.model_data = self.inputs["model_data"]
+            self.generator_state = self.inputs["generator_state"]
+            self.step_count = self.inputs["step_count"]
+
+        generator.set_state(self.generator_state)
+
         while self.step_count < self.step_target:
-            print(f'performing step {self.step_count+1} of {self.step_target}')
             self.step()
+
+            # save the model state every step reported by savestate
+            if self.savestate and self.step_count % self.savestate == 0:
+                self.inputs = {
+                    'model_graph': copy.deepcopy(self.model_graph),
+                    'model_data': copy.deepcopy(self.model_data),
+                    'generator_state': generator.get_state(),
+                    'step_count': self.step_count
+                }
+                _save_model(f'./{self._model_identifier}', self.inputs)
+
+
+def _save_model(path, inputs):
+    """ save the model_graph, generator_state and model_data in files."""
+
+    # save the model_graph with a label
+    graph_label = {'step_count': torch.tensor([inputs["step_count"]])}
+    save_graphs(str(Path(path) / "model_graphs.bin"), inputs["model_graph"], graph_label)
+
+    # save the generator_state
+    with open(Path(path) / "generator_state.bin", 'wb') as file:
+        pickle.dump([inputs["generator_state"], inputs["step_count"]], file)
+
+    # save model_data
+    with open(Path(path) / "model_data.bin", 'wb') as file:
+        pickle.dump([inputs["model_data"], inputs["step_count"]], file)
+
+
+def _load_model(path):
+    # Load model graphs
+    path_model_graph = Path(path) / "model_graphs.bin"
+    if not path_model_graph.is_file():
+        raise ValueError(f'The path {path_model_graph} is not a file.')
+
+    graph, graph_lebel = load_graphs(str(path_model_graph))
+    graph = graph[0]
+    graph_step = graph_lebel['step_count'].tolist()[0]
+
+    # Load generator_state
+    path_generator_state = Path(path) / "generator_state.bin"
+    if not path_generator_state.is_file():
+        raise ValueError(f'The path {path_generator_state} is not a file.')
+
+    with open(path_generator_state, 'rb') as file:
+        generator, generator_step = pickle.load(file)
+
+    # Load model_data
+    path_model_data = Path(path) / "model_data.bin"
+    if not path_model_data.is_file():
+        raise ValueError(f'The path {path_model_data} is not a file.')
+
+    with open(path_model_data, 'rb') as file:
+        data, data_step = pickle.load(file)
+
+    # Check if graph_step, generator_step and data_step are the same
+    if graph_step != generator_step or graph_step != data_step:
+        msg = 'The step count in the model_graph, generator_state and model_data are not the same.'
+        raise ValueError(msg)
+
+    # Show which step is loaded
+    logger.warning(f'Loading model state from step {data_step}.')
+
+    inputs = {
+        'model_graph': graph,
+        'model_data': data,
+        'generator_state': generator,
+        'step_count': data_step
+    }
+    return inputs
