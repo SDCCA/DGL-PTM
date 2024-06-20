@@ -143,7 +143,7 @@ class SigmaDist(BaseModel):
 class TechnologyDist(BaseModel):
     """Base class for technology distribution."""
     type: str = "bernoulli"
-    parameters: List[float | None] = [0.5, None]
+    parameters: List[Union[float, None]] = [0.5, None]
     round: bool = False
     decimals: Optional[int] = None
 

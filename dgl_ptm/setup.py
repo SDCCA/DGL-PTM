@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-import os
+"""The setup script."""
 from setuptools import setup
 
-
-# see setup.cfg
 setup()
