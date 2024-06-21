@@ -185,6 +185,9 @@ class PovertyTrapModel(Model):
         # store random generator state
         self.generator_state = generator.get_state()
 
+        # number of edges(links) in the network
+        self.number_of_edges = self.model_graph.number_of_edges()
+
     def create_network(self):
         """
         Create intial network connecting agents. Makes use of intial graph type specified as model parameter
@@ -310,6 +313,9 @@ class PovertyTrapModel(Model):
             self.step_count +=1
             print(f'performing step {self.step_count} of {self.step_target}')
             ptm_step(self.model_graph, self.device, self.model_data, self.step_count, self.steering_parameters)
+
+            # number of edges(links) in the network
+            self.number_of_edges = self.model_graph.number_of_edges()
 
         except:
             #TODO add model dump here. Also check against previous save to avoid overwriting
