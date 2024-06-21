@@ -33,16 +33,19 @@ def local_attachment_tensor(graph,n_FoF_links,edge_prop=None,p_attach=1.):
     else:
         new_FoF_renorm = new_FoF_norm_eprop.val/new_FoF_norm_eprop.val.sum()
         print(f"new_FoF_renorm.shape:{new_FoF_renorm.shape}")
-        selected_FoF = new_FoF_renorm.flatten().multinomial(n_FoF_links,replacement=False)
+        selected_FoF = new_FoF_renorm.flatten().multinomial(num_samples=n_FoF_links,replacement=False)
         print(f"selected_FoF.shape:{selected_FoF.shape}")
         print("fine until here, too")
-        probe_p_attach = torch.rand(new_FoF_norm_eprop.val.shape[0])
+        #probe_p_attach = torch.rand(new_FoF_norm_eprop.val.shape[0])
+        probe_p_attach = torch.rand(n_FoF_links)
         print(f"new_FoF_norm_eprop.val.shape:{new_FoF_norm_eprop.val.shape}")
         print(f'probe_p_attach.shape:{probe_p_attach.shape}')
         print(f'probe_p_attach>p_attach.shape:{(probe_p_attach >p_attach).shape}')
         print(f'selected_FoF.shape:{selected_FoF.shape}')
-        to_link = torch.logical_and((probe_p_attach > p_attach),selected_FoF)
-    FoF_to_link_matrix = sparse_from_mask(new_FoF_norm_eprop,to_link)
+        #to_link = torch.logical_and((probe_p_attach > p_attach),selected_FoF)
+        probe_selected = probe_p_attach < p_attach
+        to_link = selected_FoF[probe_selected]
+    FoF_to_link_matrix = sparse_from_mask(new_FoF_norm_eprop, to_link)
     graph.add_edges(FoF_to_link_matrix.row,FoF_to_link_matrix.col)
     graph.add_edges(FoF_to_link_matrix.col,FoF_to_link_matrix.row)
 
