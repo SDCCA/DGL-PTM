@@ -18,4 +18,8 @@ DGL_testing/edge_data_2/
 DGL_testing/edge_data_25/
 DGL_testing/edge_data_3/
 DGL_testing/edge_data_4/
+DGL_testing/scaletest_optmization.ipynb
+DGL_testing/testing_optmization.ipynb
 *slurm-*
+
+*DS_Store
