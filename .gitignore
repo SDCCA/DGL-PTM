@@ -6,4 +6,16 @@ DGL_testing/agent_data.zarr
 dgl_ptm/PosterScalingCodes
 V2*_*Agents_*Steps.csv
 V2*_Model_*Agents_*Steps.csv
+DGL_testing/agent_data_0.zarr/
+DGL_testing/agent_data_1.zarr/
+DGL_testing/agent_data_2.zarr/
+DGL_testing/agent_data_25.zarr/
+DGL_testing/agent_data_3.zarr/
+DGL_testing/agent_data_4.zarr/
+DGL_testing/edge_data_0/
+DGL_testing/edge_data_1/
+DGL_testing/edge_data_2/
+DGL_testing/edge_data_25/
+DGL_testing/edge_data_3/
+DGL_testing/edge_data_4/
 *slurm-*
