@@ -13,9 +13,10 @@ def wealth_consumption(model_graph, model_params=None, method='default'):
     else:
         raise NotImplementedError("Incorrect method received. \
                          Method needs to be 'default', or 'bellman_consumption'")
-    
-    
+
+
 def _fitted_agent_wealth_consumption(model_graph):
+    # ToDo: Add a reference for the quation, see #83
     model_graph.ndata['wealth_consumption'] = 0.64036047*torch.log(model_graph.ndata['wealth'])
 
 def _bellman_agent_wealth_consumption(model_graph, model_params):

@@ -5,6 +5,7 @@ name: dgl_ptm_cuda
 channels:
   - defaults
 dependencies:
+  - python>=3.11,<3.12
   - dglteam/label/cu121::dgl
   - pip:
     - -e ./dgl_ptm  # install dgl_ptm in the editable mode, # TODO change to the actual pypi package
