@@ -2,7 +2,7 @@
 import pytest
 import yaml
 
-from dgl_ptm.config import Config, CONFIG
+from dgl_ptm.config import Config
 
 @pytest.fixture
 def config_parameters():
@@ -40,7 +40,7 @@ def test_from_dict(config_parameters):
 
 def test_to_yaml(tmp_path):
     """Test Config.to_yaml."""
-    cfg = CONFIG
+    cfg = Config()
     cfg.to_yaml(tmp_path / "config.yaml")
 
     with open(tmp_path / "config.yaml", "r") as f:
