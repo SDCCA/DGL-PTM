@@ -1,7 +1,7 @@
 import dgl
 import torch
 
-def link_deletion(agent_graph, del_method: str, del_threshold: float):
+def link_deletion(agent_graph, device, del_method: str, del_threshold: float):
     '''
         link_deletion - deletes links between agents with a deletion probability 'del_prob' 
                         by sampling against a random uniform distribution.
@@ -17,10 +17,10 @@ def link_deletion(agent_graph, del_method: str, del_threshold: float):
         Output:
             agent_graph: Updated agent_graph with reduced edges based on 'del_prob'
     '''
-    agent_graph.remove_edges(_select_edges(agent_graph, del_method=del_method, del_threshold=del_threshold))
+    agent_graph.remove_edges(_select_edges(agent_graph, device-device, del_method=del_method, del_threshold=del_threshold))
 
 
-def _select_edges(agent_graph, del_method: str, del_threshold: float):
+def _select_edges(agent_graph, device, del_method: str, del_threshold: float):
     '''
         Identify edges to delete based on a probability and triangular matrix manipulation
 
@@ -42,7 +42,7 @@ def _select_edges(agent_graph, del_method: str, del_threshold: float):
     if del_method == "probability":
         mask_edges = torch.rand(upper_triangular.val.size()[0]) < del_threshold # * triu_adj.val TODO: Is this needed?
     elif del_method == "size":
-        mask_edges = torch.randperm(upper_triangular.val.size()[0]) < del_threshold # * triu_adj.val TODO: Is this needed?
+        mask_edges = torch.randperm(upper_triangular.val.size()[0], device=device) < del_threshold # * triu_adj.val TODO: Is this needed?
     else:
         raise NotImplementedError('Currently only "probability" and "size" deletion methods are supported')
         mask_edges = torch.zeros(upper_triangular.val.size()[0])
