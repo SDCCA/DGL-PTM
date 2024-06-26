@@ -30,7 +30,7 @@ def ptm_step(agent_graph, device, timestep, params):
         
         #Link/edge manipulation
         local_attachment(agent_graph, n_FoF_links = 1, edge_prop = 'weight', p_attach=1. )
-        link_deletion(agent_graph, del_prob = params['del_prob'])
+        link_deletion(agent_graph, del_method = 'probability', del_threshold = params['del_prob'])
         global_attachment(agent_graph, ratio = params['ratio'])
         
         #Update agent states
