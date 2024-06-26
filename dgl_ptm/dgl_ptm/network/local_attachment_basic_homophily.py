@@ -3,7 +3,7 @@ import dgl
 from dgl.sparse import spmatrix
 
 
-def local_attachment_tensor(graph,n_FoF_links, homophily_parameter = None, characteristic_distance = None, truncation_weight = None):
+def local_attachment_homophily(graph,n_FoF_links, homophily_parameter = None, characteristic_distance = None, truncation_weight = None):
     '''This function attempts to form links between two agents connected by a common neighbor
     by randomly selecting 2 neighbors of randomly selected nodes with 2 or more neighbors, 
     calculating the potential homophily weight of the new edge and forming the edge if the
