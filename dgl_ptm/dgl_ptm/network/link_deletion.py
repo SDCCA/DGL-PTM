@@ -1,36 +1,35 @@
 import dgl
 import torch
 
-def link_deletion(agent_graph, device, del_method: str, del_threshold: float):
+def link_deletion(agent_graph, method: str, threshold: float):
     '''
-        link_deletion - deletes links between agents with a deletion probability 'del_prob' 
-                        by sampling against a random uniform distribution.
-
+        link_deletion - deletes links between agents according to a selected deletion method.
+        
         Args:
             agent_graph: DGLGraph with agent nodes and edges connecting agents
-            del_method: deletion method; either
-                "probability" (edges selected idependently by probability) or
+            method: deletion method. Either
+                "probability" (each edge selected idependently with this probability) or
                 "size" (fixed number of randomly selected edges)
-            del_threshold: Threshold for deleting an existing edge between two agent nodes.
-                Either the number of edges, or the probability applied to each edge.
+            threshold: Threshold for deleting an existing edge between two agent nodes.
+                Either the probability each edge is deleted or the number of edges to delete.
 
         Output:
-            agent_graph: Updated agent_graph with reduced edges based on 'del_prob'
+            agent_graph: Updated agent_graph with reduced edges based on 'method' and 'threshold'.
     '''
-    agent_graph.remove_edges(_select_edges(agent_graph, device-device, del_method=del_method, del_threshold=del_threshold))
+    agent_graph.remove_edges(_select_edges(agent_graph, method = method, threshold = threshold))
 
 
-def _select_edges(agent_graph, device, del_method: str, del_threshold: float):
+def _select_edges(agent_graph, method: str, threshold: float):
     '''
-        Identify edges to delete based on a probability and triangular matrix manipulation
+        Identify edges to delete according to a selected deletion method.
 
         Args:
             agent_graph: DGLGraph with agent nodes and edges connecting agents
-            del_method: deletion method; either
-                "probability" (edges selected idependently by probability) or
+            method: deletion method. Either
+                "probability" (each edge selected idependently with this probability) or
                 "size" (fixed number of randomly selected edges)
-            del_threshold: Threshold for deleting an existing edge between two agent nodes.
-                Either the number of edges, or the probability applied to each edge.
+            threshold: Threshold for deleting an existing edge between two agent nodes.
+                Either the probability each edge is deleted or the number of edges to delete.
 
         Return:
             agent_graph.edge_ids: edge_ids for agent edges to be deleted
@@ -39,10 +38,10 @@ def _select_edges(agent_graph, device, del_method: str, del_threshold: float):
 
     # TODO: check https://discuss.pytorch.org/t/torch-equivalent-of-numpy-random-choice/16146/16
     mask_edges
-    if del_method == "probability":
-        mask_edges = torch.rand(upper_triangular.val.size()[0]) < del_threshold # * triu_adj.val TODO: Is this needed?
-    elif del_method == "size":
-        mask_edges = torch.randperm(upper_triangular.val.size()[0], device=device) < del_threshold # * triu_adj.val TODO: Is this needed?
+    if method == "probability":
+        mask_edges = torch.rand(upper_triangular.val.size()[0]) < threshold # * triu_adj.val TODO: Is this needed?
+    elif method == "size":
+        mask_edges = torch.randperm(upper_triangular.val.size()[0]) < threshold # * triu_adj.val TODO: Is this needed?
     else:
         raise NotImplementedError('Currently only "probability" and "size" deletion methods are supported')
         mask_edges = torch.zeros(upper_triangular.val.size()[0])
@@ -68,7 +67,7 @@ def _sparse_matrix_apply_mask(om, mask):
 
 def _sparse_upper_triangular(spm):
     """
-    select the upper triangular matrix from a sparse matrix
+    Select the upper triangular matrix from a sparse matrix.
 
     Args:
         spm: the sparse matrix (dgl.sparse.SparseMatrix)
@@ -81,8 +80,8 @@ def _sparse_upper_triangular(spm):
 
 def _symmetrical_from_upper_triangular(triu):
     """
-    create a symmetrical matrix based on an input upper triangular matrix. 
-    Note, this works because the diagonal is zero as we have no self-loops
+    Create a symmetrical matrix based on an input upper triangular matrix.
+    Note, this works because the diagonal is zero as we have no self-loops.
 
     Args:
         triu: upper triangular matrix
