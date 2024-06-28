@@ -3,7 +3,8 @@ initial_graph_type: barabasi-albert
 step_count: 0
 step_target: 20
 steering_parameters:
-  del_prob: 0.05
+  del_method: probability
+  del_threshold: 0.05
   edata:
   - all
   epath: ./edge_data
