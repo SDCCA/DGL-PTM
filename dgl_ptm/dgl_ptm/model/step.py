@@ -5,9 +5,10 @@
 
 from dgl_ptm.agentInteraction.trade_money import trade_money
 from dgl_ptm.network.local_attachment import local_attachment 
-from dgl_ptm.network.local_attachment_basic_homophily import local_attachment_tensor 
+from dgl_ptm.network.local_attachment_basic_homophily import local_attachment_homophily 
 from dgl_ptm.network.link_deletion import link_deletion 
 from dgl_ptm.network.global_attachment import global_attachment
+from dgl_ptm.network.random_edge_noise import random_edge_noise
 from dgl_ptm.agent.agent_update import agent_update
 from dgl_ptm.model.data_collection import data_collection
 from dgl_ptm.agentInteraction.weight_update import weight_update
@@ -52,23 +53,23 @@ def ptm_step(agent_graph, device, timestep, params):
 
             agent_update(agent_graph, params, timestep=timestep, method = 'capital')
         
+        #Weight update
+        weight_update(agent_graph, device, homophily_parameter = params['weight_a'], characteristic_distance = params['weight_b'],truncation_weight = params['truncation_weight'])
+
+        #Link/edge manipulation
+        #local_attachment(agent_graph, n_FoF_links = int(params['ratio']*agent_graph.number_of_nodes()), edge_prop = 'weight', p_attach=params['attachProb'][timestep])
+        random_edge_noise(agent_graph, n_perturbances = int(params['ratio']*agent_graph.number_of_nodes()))
+        local_attachment_homophily(agent_graph, n_FoF_links = int(params['ratio']*agent_graph.number_of_nodes()), homophily_parameter = params['weight_a'], characteristic_distance = params['weight_b'],truncation_weight = params['truncation_weight'])
+        link_deletion(agent_graph, del_prob = params['del_prob'])
+        #global_attachment(agent_graph, ratio = params['ratio'])
 
         #Wealth transfer
         trade_money(agent_graph, device, method = params['wealth_method'])
 
-        #Link/edge manipulation
-        #local_attachment(agent_graph, n_FoF_links = int(params['ratio']*agent_graph.number_of_nodes()), edge_prop = 'weight', p_attach=params['attachProb'][timestep])
-        local_attachment_tensor(agent_graph, n_FoF_links = int(params['ratio']*agent_graph.number_of_nodes()), homophily_parameter = params['weight_a'], characteristic_distance = params['weight_b'],truncation_weight = params['truncation_weight'])
-        link_deletion(agent_graph, del_prob = params['del_prob'])
-        #global_attachment(agent_graph, ratio = params['ratio'])
-        
         #Update agent states
         agent_update(agent_graph, params, timestep=timestep, method ='theta')
         agent_update(agent_graph, params, method ='income')
         agent_update(agent_graph, params, device=device, method ='consumption')
-
-        #Weight update
-        weight_update(agent_graph, device, homophily_parameter = params['weight_a'], characteristic_distance = params['weight_b'],truncation_weight = params['truncation_weight'])
 
         #Data collection and storage
         data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 

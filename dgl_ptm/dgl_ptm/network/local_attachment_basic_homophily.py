@@ -3,7 +3,7 @@ import dgl
 from dgl.sparse import spmatrix
 
 
-def local_attachment_tensor(graph,n_FoF_links, homophily_parameter = None, characteristic_distance = None, truncation_weight = None):
+def local_attachment_homophily(graph,n_FoF_links, homophily_parameter = None, characteristic_distance = None, truncation_weight = None):
     '''This function attempts to form links between two agents connected by a common neighbor
     by randomly selecting 2 neighbors of randomly selected nodes with 2 or more neighbors, 
     calculating the potential homophily weight of the new edge and forming the edge if the
@@ -17,7 +17,7 @@ def local_attachment_tensor(graph,n_FoF_links, homophily_parameter = None, chara
     #preselect based on adjacency matrix for 2 or more neighbors
     candidates=graph.adj().sum(dim=1)>1
 
-    # Select bridge/connecting nodes randomply from candidates (with replacement)
+    # Select bridge/connecting nodes randomly from candidates (with replacement)
     connecting_nodes=torch.nonzero(candidates, as_tuple=True)[0][torch.randint(0,torch.sum(candidates),(n_FoF_links,))]
 
     # Sample 2 neighbors of bridge/connecting nodes and remove any duplicates or false autopairs
@@ -47,8 +47,8 @@ def local_attachment_tensor(graph,n_FoF_links, homophily_parameter = None, chara
     successful_links = potential_weights > prob_tensor
 
     # Add new edges to the original graph
-    graph.add_edges(even_indices_tensor[successful_links], odd_indices_tensor[successful_links])
-    graph.add_edges(odd_indices_tensor[successful_links], even_indices_tensor[successful_links])
+    graph.add_edges(even_indices_tensor[successful_links], odd_indices_tensor[successful_links], data={'weight': potential_weights[successful_links]})
+    graph.add_edges(odd_indices_tensor[successful_links], even_indices_tensor[successful_links], data={'weight': potential_weights[successful_links]})
 
     print(f"after:{torch.sum(graph.has_edges_between(graph.nodes(), graph.nodes()))}")
 
