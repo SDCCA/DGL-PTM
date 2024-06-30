@@ -67,6 +67,15 @@ def ptm_step(agent_graph, device, timestep, params):
         #Wealth transfer
         trade_money(agent_graph, device, method = params['wealth_method'])
 
+<<<<<<< HEAD
+=======
+        #Link/edge manipulation
+        #local_attachment(agent_graph, n_FoF_links = int(params['ratio']*agent_graph.number_of_nodes()), edge_prop = 'weight', p_attach=params['attachProb'][timestep])
+        local_attachment_homophily(agent_graph, n_FoF_links = int(params['ratio']*agent_graph.number_of_nodes()), homophily_parameter = params['weight_a'], characteristic_distance = params['weight_b'],truncation_weight = params['truncation_weight'])
+        link_deletion(agent_graph, del_prob = params['del_prob'])
+        #global_attachment(agent_graph, ratio = params['ratio'])
+        
+>>>>>>> 88ded89e067e6b490a24c153b68c7362a5acc3c5
         #Update agent states
         agent_update(agent_graph, params, timestep=timestep, method ='theta')
         agent_update(agent_graph, params, method ='income')
