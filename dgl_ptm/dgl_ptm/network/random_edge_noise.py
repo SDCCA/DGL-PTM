@@ -27,7 +27,5 @@ def random_edge_noise(graph,n_perturbances):
     graph.add_edges(node_pairs[:, 0], node_pairs[:, 1],{'weight': random_weights})
     graph.add_edges(node_pairs[:, 1], node_pairs[:, 0],{'weight': random_weights})
 
-    print(f"after:{torch.sum(graph.has_edges_between(graph.nodes(), graph.nodes()))}")
-
 
 

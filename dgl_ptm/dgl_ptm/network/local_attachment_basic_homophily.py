@@ -12,7 +12,6 @@ def local_attachment_homophily(graph,n_FoF_links, homophily_parameter = None, ch
     with replacement; if a connecting agent's sampled neighbors are already connected, or the 
     random number generated is greater than the potential homophily edge weight, a new link 
     is not formed. A potentially connecting pair of neighbors is only considered once per call.'''
-    print(f"before:{torch.sum(graph.has_edges_between(graph.nodes(), graph.nodes()))}")
 
     #preselect based on adjacency matrix for 2 or more neighbors
     candidates=graph.adj().sum(dim=1)>1
@@ -22,18 +21,13 @@ def local_attachment_homophily(graph,n_FoF_links, homophily_parameter = None, ch
 
     # Sample 2 neighbors of bridge/connecting nodes and remove any duplicates or false autopairs
     sample = dgl.sampling.sample_neighbors(graph,connecting_nodes, 2 , replace= False, edge_dir="out")
-    assert len(sample.edges(order='eid')) % 2 == 0, "The number of elements in the dest tensor should be even."
     node_pairs = torch.unique(sample.edges(order='eid')[1].view(-1, 2), dim=0)
     node_pairs = node_pairs[(node_pairs[:, 0] != node_pairs[:, 1])]
 
     # Extract node pairs and exclude existing edges
-    #existing_connections = graph.has_edges_between(sample.edges(order='eid')[1][::2], sample.edges(order='eid')[1][1::2])
-    #even_indices_tensor = sample.edges(order='eid')[1][::2][~existing_connections]
-    #odd_indices_tensor = sample.edges(order='eid')[1][1::2][~existing_connections] 
     existing_connections = graph.has_edges_between(node_pairs[:,0], node_pairs[:,1])
     even_indices_tensor = node_pairs[:,0][~existing_connections]
     odd_indices_tensor = node_pairs[:,1][~existing_connections]
-    #prob_tensor = torch.rand(even_indices_tensor.size(0))
     prob_tensor = torch.rand(even_indices_tensor.size(0))
  
 
@@ -50,7 +44,6 @@ def local_attachment_homophily(graph,n_FoF_links, homophily_parameter = None, ch
     graph.add_edges(even_indices_tensor[successful_links], odd_indices_tensor[successful_links], data={'weight': potential_weights[successful_links]})
     graph.add_edges(odd_indices_tensor[successful_links], even_indices_tensor[successful_links], data={'weight': potential_weights[successful_links]})
 
-    print(f"after:{torch.sum(graph.has_edges_between(graph.nodes(), graph.nodes()))}")
 
 
 

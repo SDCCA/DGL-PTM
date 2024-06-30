@@ -57,11 +57,12 @@ def ptm_step(agent_graph, device, timestep, params):
         weight_update(agent_graph, device, homophily_parameter = params['weight_a'], characteristic_distance = params['weight_b'],truncation_weight = params['truncation_weight'])
 
         #Link/edge manipulation
-        #local_attachment(agent_graph, n_FoF_links = int(params['ratio']*agent_graph.number_of_nodes()), edge_prop = 'weight', p_attach=params['attachProb'][timestep])
-        random_edge_noise(agent_graph, n_perturbances = int(params['ratio']*agent_graph.number_of_nodes()))
-        local_attachment_homophily(agent_graph, n_FoF_links = int(params['ratio']*agent_graph.number_of_nodes()), homophily_parameter = params['weight_a'], characteristic_distance = params['weight_b'],truncation_weight = params['truncation_weight'])
-        link_deletion(agent_graph, del_prob = params['del_prob'])
-        #global_attachment(agent_graph, ratio = params['ratio'])
+        start_edges = agent_graph.number_of_edges()
+        print(f"Initial edges: {start_edges}")
+        random_edge_noise(agent_graph, n_perturbances = int(params['noise_ratio']*agent_graph.number_of_nodes()))
+        local_attachment_homophily(agent_graph, n_FoF_links = int(params['local_ratio']*agent_graph.number_of_nodes()), homophily_parameter = params['weight_a'], characteristic_distance = params['weight_b'],truncation_weight = params['truncation_weight'])
+        current_edges = agent_graph.number_of_edges()
+        link_deletion(agent_graph, method = "special" , threshold = int((current_edges-start_edges)/2))
 
         #Wealth transfer
         trade_money(agent_graph, device, method = params['wealth_method'])
