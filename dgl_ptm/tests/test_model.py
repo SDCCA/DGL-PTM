@@ -1,6 +1,7 @@
 import pytest
 import dgl_ptm
 import os
+import xarray as xr
 
 from dgl_ptm.model.data_collection import data_collection
 from pathlib import Path
@@ -42,8 +43,39 @@ class TestPtmStep:
 
 class TestDataCollection:
     def test_data_collection(self, model):
+        data_collection(model.model_graph, timestep=0, npath = model.steering_parameters['npath'],
+                        epath = model.steering_parameters['epath'], ndata = model.steering_parameters['ndata'],
+                        edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
+                        mode = model.steering_parameters['mode'])
 
-        data_collection(model.model_graph, 2, npath='./my_model/agent_data', epath='./my_model/edge_data', ndata = ['all'], edata = ['all'], format = 'xarray', mode = 'w-')
+        assert Path('my_model/agent_data.zarr').exists()
+        assert Path('my_model/edge_data/0.zarr').exists()
 
-        assert Path('./my_model/agent_data/agent_data.zarr').exists()
-        assert Path('./my_model/edge_data/2.zarr').exists()
+    def test_data_collection_time_step1(self, model):
+        model.step() # timestep 1
+        data_collection(model.model_graph, timestep=1, npath = model.steering_parameters['npath'],
+                        epath = model.steering_parameters['epath'], ndata = model.steering_parameters['ndata'],
+                        edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
+                        mode = model.steering_parameters['mode'])
+
+        assert Path('my_model/agent_data.zarr').exists()
+        assert Path('my_model/edge_data/0.zarr').exists()
+        assert Path('my_model/edge_data/1.zarr').exists()
+
+        # check if dimension 'n_time' exist in agent_data.zarr
+        agent_data = xr.open_zarr('my_model/agent_data.zarr')
+        assert 'n_time' in agent_data.dims
+
+        # check variable names in edge_data/1.zarr
+        edge_data = xr.open_zarr('my_model/edge_data/1.zarr')
+        assert 'weight' in edge_data.variables
+
+
+class TestInitializeModel:
+    def test_set_model_parameters(self):
+        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
+        model.set_model_parameters()
+
+        assert model.steering_parameters['npath'] == 'test_model/agent_data.zarr'
+        assert model.steering_parameters['epath'] == 'test_model/edge_data'
+        assert Path('test_model/test_model.yaml').exists()
