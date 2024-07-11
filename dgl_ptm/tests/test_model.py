@@ -76,6 +76,6 @@ class TestInitializeModel:
         model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
         model.set_model_parameters()
 
-        assert model.steering_parameters['npath'] == 'test_model/agent_data.zarr'
-        assert model.steering_parameters['epath'] == 'test_model/edge_data'
+        assert model.steering_parameters['npath'] == Path('test_model/agent_data.zarr')
+        assert model.steering_parameters['epath'] == Path('test_model/edge_data')
         assert Path('test_model/test_model.yaml').exists()
