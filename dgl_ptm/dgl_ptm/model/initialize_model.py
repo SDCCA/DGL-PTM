@@ -28,10 +28,10 @@ def sample_distribution_tensor(type, distParameters, nSamples, round=False, deci
         dist = torch.gather(torch.Tensor(distParameters[1]), 0, torch.multinomial(torch.tensor(distParameters[0]), nSamples, replacement=True))
     elif type == 'truncnorm':
         # distParameters are mean, standard deviation, min, and max. cdf(x)=(1+erf(x/2^0.5))/2. cdf^-1(x)=2^0.5*erfinv(2*x-1).
-        trunc_val_a = (distParameters[2]-distParameters[0])/distParameters[1]
-        trunc_val_b = (distParameters-distParameters[0])/distParameters[1]
-        cdf_min = (1 + torch.erf(trunc_val_a / torch.sqrt(torch.tensor(2.0))))/2
-        cdf_max = (1 + torch.erf(trunc_val_b / torch.sqrt(torch.tensor(2.0))))/2
+        trunc_val_min = (distParameters[2]-distParameters[0])/distParameters[1]
+        trunc_val_max = (distParameters-distParameters[0])/distParameters[1]
+        cdf_min = (1 + torch.erf(trunc_val_min / torch.sqrt(torch.tensor(2.0))))/2
+        cdf_max = (1 + torch.erf(trunc_val_max / torch.sqrt(torch.tensor(2.0))))/2
 
         uniform_samples = torch.rand(size)
         sample_ppf = torch.sqrt(torch.tensor(2.0)) * torch.erfinv(2 *(cdf_min + (cdf_max - cdf_min) * uniform_samples) - 1)
@@ -76,7 +76,7 @@ class PovertyTrapModel(Model):
 
     #default values as class variable 
     default_model_parameters = {'number_agents': 100 , 
-    "seed":0,
+    'seed':0,
     'gamma_vals':torch.tensor([0.3,0.45]) , #for pseudo income
     'sigma_dist': {'type':'uniform','parameters':[0.05,1.94],'round':True,'decimals':1},
     'cost_vals': torch.tensor([0.,0.45]), #for pseudo income
@@ -88,7 +88,7 @@ class PovertyTrapModel(Model):
     'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
     'lam_dist': {'type':'uniform','parameters':[0.05,0.94],'round':True,'decimals':1},
     'initial_graph_type': 'barabasi-albert',
-    'initial_graph_args': {'seed': 42, 'new_node_edges':1},
+    'initial_graph_args': {'seed': 0, 'new_node_edges':1},
     'device': 'cpu',
     'step_count':0,
     'step_target':20,
@@ -269,57 +269,57 @@ class PovertyTrapModel(Model):
 
     def _initialize_agents_adapttable(self):
         """
-        Initialize agents adaptation measure knowledge, currently uniform.
+        Initialize agent adaptation measure knowledge, currently uniform.
         """
         agentsAdaptTable =torch.stack([self.steering_parameters['adapt_m'],self.steering_parameters['adapt_cost']]).repeat(self.number_agents,1,1)
         return agentsAdaptTable
 
     def _initialize_agents_theta(self):
         """
-        Initialize agents theta as a 1d tensor sampled from the specified initial theta distribution
+        Initialize agent theta as a 1d tensor sampled from the specified initial theta distribution
         """
         agentsTheta = sample_distribution_tensor(self.a_theta_dist['type'],self.a_theta_dist['parameters'],self.number_agents,round=self.a_theta_dist['round'],decimals=self.a_theta_dist['decimals'])
         return agentsTheta
 
     def _initialize_agents_sensitivity(self):
         """
-        Initialize agents sensitivity as a 1d tensor sampled from the specified initial sensitivity distribution
+        Initialize agent sensitivity as a 1d tensor sampled from the specified initial sensitivity distribution
         """
         agentsSensitivity = sample_distribution_tensor(self.sensitivity_dist['type'],self.sensitivity_dist['parameters'],self.number_agents,round=self.sensitivity_dist['round'],decimals=self.sensitivity_dist['decimals'])
         return agentsSensitivity
         
     def _initialize_agents_capital(self):
         """
-        Initialize agents captial as a 1d tensor sampled from the specified intial capital distribution
+        Initialize agent captial as a 1d tensor sampled from the specified initial capital distribution
         """
         agentsCapital = sample_distribution_tensor(self.capital_dist['type'],self.capital_dist['parameters'],self.number_agents,round=self.capital_dist['round'],decimals=self.capital_dist['decimals'])
         return agentsCapital
 
     def _initialize_agents_alpha(self):
         """
-        Initialize agents alpha as a 1d tensor sampled from the specified intial alpha distribution
+        Initialize agent alpha as a 1d tensor sampled from the specified initial alpha distribution
         """
         agentsAlpha = sample_distribution_tensor(self.alpha_dist['type'],self.alpha_dist['parameters'],self.number_agents,round=self.alpha_dist['round'],decimals=self.alpha_dist['decimals'])
         return agentsAlpha
 
     def _initialize_agents_lam(self):
         """
-        Initialize agents lambda as a 1d tensor sampled from the specified intial lambda distribution
+        Initialize agent lambda as a 1d tensor sampled from the specified initial lambda distribution
         """
         agentsLam = sample_distribution_tensor(self.lam_dist['type'],self.lam_dist['parameters'],self.number_agents,round=self.lam_dist['round'],decimals=self.lam_dist['decimals'])
         return agentsLam
 
     def _initialize_agents_sigma(self):
         """
-        Initialize agents sigma as a 1d tensor 
+        Initialize agent sigma as a 1d tensor 
         """
         agentsSigma = sample_distribution_tensor(self.sigma_dist['type'],self.sigma_dist['parameters'],self.number_agents,round=self.sigma_dist['round'],decimals=self.sigma_dist['decimals'])
         return agentsSigma
 
     def _initialize_agents_tec(self):
         """
-        Initialize the agents technology level distribution as 1d tensor sampled from the specified intial technology level distribution.
-        Initialize agents gamma and cost distributions according to their tec level and the spefied initial gamma and cost
+        Initialize the agent technology level distribution as 1d tensor sampled from the specified initial technology level distribution.
+        Initialize agent gamma and cost distributions according to tec level and the spefied initial gamma and cost
         values associated with that tech level
         """
         agentsTecLevel = sample_distribution_tensor(self.tec_dist['type'],self.tec_dist['parameters'],self.number_agents,round=self.tec_dist['round'],decimals=self.tec_dist['decimals'])
