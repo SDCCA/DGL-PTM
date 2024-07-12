@@ -78,7 +78,7 @@ class PovertyTrapModel(Model):
     default_model_parameters = {'number_agents': 100 , 
     "seed":0,
     'gamma_vals':torch.tensor([0.3,0.45]) , #for pseudo income
-    'sigma_dist': {'type':'uniform','parameters':[0.05,1.9],'round':True,'decimals':1},
+    'sigma_dist': {'type':'uniform','parameters':[0.05,1.94],'round':True,'decimals':1},
     'cost_vals': torch.tensor([0.,0.45]), #for pseudo income
     'tec_levels': torch.tensor([0,1]), #check if deletable
     'a_theta_dist': {'type':'uniform','parameters':[0.1,1],'round':False,'decimals':None},
@@ -86,7 +86,7 @@ class PovertyTrapModel(Model):
     'tec_dist': {'type':'bernoulli','parameters':[0.5,None],'round':False,'decimals':None}, 
     'capital_dist': {'type':'uniform','parameters':[0.1,10.],'round':False,'decimals':None}, 
     'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
-    'lam_dist': {'type':'uniform','parameters':[0.05,0.9],'round':True,'decimals':1},
+    'lam_dist': {'type':'uniform','parameters':[0.05,0.94],'round':True,'decimals':1},
     'initial_graph_type': 'barabasi-albert',
     'initial_graph_args': {'seed': 42, 'new_node_edges':1},
     'device': 'cpu',

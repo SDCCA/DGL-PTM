@@ -1,49 +1,18 @@
+
+
+
+
+
+
 number_agents: 100
+seed: 0
+device: cpu
 initial_graph_type: barabasi-albert
+initial_graph_args': 
+  seed: 0
+  new_node_edges: 1
 step_count: 0
 step_target: 20
-steering_parameters:
-  del_prob: 0.05
-  edata:
-  - all
-  epath: ./edge_data
-  mode: xarray
-  ndata:
-  - all
-  npath: ./agent_data.zarr
-  ratio: 0.1
-  wealth_method: singular_transfer
-  income_method: income_generation
-  consume_method: fitted_consumption
-  adapt_m:  
-    - 0.
-    - 0.5
-    - 0.9
-  adapt_cost:
-    - 0.
-    - 0.25
-    - 0.45
-  depreciation: 0.6
-  discount: 0.95
-  m_theta_dist': 
-    type: multinomial
-    parameters:
-    - [0.02 ,0.03, 0.05, 0.9]
-    - [0.7, 0.8, 0.9, 1]
-    round:  False
-    decimals: None
-  weight_a: 0.69
-  weight_b: 35
-  tech_gamma: 
-    - 0.3
-    - 0.35
-    - 0.45
-  tech_cost:  
-    - 0.
-    - 0.15
-    - 0.65
-  truncation_weight:  1.0e-10
-  step_type: custom
 alpha_dist:
   decimals: null
   parameters:
@@ -67,18 +36,17 @@ gamma_vals:
 lam_dist:
   decimals: 1
   parameters:
-  - 0.1
-  - 0.9
+  - 0.05
+  - 0.94
   round: true
   type: uniform
 sigma_dist: 
   type: uniform
   parameters:
-  - 0.1
-  - 1.9
+  - 0.05
+  - 1.94
   round:  true
   decimals: 1
-
 tec_dist:
   decimals: null
   parameters:
@@ -110,14 +78,57 @@ sensitivity_dist:
     - 1
   round: false
   type: uniform
-adapt_m: 
-  - 0.
-  - 0.5
-  - 0.9
-adapt_cost:
-  - 0
-  - 0.25
-  - 0.45
-depreciation: 0.6
-discount: 0.95
+steering_parameters:
+  del_prob: 0.05
+  noise_ratio: 0.05
+  local_ratio: 0.25
+  edata:
+  - all
+  epath: ./edge_data
+  mode: xarray
+  ndata:
+  - all
+  npath: ./agent_data.zarr
+  ratio: 0.1
+  wealth_method: singular_transfer
+  income_method: income_generation
+  consume_method: fitted_consumption
+  nn_path: None
+  adapt_m:  
+    - 0.
+    - 0.5
+    - 0.9
+  adapt_cost:
+    - 0.
+    - 0.25
+    - 0.45
+  depreciation: 0.6
+  discount: 0.95
+  m_theta_dist': 
+    type: multinomial
+    parameters:
+    - [0.02 ,0.03, 0.05, 0.9]
+    - [0.7, 0.8, 0.9, 1]
+    round:  False
+    decimals: None
+  m_attach_dist: 
+    type: uniform
+    parameters: 
+    - [0.001,1]
+    round: False
+    decimals: None
+  weight_a: 0.69
+  weight_b: 35
+  tech_gamma: 
+    - 0.3
+    - 0.35
+    - 0.45
+  tech_cost:  
+    - 0.
+    - 0.15
+    - 0.65
+  truncation_weight:  1.0e-10
+  step_type: default
+
+
 
