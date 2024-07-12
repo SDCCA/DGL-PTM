@@ -26,6 +26,18 @@ def sample_distribution_tensor(type, distParameters, nSamples, round=False, deci
         dist = torch.distributions.bernoulli.Bernoulli(probs=distParameters[0],logits=distParameters[1],validate_args=None).sample(torch.tensor([nSamples]))
     elif type == 'multinomial':
         dist = torch.gather(torch.Tensor(distParameters[1]), 0, torch.multinomial(torch.tensor(distParameters[0]), nSamples, replacement=True))
+    elif type == 'truncnorm':
+        # distParameters are mean, standard deviation, min, and max. cdf(x)=(1+erf(x/2^0.5))/2. cdf^-1(x)=2^0.5*erfinv(2*x-1).
+        trunc_val_a = (distParameters[2]-distParameters[0])/distParameters[1]
+        trunc_val_b = (distParameters-distParameters[0])/distParameters[1]
+        cdf_min = (1 + torch.erf(trunc_val_a / torch.sqrt(torch.tensor(2.0))))/2
+        cdf_max = (1 + torch.erf(trunc_val_b / torch.sqrt(torch.tensor(2.0))))/2
+
+        uniform_samples = torch.rand(size)
+        sample_ppf = torch.sqrt(torch.tensor(2.0)) * torch.erfinv(2 *(cdf_min + (cdf_max - cdf_min) * uniform_samples) - 1)
+
+        dist = destParameters[0] + destParameters[1] * sample_ppf
+    
 
     else:
         raise NotImplementedError('Currently only uniform, normal, multinomial, and bernoulli distributions are supported')
@@ -66,7 +78,7 @@ class PovertyTrapModel(Model):
     default_model_parameters = {'number_agents': 100 , 
     "seed":0,
     'gamma_vals':torch.tensor([0.3,0.45]) , #for pseudo income
-    'sigma_dist': {'type':'uniform','parameters':[0.1,1.9],'round':True,'decimals':1},
+    'sigma_dist': {'type':'uniform','parameters':[0.05,1.9],'round':True,'decimals':1},
     'cost_vals': torch.tensor([0.,0.45]), #for pseudo income
     'tec_levels': torch.tensor([0,1]), #check if deletable
     'a_theta_dist': {'type':'uniform','parameters':[0.1,1],'round':False,'decimals':None},
@@ -74,7 +86,7 @@ class PovertyTrapModel(Model):
     'tec_dist': {'type':'bernoulli','parameters':[0.5,None],'round':False,'decimals':None}, 
     'capital_dist': {'type':'uniform','parameters':[0.1,10.],'round':False,'decimals':None}, 
     'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
-    'lam_dist': {'type':'uniform','parameters':[0.1,0.9],'round':True,'decimals':1},
+    'lam_dist': {'type':'uniform','parameters':[0.05,0.9],'round':True,'decimals':1},
     'initial_graph_type': 'barabasi-albert',
     'initial_graph_args': {'seed': 42, 'new_node_edges':1},
     'device': 'cpu',
@@ -198,8 +210,9 @@ class PovertyTrapModel(Model):
         """
 
         agent_graph = network_creation(self.number_agents, self.initial_graph_type, **self.initial_graph_args)
-        self.model_graph = agent_graph
+        self.model_graph = agent_graph.to(self.device)
         print(f'Created graph with {self.model_graph.number_of_nodes()} agents.')
+        print(f"At initialization, graph has {torch.sum(agent_graph.edges(order='eid')[0]==agent_graph.edges(order='eid')[1])} auto edges and {agent_graph.edges(order='eid')[0].size(0)-torch.unique(torch.stack((agent_graph.edges(order='eid')[0],agent_graph.edges(order='eid')[1]), dim=1),dim=0).size(0)} duplicate edges.")
 
     def initialize_model_properties(self):
         """
@@ -235,21 +248,21 @@ class PovertyTrapModel(Model):
         agentsTecLevel, agentsGamma, agentsCost = self._initialize_agents_tec()
 
         if isinstance(self.model_graph,dgl.DGLGraph):
-            self.model_graph.ndata['wealth'] = agentsCapital
-            self.model_graph.ndata['alpha'] = agentsAlpha
-            self.model_graph.ndata['theta'] = agentsTheta
-            self.model_graph.ndata['sensitivity'] = agentsSensitivity
-            self.model_graph.ndata['lambda'] = agentsLam
-            self.model_graph.ndata['sigma'] = agentsSigma
-            self.model_graph.ndata['tec'] = agentsTecLevel
-            self.model_graph.ndata['gamma'] = agentsGamma
-            self.model_graph.ndata['cost'] = agentsCost
-            self.model_graph.ndata['a_table'] = agentsAdaptTable
-            self.model_graph.ndata['wealth_consumption'] = torch.zeros(self.model_graph.num_nodes())
-            self.model_graph.ndata['i_a'] = torch.zeros(self.model_graph.num_nodes())
-            self.model_graph.ndata['m'] = torch.zeros(self.model_graph.num_nodes())
-            self.model_graph.ndata['zeros'] = torch.zeros(self.model_graph.num_nodes())
-            self.model_graph.ndata['ones'] = torch.ones(self.model_graph.num_nodes())
+            self.model_graph.ndata['wealth'] = agentsCapital.to(self.device)
+            self.model_graph.ndata['alpha'] = agentsAlpha.to(self.device)
+            self.model_graph.ndata['theta'] = agentsTheta.to(self.device)
+            self.model_graph.ndata['sensitivity'] = agentsSensitivity.to(self.device)
+            self.model_graph.ndata['lambda'] = agentsLam.to(self.device)
+            self.model_graph.ndata['sigma'] = agentsSigma.to(self.device)
+            self.model_graph.ndata['tec'] = agentsTecLevel.to(self.device)
+            self.model_graph.ndata['gamma'] = agentsGamma.to(self.device)
+            self.model_graph.ndata['cost'] = agentsCost.to(self.device)
+            self.model_graph.ndata['a_table'] = agentsAdaptTable.to(self.device)
+            self.model_graph.ndata['wealth_consumption'] = torch.zeros(self.model_graph.num_nodes()).to(self.device)
+            self.model_graph.ndata['i_a'] = torch.zeros(self.model_graph.num_nodes()).to(self.device)
+            self.model_graph.ndata['m'] = torch.zeros(self.model_graph.num_nodes()).to(self.device)
+            self.model_graph.ndata['zeros'] = torch.zeros(self.model_graph.num_nodes()).to(self.device)
+            self.model_graph.ndata['ones'] = torch.ones(self.model_graph.num_nodes()).to(self.device)
         else:
             raise RuntimeError('model graph must be a defined DGLgraph object. Consder running `create_network` before initializing agent properties')
 

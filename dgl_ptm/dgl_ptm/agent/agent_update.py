@@ -15,7 +15,7 @@ def agent_update(model_graph, model_params, device=None, timestep=None, method='
     elif method == 'consumption':
         _agent_consumption_update(model_graph, model_params,device)
     elif method == 'income':
-        _agent_income_update(model_graph,model_params)
+        _agent_income_update(model_graph,device,model_params)
     else:
         raise NotImplementedError(f"Unrecognized agent update type {method} attempted during time step implementation.'")
 
@@ -56,6 +56,6 @@ def _agent_consumption_update(model_graph, model_params, device):
     '''Updates agent consumption based on method specified in model parameters.'''
     wealth_consumption(model_graph, model_params, device, method=model_params['consume_method'])
 
-def _agent_income_update(model_graph,model_params):
+def _agent_income_update(model_graph,device, model_params):
     '''Updates agent income based on method specified in model parameters.'''
-    income_generation(model_graph,model_params,method=model_params['income_method'])
+    income_generation(model_graph,device,model_params,method=model_params['income_method'])

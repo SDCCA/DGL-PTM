@@ -3,7 +3,7 @@ import dgl
 from dgl.sparse import spmatrix
 
 
-def local_attachment_homophily(graph,n_FoF_links, homophily_parameter = None, characteristic_distance = None, truncation_weight = None):
+def local_attachment_homophily(graph,device,n_FoF_links, homophily_parameter = None, characteristic_distance = None, truncation_weight = None):
     '''This function attempts to form links between two agents connected by a common neighbor
     by randomly selecting 2 neighbors of randomly selected nodes with 2 or more neighbors, 
     calculating the potential homophily weight of the new edge and forming the edge if the
@@ -21,15 +21,15 @@ def local_attachment_homophily(graph,n_FoF_links, homophily_parameter = None, ch
 
     # Sample 2 neighbors of bridge/connecting nodes and remove any duplicates or false autopairs
     sample = dgl.sampling.sample_neighbors(graph,connecting_nodes, 2 , replace= False, edge_dir="out")
-    node_pairs = torch.unique(sample.edges(order='eid')[1].view(-1, 2), dim=0)
+    node_pairs,_ = torch.sort(sample.edges(order='eid')[1].view(-1, 2), dim=1)
+    node_pairs = torch.unique(node_pairs, dim=0)
     node_pairs = node_pairs[(node_pairs[:, 0] != node_pairs[:, 1])]
 
     # Extract node pairs and exclude existing edges
     existing_connections = graph.has_edges_between(node_pairs[:,0], node_pairs[:,1])
     even_indices_tensor = node_pairs[:,0][~existing_connections]
     odd_indices_tensor = node_pairs[:,1][~existing_connections]
-    prob_tensor = torch.rand(even_indices_tensor.size(0))
- 
+    prob_tensor = torch.rand(even_indices_tensor.size(0)).to(device)
 
     # Compare random number for each prospective link to projected homophily edge weight
     wealth_diff = sample.ndata['wealth'][even_indices_tensor] - sample.ndata['wealth'][odd_indices_tensor]

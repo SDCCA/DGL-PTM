@@ -21,6 +21,7 @@ DGL_testing/edge_data_3/
 DGL_testing/edge_data_4/
 DGL_testing/scaletest_optmization.ipynb
 DGL_testing/testing_optmization.ipynb
+PrelimScalingCodes/
 *slurm-*
 
 *DS_Store
