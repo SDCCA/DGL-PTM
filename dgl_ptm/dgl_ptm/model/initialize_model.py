@@ -238,8 +238,8 @@ class PovertyTrapModel(Model):
         self.model_data['modelTheta'] = self.model_data['modelTheta'].to(self.device)
 
         weight_update(self.model_graph, self.device, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
-        data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
-                    edata = self.steering_parameters['edata'], format = self.steering_parameters['format'], mode = self.steering_parameters['mode'])
+        #data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
+                    #edata = self.steering_parameters['edata'], format = self.steering_parameters['format'], mode = self.steering_parameters['mode'])
 
         # store random generator state
         self.generator_state = generator.get_state()
@@ -380,9 +380,9 @@ class PovertyTrapModel(Model):
 
     def step(self):
         try:
-            self.step_count +=1
             print(f'performing step {self.step_count} of {self.step_target}')
             ptm_step(self.model_graph, self.device, self.model_data, self.step_count, self.steering_parameters)
+            self.step_count +=1
 
             # number of edges(links) in the network
             self.number_of_edges = self.model_graph.number_of_edges()
