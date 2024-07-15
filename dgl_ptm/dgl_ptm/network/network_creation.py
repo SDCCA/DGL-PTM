@@ -23,6 +23,7 @@ def network_creation(num_agents, method, **kwargs):
     if (method == 'barabasi-albert'):
         if 'seed' in kwargs.keys():
             seed  = kwargs['seed']
+            print(f"using seed {seed} for network creation.")
         else:
             seed = random.randint(1, 100000)
         

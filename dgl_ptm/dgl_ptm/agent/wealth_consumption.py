@@ -230,6 +230,7 @@ def  _nn_bellman_wealth_consumption(model_graph,model_params, device):
     
     estimator,scale = load_consumption_model(model_params['nn_path'],device)  
 
+    estimator.to(device)
     estimator.eval()
 
     input = torch.cat((model_graph.ndata['alpha'].unsqueeze(1), model_graph.ndata['wealth'].unsqueeze(1), model_graph.ndata['sigma'].unsqueeze(1), model_graph.ndata['theta'].unsqueeze(1)), dim=1) 

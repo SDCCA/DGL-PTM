@@ -9,7 +9,7 @@ def load_consumption_model(model_path,device):
     #print("entered load_consumption_model")
 
     model_path="/Users/victoria/Documents/Scripts/Python/DGL-PTM/DGL_testing/nn_data/both_PudgeFiveLayer_1024/0409_175055/model_best.pth"
-    modelinfo = torch.load(model_path, map_location=torch.device('cpu'))
+    modelinfo = torch.load(model_path, map_location=torch.device(device))
 
 
     #print("loaded info")

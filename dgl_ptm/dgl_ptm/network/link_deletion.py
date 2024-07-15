@@ -20,6 +20,7 @@ def link_deletion(agent_graph, method: str, threshold: float):
                 "probability": the probability for deleting any edge,
                 "weighted": the base probability for deleting any edge,
                 "size": the number of edges to delete, or
+
                 "multinomial": the number of edges to delete.
 
         Output:
@@ -54,7 +55,6 @@ def _select_edges(agent_graph, method: str, threshold: float):
     '''
     upper_triangular = _sparse_upper_triangular(agent_graph.adj())
 
-    mask_edges
     if method == "probability":
         mask_edges = torch.rand(upper_triangular.val.size()[0]) < threshold
     elif method == "weighted":
