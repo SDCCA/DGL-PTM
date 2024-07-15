@@ -31,7 +31,7 @@ def ptm_step(agent_graph, device, timestep, params):
         
         #Link/edge manipulation
         local_attachment(agent_graph, n_FoF_links = 1, edge_prop = 'weight', p_attach=1. )
-        link_deletion(agent_graph, del_prob = params['del_prob'])
+        link_deletion(agent_graph, method = params['del_method'], threshold = params['del_threshold'])
         global_attachment(agent_graph, ratio = params['ratio'])
         
         #Update agent states
@@ -62,10 +62,11 @@ def ptm_step(agent_graph, device, timestep, params):
         random_edge_noise(agent_graph, device, n_perturbances = int(params['noise_ratio']*agent_graph.number_of_nodes()))
         local_attachment_homophily(agent_graph, device, n_FoF_links = int(params['local_ratio']*agent_graph.number_of_nodes()), homophily_parameter = params['weight_a'], characteristic_distance = params['weight_b'],truncation_weight = params['truncation_weight'])
         current_edges = agent_graph.number_of_edges()
-        link_deletion(agent_graph, method = "size" , threshold = int((current_edges-start_edges)/2))
+        link_deletion(agent_graph, method = params['del_method'], threshold = params['del_threshold'])
 
         #Wealth transfer
         trade_money(agent_graph, device, method = params['wealth_method'])
+
 
         #Update agent states
         agent_update(agent_graph, params, timestep=timestep, method ='theta')

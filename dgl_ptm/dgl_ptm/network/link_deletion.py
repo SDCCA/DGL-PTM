@@ -13,13 +13,14 @@ def link_deletion(agent_graph, method: str, threshold: float):
             method: deletion method. Must be either
                 "probability": each edge selected idependently with equal probability,
                 "weighted": each edge selected independently with weighted probability,
-                "size": fixed number of edges selected with equal probability,
+                "size": fixed number of edges selected with equal probability, or
                 "multinomial": fixed number of edges selected with weighted probability.
             threshold: Threshold for deleting an existing edge between two agent nodes.
                 The interpretation of this threshold depends on the deletion method:
                 "probability": the probability for deleting any edge,
                 "weighted": the base probability for deleting any edge,
-                "size": the number of edges to delete,
+                "size": the number of edges to delete, or
+
                 "multinomial": the number of edges to delete.
 
         Output:
@@ -40,13 +41,13 @@ def _select_edges(agent_graph, method: str, threshold: float):
             method: deletion method. Must be either
                 "probability": each edge selected idependently with equal probability,
                 "weighted": each edge selected independently with weighted probability,
-                "size": fixed number of edges selected with equal probability,
+                "size": fixed number of edges selected with equal probability, or
                 "multinomial": fixed number of edges selected with weighted probability.
             threshold: Threshold for deleting an existing edge between two agent nodes.
                 The interpretation of this threshold depends on the deletion method:
                 "probability": the probability for deleting any edge,
                 "weighted": the base probability for deleting any edge,
-                "special": the number of edges to delete, or
+                "size": the number of edges to delete, or
                 "multinomial": the number of edges to delete.
 
         Return:
@@ -54,7 +55,6 @@ def _select_edges(agent_graph, method: str, threshold: float):
     '''
     upper_triangular = _sparse_upper_triangular(agent_graph.adj())
 
-    #mask_edges
     if method == "probability":
         mask_edges = torch.rand(upper_triangular.val.size()[0]) < threshold
     elif method == "weighted":
