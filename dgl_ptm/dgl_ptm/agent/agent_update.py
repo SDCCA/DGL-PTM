@@ -4,7 +4,8 @@ from dgl_ptm.agent.agent_perception import agent_perception_update
 from dgl_ptm.agent.capital_update import capital_update
 import torch
 
-def agent_update(model_graph, device, model_params, model_data=None, timestep=None, method='default'):
+
+def agent_update(model_graph, model_params, device=None, timestep=None, method='pseudo'):
     '''
     agent_update - Updates agent attributes
     '''
@@ -13,12 +14,49 @@ def agent_update(model_graph, device, model_params, model_data=None, timestep=No
     elif method == 'theta':
         agent_perception_update(model_graph, model_data, timestep, method=model_params['perception_method'])
     elif method == 'consumption':
-        wealth_consumption(model_graph, model_params,method=model_params['consume_method'])
+        _agent_consumption_update(model_graph, model_params,device)
     elif method == 'income':
-        # device is passed to this function as variables need to be moved from cpu to gpu within function
-        # depending on user choice of device.
-        income_generation(model_graph, device, model_params,method=model_params['income_method'])
+        _agent_income_update(model_graph,device,model_params)
     else:
-        raise NotImplementedError("Incorrect method received. \
-                         Method needs to be one of: 'capital', 'theta', 'consumption', or 'income'")
+        raise NotImplementedError(f"Unrecognized agent update type {method} attempted during time step implementation.'")
 
+def _pseudo_agent_update(model_graph,model_params): 
+    '''
+    agent_update - Updates the state of the agent based on income generation and money trades
+    '''
+    model_graph.ndata['wealth'] = model_graph.ndata['wealth'] + model_graph.ndata['net_trade']
+    income_generation(model_graph, model_params, method = model_params['income_method'])
+    wealth_consumption(model_graph, method=model_params['consume_method'])
+    model_graph.ndata['wealth'] = model_graph.ndata['wealth'] + model_graph.ndata['income'] - model_graph.ndata['wealth_consumption']
+
+
+
+def _agent_capital_update(model_graph,model_params,timestep):
+    
+    
+    #formula for k_t+1 is applied at the beginning of each time step 
+    # k_t+1 becomes the new k_t
+    
+    k,c,i_a,m = model_graph.ndata['wealth'],model_graph.ndata['wealth_consumption'],model_graph.ndata['i_a'],model_graph.ndata['m']
+    
+    global_θ =model_params['modelTheta'][timestep]
+    𝛿=model_params['depreciation']
+
+    # k_t+1 = θ(f(k,α) - c - i_a + (1-𝛿)k_t)
+    model_graph.ndata['wealth'] = (global_θ + m * (1-global_θ)) * (model_graph.ndata['income'] - c - i_a + (1-𝛿) * k)
+    #self.connections=0
+    #self.trades=0
+    #self.net_traded=model_graph.ndata['wealth']
+    
+def _agent_theta_update(model_graph,model_params,timestep):
+    #updates agent perception of theta based on observation and sensitivity
+    global_θ =model_params['modelTheta'][timestep]
+    model_graph.ndata['theta'] = model_graph.ndata['theta'] * (1-model_graph.ndata['sensitivity']) + global_θ * model_graph.ndata['sensitivity']
+
+def _agent_consumption_update(model_graph, model_params, device):
+    '''Updates agent consumption based on method specified in model parameters.'''
+    wealth_consumption(model_graph, model_params, device, method=model_params['consume_method'])
+
+def _agent_income_update(model_graph,device, model_params):
+    '''Updates agent income based on method specified in model parameters.'''
+    income_generation(model_graph,device,model_params,method=model_params['income_method'])
