@@ -1,6 +1,7 @@
 import dgl
 import torch
 
+
 def link_deletion(agent_graph, method: str, threshold: float):
     '''
         link_deletion - deletes links between agents according to a selected deletion method.
@@ -68,6 +69,7 @@ def _select_edges(agent_graph, method: str, threshold: float):
     else:
         raise NotImplementedError('Currently only "probability" and "size" deletion methods are supported')
         mask_edges = torch.zeros(upper_triangular.val.size()[0])
+
 
     deletion_matrix_upper_tri = _sparse_matrix_apply_mask(upper_triangular, mask_edges)
     deletion_matrix = _symmetrical_from_upper_triangular(deletion_matrix_upper_tri)

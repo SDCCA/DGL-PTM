@@ -3,6 +3,7 @@ import dgl
 from dgl.sparse import spmatrix
 
 # TODO: check readability variables.
+
 # TODO: confirm that the behavior for sum(weight)=0 agents is the same as for plain local attachment
 def local_attachment_tensor(graph,n_FoF_links,edge_prop=None,p_attach=1.):
     print(n_FoF_links)

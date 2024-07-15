@@ -1,17 +1,18 @@
 from dgl_ptm.agent.income_generation import income_generation
 from dgl_ptm.agent.wealth_consumption import wealth_consumption
+from dgl_ptm.agent.agent_perception import agent_perception_update
+from dgl_ptm.agent.capital_update import capital_update
 import torch
+
 
 def agent_update(model_graph, model_params, device=None, timestep=None, method='pseudo'):
     '''
     agent_update - Updates agent attributes
     '''
-    if method=='pseudo':
-        _pseudo_agent_update(model_graph,model_params)
-    elif method == 'capital':
-        _agent_capital_update(model_graph,model_params,timestep)
+    if method == 'capital':
+        capital_update(model_graph, model_params, model_data, timestep, method=model_params['capital_update_method'])
     elif method == 'theta':
-        _agent_theta_update(model_graph,model_params,timestep)
+        agent_perception_update(model_graph, model_data, timestep, method=model_params['perception_method'])
     elif method == 'consumption':
         _agent_consumption_update(model_graph, model_params,device)
     elif method == 'income':
