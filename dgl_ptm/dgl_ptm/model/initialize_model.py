@@ -242,7 +242,7 @@ class PovertyTrapModel(Model):
             self.model_graph.ndata['zeros'] = torch.zeros(self.model_graph.num_nodes())
             self.model_graph.ndata['ones'] = torch.ones(self.model_graph.num_nodes())
         else:
-            raise RuntimeError('model graph must be a defined DGLgraph object. Consder running `create_network` before initializing agent properties')
+            raise RuntimeError('model graph must be a defined as DGLgraph object. Consider running `create_network` before initializing agent properties')
 
 
     def _initialize_agents_adapttable(self):
