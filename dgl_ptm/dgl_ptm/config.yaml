@@ -78,14 +78,13 @@ steering_parameters:
   ndata: ['all_except',['a_table']]
   npath: './agent_data.zarr'
   ratio: 0.1
-  wealth_method: singular_transfer
+  wealth_method: weighted_transfer
   ncome_method: income_generation
-  consume_method: fitted_consumption
+  consume_method: estimated_bellman_consumption
   nn_path: None
   capital_update_method: default
   characteristic_distance: 35
   homophily_parameter: 0.69
-  perception_method: default
   adapt_m:
     - 0.
     - 0.5

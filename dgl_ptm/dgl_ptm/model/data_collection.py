@@ -42,7 +42,7 @@ def _node_property_collector(agent_graph, npath, ndata, timestep, format, mode):
             for prop in ndata:
                 _check_nprop_in_graph(agent_graph, prop)
                 agent_data_cpu=agent_graph.ndata[prop][:,None].cpu()
-                agent_data_instance = agent_data_instance.assign(prop=(['n_agents','ntime'], agent_data_cpu.numpy()))
+                agent_data_instance = agent_data_instance.assign(prop=(['n_agents','n_time'], agent_data_cpu.numpy()))
                 #below code didn't work above is a fix, but issue about gpu to cpu transfer remains. also why must copies be made rather than methods called
                # agent_data_instance = agent_data_instance.assign(prop=(['n_agents','n_time'], da.from_array(agent_graph.ndata[prop][:,None].cpu().numpy())))
                 agent_data_instance = agent_data_instance.rename(name_dict={'prop':prop})

@@ -9,7 +9,7 @@ def income_generation(model_graph, device, params=None, method='pseudo_income_ge
     elif method == 'income_generation':
         _income_generator(model_graph,device, params)
     else:
-        raise NotImplementedError("Incorrect income generation method received.)
+        raise NotImplementedError("Incorrect income generation method received.")
     
 
 def _pseudo_income_generator(model_graph):

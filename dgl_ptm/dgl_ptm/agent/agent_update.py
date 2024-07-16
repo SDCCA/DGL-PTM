@@ -1,6 +1,5 @@
 from dgl_ptm.agent.income_generation import income_generation
 from dgl_ptm.agent.wealth_consumption import wealth_consumption
-from dgl_ptm.agent.agent_perception import agent_perception_update
 from dgl_ptm.agent.capital_update import capital_update
 import torch
 
@@ -10,13 +9,15 @@ def agent_update(model_graph, model_params, device=None, timestep=None, method='
     agent_update - Updates agent attributes
     '''
     if method == 'capital':
-        capital_update(model_graph, model_params, model_data, timestep, method=model_params['capital_update_method'])
+        _agent_capital_update(model_graph, model_params, timestep)
     elif method == 'theta':
-        agent_perception_update(model_graph, model_data, timestep, method=model_params['perception_method'])
+        _agent_theta_update(model_graph, model_params, timestep)
     elif method == 'consumption':
         _agent_consumption_update(model_graph, model_params,device)
     elif method == 'income':
-        _agent_income_update(model_graph,device,model_params)
+        _agent_income_update(model_graph,model_params,device)
+    elif method == 'pseudo':
+        _pseudo_agent_update(model_graph,model_params,device)
     else:
         raise NotImplementedError(f"Unrecognized agent update type {method} attempted during time step implementation.'")
 
@@ -57,6 +58,6 @@ def _agent_consumption_update(model_graph, model_params, device):
     '''Updates agent consumption based on method specified in model parameters.'''
     wealth_consumption(model_graph, model_params, device, method=model_params['consume_method'])
 
-def _agent_income_update(model_graph,device, model_params):
+def _agent_income_update(model_graph, model_params, device):
     '''Updates agent income based on method specified in model parameters.'''
     income_generation(model_graph,device,model_params,method=model_params['income_method'])

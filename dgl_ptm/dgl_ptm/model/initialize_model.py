@@ -91,7 +91,7 @@ class PovertyTrapModel(Model):
     Poverty Trap model as derived model class
 
     """
-"""
+    """
     #default values as class variable 
     default_model_parameters = {'number_agents': 100 , 
     'seed':0,
@@ -135,7 +135,7 @@ class PovertyTrapModel(Model):
                             'truncation_weight':1.0e-10,
                             'step_type':'default'}}
 
-"""
+    """
 
     def __init__(self,*, model_identifier, restart=False, savestate=10):
         """
@@ -167,11 +167,11 @@ class PovertyTrapModel(Model):
         self.alpha_dist = CONFIG.alpha_dist
         self.lambda_dist = CONFIG.lambda_dist
         self.initial_graph_type = CONFIG.initial_graph_type
+        self.initial_graph_args = CONFIG.initial_graph_args
         self.model_graph = CONFIG.model_graph
         self.step_count = CONFIG.step_count
         self.step_target = CONFIG.step_target
         self.steering_parameters = CONFIG.steering_parameters
-        self.model_data = CONFIG.model_data
 
     def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
         """
@@ -235,7 +235,7 @@ class PovertyTrapModel(Model):
         self.initialize_agent_properties()
         self.model_graph = self.model_graph.to(self.device)
         self.initialize_model_properties()
-        self.model_data['modelTheta'] = self.model_data['modelTheta'].to(self.device)
+        self.steering_parameters['modelTheta'] = self.steering_parameters['modelTheta'].to(self.device)
 
         weight_update(self.model_graph, self.device, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
         #data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
@@ -265,8 +265,8 @@ class PovertyTrapModel(Model):
         """
         modelTheta = self._initialize_model_theta()
         self.steering_parameters['modelTheta'] = modelTheta
-        attachProb = self._initialize_attach_prob()
-        self.steering_parameters['attachProb'] = attachProb
+        #attachProb = self._initialize_attach_prob()
+        #self.steering_parameters['attachProb'] = attachProb
 
     def _initialize_model_theta(self):
         modelTheta = sample_distribution_tensor(self.steering_parameters['m_theta_dist']['type'],self.steering_parameters['m_theta_dist']['parameters'],self.step_target,round=self.steering_parameters['m_theta_dist']['round'],decimals=self.steering_parameters['m_theta_dist']['decimals'])
@@ -381,7 +381,7 @@ class PovertyTrapModel(Model):
     def step(self):
         try:
             print(f'performing step {self.step_count} of {self.step_target}')
-            ptm_step(self.model_graph, self.device, self.model_data, self.step_count, self.steering_parameters)
+            ptm_step(self.model_graph, self.device, self.step_count, self.steering_parameters)
             self.step_count +=1
 
             # number of edges(links) in the network
@@ -397,7 +397,7 @@ class PovertyTrapModel(Model):
         if self.restart:
             self.inputs = _load_model(f'./{self._model_identifier}')
             self.model_graph = copy.deepcopy(self.inputs["model_graph"])
-            self.model_data = self.inputs["model_data"]
+            #self.model_data = self.inputs["model_data"]
             self.generator_state = self.inputs["generator_state"]
             self.step_count = self.inputs["step_count"]
 
@@ -410,7 +410,7 @@ class PovertyTrapModel(Model):
             if self.savestate and self.step_count % self.savestate == 0:
                 self.inputs = {
                     'model_graph': copy.deepcopy(self.model_graph),
-                    'model_data': copy.deepcopy(self.model_data),
+                    #'model_data': copy.deepcopy(self.model_data),
                     'generator_state': generator.get_state(),
                     'step_count': self.step_count
                 }
@@ -429,8 +429,8 @@ def _save_model(path, inputs):
         pickle.dump([inputs["generator_state"], inputs["step_count"]], file)
 
     # save model_data
-    with open(Path(path) / "model_data.bin", 'wb') as file:
-        pickle.dump([inputs["model_data"], inputs["step_count"]], file)
+    #with open(Path(path) / "model_data.bin", 'wb') as file:
+    #    pickle.dump([inputs["model_data"], inputs["step_count"]], file)
 
 
 def _load_model(path):
@@ -452,16 +452,16 @@ def _load_model(path):
         generator, generator_step = pickle.load(file)
 
     # Load model_data
-    path_model_data = Path(path) / "model_data.bin"
-    if not path_model_data.is_file():
-        raise ValueError(f'The path {path_model_data} is not a file.')
+    #path_model_data = Path(path) / "model_data.bin"
+    #if not path_model_data.is_file():
+    #    raise ValueError(f'The path {path_model_data} is not a file.')
 
-    with open(path_model_data, 'rb') as file:
-        data, data_step = pickle.load(file)
+    #with open(path_model_data, 'rb') as file:
+    #    data, data_step = pickle.load(file)
 
     # Check if graph_step, generator_step and data_step are the same
-    if graph_step != generator_step or graph_step != data_step:
-        msg = 'The step count in the model_graph, generator_state and model_data are not the same.'
+    if graph_step != generator_step: #or graph_step != data_step:
+        msg = 'The step count in the model_graph and generator_state are not the same.'# and model_data are not the same.'
         raise ValueError(msg)
 
     # Show which step is loaded
@@ -469,7 +469,7 @@ def _load_model(path):
 
     inputs = {
         'model_graph': graph,
-        'model_data': data,
+        #'model_data': data,
         'generator_state': generator,
         'step_count': data_step
     }

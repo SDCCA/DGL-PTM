@@ -39,7 +39,7 @@ def ptm_step(agent_graph, device, timestep, params):
         agent_update(agent_graph, params)
 
         #Weight update
-        weight_update(agent_graph, a = params['homophily_parameter'], b = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
+        weight_update(agent_graph, homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
 
         #Data collection and storage
         data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 
@@ -55,13 +55,13 @@ def ptm_step(agent_graph, device, timestep, params):
             agent_update(agent_graph, params, timestep=timestep, method = 'capital')
         
         #Weight update
-        weight_update(agent_graph, device, homophily_parameter = params['weight_a'], characteristic_distance = params['weight_b'],truncation_weight = params['truncation_weight'])
+        weight_update(agent_graph, device, homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
 
         #Link/edge manipulation
         start_edges = agent_graph.number_of_edges()
         print(f"Initial edges: {start_edges}")
         random_edge_noise(agent_graph, device, n_perturbances = int(params['noise_ratio']*agent_graph.number_of_nodes()))
-        local_attachment_homophily(agent_graph, device, n_FoF_links = int(params['local_ratio']*agent_graph.number_of_nodes()), homophily_parameter = params['weight_a'], characteristic_distance = params['weight_b'],truncation_weight = params['truncation_weight'])
+        local_attachment_homophily(agent_graph, device, n_FoF_links = int(params['local_ratio']*agent_graph.number_of_nodes()), homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
         threshold = int((agent_graph.number_of_edges()-start_edges)/2)
         link_deletion(agent_graph, method = params['del_method'], threshold = threshold)
 

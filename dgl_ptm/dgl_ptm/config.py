@@ -35,21 +35,19 @@ class MThetaDist(BaseModel):
 
 class SteeringParams(BaseModel):
     """Base class for steering parameters."""
-    deletion_prob: float = 0.05
     edata: List[str] = ["all"]
     epath: str = "./edge_data"
     format: str = "xarray"
     mode: str = "w"
     ndata: List[Union[str, List[str]]] = ["all_except", ["a_table"]]
     npath: str = "./agent_data.zarr"
-    ratio: float = 0.1
     wealth_method: str = "singular_transfer"
     income_method: str = "default"
     consume_method: str = "default"
+    nn_path: str = "default"
     capital_update_method: str = "default"
-    characteristic_distance: int = 35
-    homophily_parameter: float = 0.69
-    perception_method: str = "default"
+    characteristic_distance: Union[int,float] = 35
+    homophily_parameter: Union[int,float] = 0.69
     adapt_m: List[float] = [0.0, 0.5, 0.9]
     adapt_cost: List[float] = [0.0, 0.25, 0.45]
     depreciation: float = 0.6
@@ -57,6 +55,10 @@ class SteeringParams(BaseModel):
     m_theta_dist: MThetaDist = MThetaDist()
     tech_gamma: List[float] = [0.3, 0.35, 0.45]
     tech_cost: List[float] = [0.0, 0.15, 0.65]
+    del_method: str = 'prob'
+    del_threshold: Optional[Union[int, float]] = 0.05
+    noise_ratio: float = 0.05
+    local_ratio: float = 0.25
     truncation_weight: float = 1.0e-10
     step_type: str = "custom"
 
@@ -79,6 +81,13 @@ class SteeringParams(BaseModel):
     # Make sure pydantic validates the default values
     model_config = ConfigDict(validate_default = True)
 
+class InitialGraphArgs(BaseModel):
+    """Base class for initial graph arguments."""
+    seed: int = 100
+    new_node_edges: int = 1
+
+    # Make sure pydantic validates the default values
+    model_config = ConfigDict(validate_default = True)
 
 class AlphaDist(BaseModel):
     """Base class for alpha distribution."""
@@ -189,9 +198,10 @@ class Config(BaseModel):
     """Base class for configuration parameters."""
     model_identifier: str = Field("test", alias='_model_identifier') # because pydantic does not like underscores
     device: str = "cpu"
+    seed: int = 42
     number_agents: PositiveInt = 100
     initial_graph_type: str = "barabasi-albert"
-    model_data: dict = {} # TODO: might be possible to move it from config to model
+    initial_graph_args: InitialGraphArgs = InitialGraphArgs()
     model_graph: object = None # TODO: might be possible to move it from config to model
     step_count: int = 0
     step_target: PositiveInt = 5
