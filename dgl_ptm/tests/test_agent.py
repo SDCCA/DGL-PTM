@@ -125,7 +125,7 @@ class TestWealthConsumption:
         wealth_consumption(
             model.model_graph,
             model.steering_parameters,
-            method="default"
+            method='fitted_consumption'
             )
 
         # assert _fitted_agent_wealth_consumption was called
