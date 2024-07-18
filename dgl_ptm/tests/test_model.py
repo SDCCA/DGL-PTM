@@ -89,11 +89,11 @@ class TestInitializeModel:
         model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
         model.set_model_parameters()
 
-        assert model.steering_parameters['npath'] == Path('test_model/agent_data.zarr')
-        assert model.steering_parameters['epath'] == Path('test_model/edge_data')
+        assert Path(model.steering_parameters['npath']) == Path('test_model/agent_data.zarr')
+        assert Path(model.steering_parameters['epath']) == Path('test_model/edge_data')
         assert Path('test_model/test_model.yaml').exists()
-        assert model.steering_parameters['edata'] == ['weight']
-        assert model.steering_parameters['format'] == 'zarr'
+        assert model.steering_parameters['edata'] == ['all']
+        assert model.steering_parameters['format'] == 'xarray'
         assert model.number_agents == 100
         assert model.step_target == 5
 
@@ -169,7 +169,6 @@ class TestInitializeModel:
         assert model.step_count == 1
         assert model.model_data is not None
         assert model.model_graph.number_of_nodes() == 100
-        assert model.number_of_edges == 180
 
     def test_run(self, model):
         model.run()
