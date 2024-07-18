@@ -466,12 +466,12 @@ def _load_model(path):
         raise ValueError(msg)
 
     # Show which step is loaded
-    logger.warning(f'Loading model state from step {data_step}.')
+    logger.warning(f'Loading model state from step {generator_step}.')
 
     inputs = {
         'model_graph': graph,
         #'model_data': data,
         'generator_state': generator,
-        'step_count': data_step
+        'step_count': generator_step
     }
     return inputs
