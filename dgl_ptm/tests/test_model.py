@@ -48,7 +48,6 @@ class TestPtmStep:
         𝛿=model.steering_parameters['depreciation']
         new_wealth = (global_θ + m * (1-global_θ)) * (model.model_graph.ndata['income'] - c - i_a + (1-𝛿) * k)
 
-
         model.step() # timestep 2
         assert (model.model_graph.ndata['wealth'] == new_wealth).all()
         assert Path('./my_model/edge_data/2.zarr').exists()
