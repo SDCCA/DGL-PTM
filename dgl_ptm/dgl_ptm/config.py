@@ -55,7 +55,7 @@ class SteeringParams(BaseModel):
     m_theta_dist: MThetaDist = MThetaDist()
     tech_gamma: List[float] = [0.3, 0.35, 0.45]
     tech_cost: List[float] = [0.0, 0.15, 0.65]
-    del_method: str = 'prob'
+    del_method: str = "probability"
     del_threshold: Optional[Union[int, float]] = 0.05
     noise_ratio: float = 0.05
     local_ratio: float = 0.25
