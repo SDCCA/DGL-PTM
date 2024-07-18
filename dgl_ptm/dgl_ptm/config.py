@@ -42,8 +42,8 @@ class SteeringParams(BaseModel):
     ndata: List[Union[str, List[str]]] = ["all_except", ["a_table"]]
     npath: str = "./agent_data.zarr"
     wealth_method: str = "singular_transfer"
-    income_method: str = "default"
-    consume_method: str = "default"
+    income_method: str = "income_generation"
+    consume_method: str = "fitted_consumption"
     nn_path: str = "default"
     capital_update_method: str = "default"
     characteristic_distance: Union[int,float] = 35
@@ -60,7 +60,7 @@ class SteeringParams(BaseModel):
     noise_ratio: float = 0.05
     local_ratio: float = 0.25
     truncation_weight: float = 1.0e-10
-    step_type: str = "custom"
+    step_type: str = "default"
 
     @field_validator("adapt_m")
     def _convert_adapt_m(cls, v):
