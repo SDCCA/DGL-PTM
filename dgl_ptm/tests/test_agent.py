@@ -98,7 +98,7 @@ class TestIncomeGeneration:
             model.model_graph,
             model.device,
             model.steering_parameters,
-            method="default"
+            method='income_generation'
             )
 
         # assert _agent_income_generator was called
