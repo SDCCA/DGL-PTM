@@ -153,11 +153,6 @@ class PovertyTrapModel(Model):
 
         cfg.model_identifier = self._model_identifier # see config.py for why cfg.model_identifier
 
-        # save updated config to yaml file
-        cfg_filename = f'./{self._model_identifier}.yaml'
-        cfg.to_yaml(cfg_filename)
-        logger.warning(f'The model parameters are saved to {cfg_filename}.')
-
         # update model parameters/ attributes
         cfg_dict = cfg.model_dump(by_alias=True, warnings=False)
         for key, value in cfg_dict.items():
@@ -165,8 +160,14 @@ class PovertyTrapModel(Model):
 
         # Correct the paths
         parent_dir = "." / Path(self._model_identifier)
+        parent_dir.mkdir(parents=True, exist_ok=True)
         self.steering_parameters['npath'] = str(parent_dir / Path(cfg.steering_parameters.npath))
         self.steering_parameters['epath'] = str(parent_dir / Path(cfg.steering_parameters.epath))
+
+        # save updated config to yaml file
+        cfg_filename = parent_dir / f'{self._model_identifier}.yaml'
+        cfg.to_yaml(cfg_filename)
+        logger.warning(f'The model parameters are saved to {cfg_filename}.')
 
     def initialize_model(self):
         """
@@ -241,7 +242,7 @@ class PovertyTrapModel(Model):
             self.model_graph.ndata['zeros'] = torch.zeros(self.model_graph.num_nodes())
             self.model_graph.ndata['ones'] = torch.ones(self.model_graph.num_nodes())
         else:
-            raise RuntimeError('model graph must be a defined DGLgraph object. Consder running `create_network` before initializing agent properties')
+            raise RuntimeError('model graph must be a defined as DGLgraph object. Consider running `create_network` before initializing agent properties')
 
 
     def _initialize_agents_adapttable(self):
