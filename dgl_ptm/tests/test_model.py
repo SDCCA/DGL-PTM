@@ -182,9 +182,9 @@ class TestInitializeModel:
         model.run()
 
         assert model.inputs is not None
-        assert Path('test_model/model_graphs.bin').exists()
-        assert Path('test_model/model_data.bin').exists()
-        assert Path('test_model/generator_state.bin').exists()
+        assert Path('my_model/model_graphs.bin').exists()
+        assert Path('my_model/model_data.bin').exists()
+        assert Path('my_model/generator_state.bin').exists()
         assert model.inputs["step_count"] == 5
 
     def test_model_init_savestate_not_default(self, model):
