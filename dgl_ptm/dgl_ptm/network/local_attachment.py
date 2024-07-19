@@ -9,7 +9,12 @@ import dgl
 def local_attachment(graph,n_FoF_links,edge_prop=None,p_attach=1.):
     created_links = 0
     if edge_prop != None:
+        # Generate sample of n links from the entire graph 
+        # based on a distribution determined by normalized relative edge 
+        # weight i.e., w_ij/sum(w_i)
         src_ids, dst_ids, _ = select_edges(graph,n_FoF_links,edge_prop)
+        #Attempt to create a link for from the source node to a neighbor of the destination node 
+        # based on a distribution determined by normalized relative edge weight i.e., w_ij/sum(w_i)
         for i in range(len(src_ids)):
             FoF_to_link = select_FoF_attachment(src_ids[i],dst_ids[i],graph,edgeprop=edge_prop)
             if FoF_to_link != None:
@@ -62,12 +67,14 @@ def select_FoF_attachment(srcid,dstid,graph,edgeprop=None):
     if possible_FoF_nodes.numel() !=0:
         already_connected = existing_connections(srcid,possible_FoF_nodes,graph)
         if torch.all(already_connected):
-            print(f'all FoF nodes are already direcctly connected to node {srcid}.')
+            print(f'all FoF nodes are already directly connected to node {srcid}.')
         else:
             possible_FoF_to_link = possible_FoF_nodes[already_connected==False]
             dst_F_link_ids = graph.edge_ids(torch.ones_like(possible_FoF_to_link,dtype=int)*dstid,possible_FoF_to_link)
             dst_F_link_weight = graph.edges[dst_F_link_ids].data[edgeprop]
             dst_F_link_weight_norm = dst_F_link_weight/dst_F_link_weight.sum()
+            if dst_F_link_weight.sum() == 0:
+                dst_F_link_weight_norm = torch.ones_like(dst_F_link_weight)
             select = dst_F_link_weight_norm.flatten().multinomial(num_samples=1,replacement=True)
             selected_FoF = possible_FoF_to_link[select]
     else:
@@ -88,5 +95,3 @@ def create_FoF_link(srcid,targetid,graph,p_attach=1.):
 
 
 
-
-    
