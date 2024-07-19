@@ -15,11 +15,13 @@ def model():
 
 
 class TestNetworkMetrics:
-    def test_mean_connectivity(self, model):
+    def test_mean_connectivity_initialize(self, model):
         mc = mean_connectivity(model.model_graph)
-        assert mc is not None
+        assert model.mean_connectivity == mc
+        assert isinstance(mc, float)
 
+    def test_mean_connectivity_step(self, model):
         model.step() # timestep 1
         mc = mean_connectivity(model.model_graph)
-        assert mc is not None
+        assert model.mean_connectivity == mc
         assert isinstance(mc, float)
