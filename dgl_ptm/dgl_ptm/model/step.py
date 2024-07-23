@@ -29,18 +29,18 @@ def ptm_step(agent_graph, device, timestep, params):
     '''
     if params['step_type']=='default':
         #Wealth transfer
-        trade_money(agent_graph, method = params['wealth_method'])
+        trade_money(agent_graph, device, method = params['wealth_method'])
         
         #Link/edge manipulation
         local_attachment(agent_graph, n_FoF_links = 1, edge_prop = 'weight', p_attach=1. )
         link_deletion(agent_graph, method = params['del_method'], threshold = params['del_threshold'])
-        global_attachment(agent_graph, ratio = params['ratio'])
+        global_attachment(agent_graph, device, ratio = params['noise_ratio'])
         
         #Update agent states
         agent_update(agent_graph, params)
 
         #Weight update
-        weight_update(agent_graph, homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
+        weight_update(agent_graph, device, homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
 
         #Data collection and storage
         data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 

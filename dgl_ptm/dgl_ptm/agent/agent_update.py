@@ -21,13 +21,13 @@ def agent_update(model_graph, model_params, device=None, timestep=None, method='
     else:
         raise NotImplementedError(f"Unrecognized agent update type {method} attempted during time step implementation.'")
 
-def _pseudo_agent_update(model_graph,model_params): 
+def _pseudo_agent_update(model_graph,model_params,device): 
     '''
     agent_update - Updates the state of the agent based on income generation and money trades
     '''
     model_graph.ndata['wealth'] = model_graph.ndata['wealth'] + model_graph.ndata['net_trade']
-    income_generation(model_graph, model_params, method = model_params['income_method'])
-    wealth_consumption(model_graph, method=model_params['consume_method'])
+    income_generation(model_graph, device, model_params, method = model_params['income_method'])
+    wealth_consumption(model_graph, model_params, method=model_params['consume_method'], device=device)
     model_graph.ndata['wealth'] = model_graph.ndata['wealth'] + model_graph.ndata['income'] - model_graph.ndata['wealth_consumption']
 
 

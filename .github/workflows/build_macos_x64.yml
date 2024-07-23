@@ -5,9 +5,9 @@ name: Build and pytest macOS x64
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "development" ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ "master", "development" ]
 
 jobs:
   build:

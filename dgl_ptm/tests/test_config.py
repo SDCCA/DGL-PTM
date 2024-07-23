@@ -47,7 +47,8 @@ def test_to_yaml(tmp_path):
         cfg_dict = yaml.safe_load(f)
     assert cfg_dict["_model_identifier"] == "test"
     assert cfg_dict["number_agents"] == 100
-    assert cfg_dict["steering_parameters"]["deletion_prob"] == 0.05
+    assert cfg_dict["steering_parameters"]["del_method"] == "probability"
+    assert cfg_dict["steering_parameters"]["del_threshold"] == 0.05
     assert cfg_dict["steering_parameters"]["adapt_m"][1] == 0.5
 
 def test_invalid_fields(config_parameters):
