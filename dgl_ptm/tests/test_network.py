@@ -20,7 +20,7 @@ def model():
 
 class TestGlobalAttachment:
     def test_global_attachment(self, model):
-        ratio = model.steering_parameters['ratio']
+        ratio = model.steering_parameters['noise_ratio']
         current_number_of_edges = model.model_graph.number_of_edges()
 
         global_attachment(model.model_graph, model.device, ratio)
@@ -32,10 +32,11 @@ class TestGlobalAttachment:
 
 class TestLinkDeletion:
     def test_link_deletion(self, model):
-        deletion_prob = model.steering_parameters['deletion_prob']
+        del_method = model.steering_parameters['del_method']
+        del_threshold = model.steering_parameters['del_threshold']
         current_number_of_edges = model.model_graph.number_of_edges()
 
-        link_deletion(model.model_graph, deletion_prob)
+        link_deletion(model.model_graph, method = del_method, threshold = del_threshold)
         updated_number_of_edges = model.model_graph.number_of_edges()
 
         assert updated_number_of_edges > 0
