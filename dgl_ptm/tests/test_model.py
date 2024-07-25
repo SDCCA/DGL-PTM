@@ -160,7 +160,7 @@ class TestInitializeModel:
         assert model.model_graph is not None
         assert model.number_of_edges is not None
         #assert model.model_data['modelTheta'] is not None #TODO(tvl) restore assertion? model.model_data no longer exists.
-        assert Path('my_model/edge_data/0.zarr').exists()
+        #assert Path('my_model/edge_data/0.zarr').exists() # 0.zarr only exists if the model has completed step 0, which may not be the case based solely on this test.
         assert str(model.model_graph.device) == 'cpu'
         #assert str(model.model_data['modelTheta'].device) == 'cpu' #TODO(tvl) restore assertion? model.model_data no longer exists.
 
