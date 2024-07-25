@@ -30,8 +30,8 @@ def config_file(tmp_path):
 
 
 class TestPtmStep:
-    def test_ptm_step_timestep1(self, model):
-        model.step() # timestep 1
+    def test_ptm_step_timestep0(self, model):
+        model.step() # timestep 0
 
         assert 'disposable_wealth' in model.model_graph.ndata
         assert 'theta' in model.model_graph.ndata
@@ -39,13 +39,12 @@ class TestPtmStep:
         assert 'income' in model.model_graph.ndata
 
         assert Path('my_model/agent_data.zarr').exists()
-        assert Path('my_model/edge_data/1.zarr').exists()
+        assert Path('my_model/edge_data/0.zarr').exists()
 
-    def test_ptm_step_timestep2(self, model):
+    def test_ptm_step_timestep1(self, model):
+         model.step() # timestep 0
          model.step() # timestep 1
-
-         model.step() # timestep 2
-         assert Path('my_model/edge_data/2.zarr').exists()
+         assert Path('my_model/edge_data/1.zarr').exists()
 
 
 class TestDataCollection:
@@ -58,8 +57,8 @@ class TestDataCollection:
         assert Path('my_model/agent_data.zarr').exists()
         assert Path('my_model/edge_data/0.zarr').exists()
 
-    def test_data_collection_time_step1(self, model):
-        model.step() # timestep 1
+    def test_data_collection_timestep1(self, model):
+        model.step() # timestep 0
         data_collection(model.model_graph, timestep=1, npath = model.steering_parameters['npath'],
                         epath = model.steering_parameters['epath'], ndata = model.steering_parameters['ndata'],
                         edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
