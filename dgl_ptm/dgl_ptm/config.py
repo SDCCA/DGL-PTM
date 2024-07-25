@@ -62,6 +62,7 @@ class SteeringParams(BaseModel):
     truncation_weight: float = 1.0e-10
     step_type: str = "default"
     data_collection_period: int = 1
+    data_collection_list: Optional[List[int]] = None
 
     @field_validator("adapt_m")
     def _convert_adapt_m(cls, v):
