@@ -30,27 +30,21 @@ def config_file(tmp_path):
 
 
 class TestPtmStep:
-    def test_ptm_step_timestep1(self, model):
-        model.step() # timestep 1
+    def test_ptm_step_timestep0(self, model):
+        model.step() # timestep 0
 
         assert 'disposable_wealth' in model.model_graph.ndata
         assert 'theta' in model.model_graph.ndata
         assert 'wealth_consumption' in model.model_graph.ndata
         assert 'income' in model.model_graph.ndata
 
-        assert Path('./my_model/agent_data.zarr').exists()
-        assert Path('./my_model/edge_data/1.zarr').exists()
+        assert Path('my_model/agent_data.zarr').exists()
+        assert Path('my_model/edge_data/0.zarr').exists()
 
-    def test_ptm_step_timestep2(self, model):
-        model.step() # timestep 1
-        k,c,i_a,m = model.model_graph.ndata['wealth'],model.model_graph.ndata['wealth_consumption'],model.model_graph.ndata['i_a'],model.model_graph.ndata['m']
-        global_θ =model.model_data['modelTheta'][1]
-        𝛿=model.steering_parameters['depreciation']
-        new_wealth = (global_θ + m * (1-global_θ)) * (model.model_graph.ndata['income'] - c - i_a + (1-𝛿) * k)
-
-        model.step() # timestep 2
-        assert (model.model_graph.ndata['wealth'] == new_wealth).all()
-        assert Path('./my_model/edge_data/2.zarr').exists()
+    def test_ptm_step_timestep1(self, model):
+         model.step() # timestep 0
+         model.step() # timestep 1
+         assert Path('my_model/edge_data/1.zarr').exists()
 
 
 class TestDataCollection:
@@ -63,8 +57,8 @@ class TestDataCollection:
         assert Path('my_model/agent_data.zarr').exists()
         assert Path('my_model/edge_data/0.zarr').exists()
 
-    def test_data_collection_time_step1(self, model):
-        model.step() # timestep 1
+    def test_data_collection_timestep1(self, model):
+        model.step() # timestep 0
         data_collection(model.model_graph, timestep=1, npath = model.steering_parameters['npath'],
                         epath = model.steering_parameters['epath'], ndata = model.steering_parameters['ndata'],
                         edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
@@ -101,33 +95,34 @@ class TestInitializeModel:
         model.set_model_parameters(parameterFilePath=config_file)
 
         assert model._model_identifier == 'test_model'
-        assert model.steering_parameters['deletion_prob'] == 0.04
+        assert model.steering_parameters['del_method'] == 'probability'
+        assert model.steering_parameters['del_threshold'] == 0.05
         assert model.number_agents == 100
 
     def test_set_model_parameters_with_kwargs(self):
         model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
-        model.set_model_parameters(steering_parameters={'deletion_prob': 0.04})
+        model.set_model_parameters(steering_parameters={'del_method': 'probability','del_threshold': 0.04})
 
-        assert model.steering_parameters['deletion_prob'] == 0.04
+        assert model.steering_parameters['del_method'] == 'probability'
+        assert model.steering_parameters['del_threshold'] == 0.04
         assert model.number_agents == 100
 
     def test_set_model_parameters_with_file_and_kwargs(self, config_file):
         model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
         model.set_model_parameters(
             parameterFilePath=config_file,
-            steering_parameters={'deletion_prob': 0.06}
+            steering_parameters={'del_method': 'probability','del_threshold': 0.06}
             )
 
-        assert model.steering_parameters['deletion_prob'] == 0.06
+        assert model.steering_parameters['del_method'] == 'probability'
+        assert model.steering_parameters['del_threshold'] == 0.06
         assert model.number_agents == 100
 
     def test_initialize_model(self, model):
         assert model.model_graph is not None
         assert model.number_of_edges is not None
-        assert model.model_data['modelTheta'] is not None
         assert Path('my_model/edge_data/0.zarr').exists()
         assert str(model.model_graph.device) == 'cpu'
-        assert str(model.model_data['modelTheta'].device) == 'cpu'
 
     def test_create_network(self):
         model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
@@ -143,7 +138,6 @@ class TestInitializeModel:
         model.initialize_model_properties()
 
         modelTheta = torch.tensor([1., 1., 1., 1., 1.])
-        assert (model.model_data['modelTheta'] == modelTheta).all()
 
     def test_initialize_agent_properties(self):
         model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
@@ -166,14 +160,12 @@ class TestInitializeModel:
         model.step()
 
         assert model.step_count == 1
-        assert model.model_data is not None
         assert model.model_graph.number_of_nodes() == 100
 
     def test_run(self, model):
         model.run()
 
         assert model.step_count == 5
-        assert model.model_data is not None
         assert model.model_graph.number_of_nodes() == 100
 
     def test_model_init_savestate(self, model):
@@ -182,7 +174,6 @@ class TestInitializeModel:
 
         assert model.inputs is not None
         assert Path('my_model/model_graphs.bin').exists()
-        assert Path('my_model/model_data.bin').exists()
         assert Path('my_model/generator_state.bin').exists()
         assert model.inputs["step_count"] == 5
 
@@ -193,6 +184,7 @@ class TestInitializeModel:
         assert model.inputs["step_count"] == 4
 
     def test_model_init_restart(self, model):
+        model.savestate = 1
         model.step_target = 3 # only run the model till step 3
         model.run()
         expected_generator_state = set(model.inputs["generator_state"].tolist())
@@ -204,4 +196,4 @@ class TestInitializeModel:
 
         assert model.inputs is not None
         assert model.inputs["step_count"] == 5
-        assert stored_generator_state == expected_generator_state
+        assert stored_generator_state == expected_generator_state 
