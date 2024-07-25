@@ -97,9 +97,6 @@ class TestDataCollection:
         assert not Path('my_model/edge_data/2.zarr').exists()
         assert Path('my_model/edge_data/3.zarr').exists()
 
-        # Restore model data collection period.
-        model.set_model_parameters()
-
     def test_data_collection_list(self, model):
         if Path('my_model/edge_data/').exists():
             shutil.rmtree('my_model/edge_data/')
