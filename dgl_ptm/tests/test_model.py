@@ -32,7 +32,7 @@ def config_file(tmp_path):
 
 class TestPtmStep:
     def test_ptm_step_timestep1(self, model):
-        model.step() # timestep 1
+        model.step() # timestep 0
 
         assert 'disposable_wealth' in model.model_graph.ndata
         assert 'theta' in model.model_graph.ndata
@@ -40,19 +40,19 @@ class TestPtmStep:
         assert 'income' in model.model_graph.ndata
 
         assert Path('./my_model/agent_data.zarr').exists()
-        assert Path('./my_model/edge_data/1.zarr').exists()
+        assert Path('./my_model/edge_data/0.zarr').exists()
 
     # TODO(tvl) restore test? model.model_data no longer exists.
     # def test_ptm_step_timestep2(self, model):
-    #     model.step() # timestep 1
+    #     model.step() # timestep 0
     #     k,c,i_a,m = model.model_graph.ndata['wealth'],model.model_graph.ndata['wealth_consumption'],model.model_graph.ndata['i_a'],model.model_graph.ndata['m']
     #     global_θ =model.model_data['modelTheta'][1]
     #     𝛿=model.steering_parameters['depreciation']
     #     new_wealth = (global_θ + m * (1-global_θ)) * (model.model_graph.ndata['income'] - c - i_a + (1-𝛿) * k)
 
-    #     model.step() # timestep 2
+    #     model.step() # timestep 1
     #     assert (model.model_graph.ndata['wealth'] == new_wealth).all()
-    #     assert Path('./my_model/edge_data/2.zarr').exists()
+    #     assert Path('./my_model/edge_data/1.zarr').exists()
 
 
 class TestDataCollection:
@@ -203,7 +203,7 @@ class TestInitializeModel:
 
         assert model.inputs is not None
         assert Path('my_model/model_graphs.bin').exists()
-        assert Path('my_model/model_data.bin').exists()
+        #assert Path('my_model/model_data.bin').exists()
         assert Path('my_model/generator_state.bin').exists()
         assert model.inputs["step_count"] == 5
 
