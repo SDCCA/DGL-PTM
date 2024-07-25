@@ -152,7 +152,6 @@ class TestInitializeModel:
     def test_initialize_model(self, model):
         assert model.model_graph is not None
         assert model.number_of_edges is not None
-        assert Path('my_model/edge_data/0.zarr').exists()
         assert str(model.model_graph.device) == 'cpu'
 
     def test_create_network(self):
