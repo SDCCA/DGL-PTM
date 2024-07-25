@@ -33,6 +33,8 @@ class MThetaDist(BaseModel):
     model_config = ConfigDict(validate_default = True)
 
 
+# TODO(tvl): describe the difference between SteeringParams and Config.
+# TODO(tvl): there is some overlap between the parameters defined in SteeringParams and Config; this should be resolved. Otherwise, it just causes confusion.
 class SteeringParams(BaseModel):
     """Base class for steering parameters."""
     edata: List[str] = ["all"]
