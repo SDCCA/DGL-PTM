@@ -100,6 +100,23 @@ class TestDataCollection:
         # Restore model data collection period.
         model.set_model_parameters()
 
+    def test_data_collection_list(self, model):
+        if Path('my_model/edge_data/').exists():
+            shutil.rmtree('my_model/edge_data/')
+
+        model.steering_parameters['data_collection_period'] = -1
+        model.steering_parameters['data_collection_list'] = [1, 4]
+
+        model.run()
+
+        assert model.step_count == 5
+        assert Path('my_model/agent_data.zarr').exists()
+        assert not Path('my_model/edge_data/0.zarr').exists()
+        assert Path('my_model/edge_data/1.zarr').exists()
+        assert not Path('my_model/edge_data/2.zarr').exists()
+        assert not Path('my_model/edge_data/3.zarr').exists()
+        assert Path('my_model/edge_data/4.zarr').exists()
+
 
 class TestInitializeModel:
     def test_set_model_parameters(self):
