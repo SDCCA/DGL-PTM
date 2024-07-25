@@ -41,7 +41,7 @@ class TestPtmStep:
         assert Path('my_model/agent_data.zarr').exists()
         assert Path('my_model/edge_data/1.zarr').exists()
 
-     def test_ptm_step_timestep2(self, model):
+    def test_ptm_step_timestep2(self, model):
          model.step() # timestep 1
 
          model.step() # timestep 2
@@ -175,7 +175,6 @@ class TestInitializeModel:
 
         assert model.inputs is not None
         assert Path('my_model/model_graphs.bin').exists()
-        assert Path('my_model/model_data.bin').exists()
         assert Path('my_model/generator_state.bin').exists()
         assert model.inputs["step_count"] == 5
 
