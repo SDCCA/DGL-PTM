@@ -31,7 +31,7 @@ def config_file(tmp_path):
 
 
 class TestPtmStep:
-    def test_ptm_step_timestep1(self, model):
+    def test_ptm_step_timestep0(self, model):
         model.step() # timestep 0
 
         assert 'disposable_wealth' in model.model_graph.ndata
@@ -39,20 +39,13 @@ class TestPtmStep:
         assert 'wealth_consumption' in model.model_graph.ndata
         assert 'income' in model.model_graph.ndata
 
-        assert Path('./my_model/agent_data.zarr').exists()
-        assert Path('./my_model/edge_data/0.zarr').exists()
+        assert Path('my_model/agent_data.zarr').exists()
+        assert Path('my_model/edge_data/0.zarr').exists()
 
-    # TODO(tvl) restore test? model.model_data no longer exists.
-    # def test_ptm_step_timestep2(self, model):
-    #     model.step() # timestep 0
-    #     k,c,i_a,m = model.model_graph.ndata['wealth'],model.model_graph.ndata['wealth_consumption'],model.model_graph.ndata['i_a'],model.model_graph.ndata['m']
-    #     global_θ =model.model_data['modelTheta'][1]
-    #     𝛿=model.steering_parameters['depreciation']
-    #     new_wealth = (global_θ + m * (1-global_θ)) * (model.model_graph.ndata['income'] - c - i_a + (1-𝛿) * k)
-
-    #     model.step() # timestep 1
-    #     assert (model.model_graph.ndata['wealth'] == new_wealth).all()
-    #     assert Path('./my_model/edge_data/1.zarr').exists()
+    def test_ptm_step_timestep1(self, model):
+         model.step() # timestep 0
+         model.step() # timestep 1
+         assert Path('my_model/edge_data/1.zarr').exists()
 
 
 class TestDataCollection:
@@ -65,8 +58,8 @@ class TestDataCollection:
         assert Path('my_model/agent_data.zarr').exists()
         assert Path('my_model/edge_data/0.zarr').exists()
 
-    def test_data_collection_time_step1(self, model):
-        model.step() # timestep 1
+    def test_data_collection_timestep1(self, model):
+        model.step() # timestep 0
         data_collection(model.model_graph, timestep=1, npath = model.steering_parameters['npath'],
                         epath = model.steering_parameters['epath'], ndata = model.steering_parameters['ndata'],
                         edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
@@ -159,10 +152,8 @@ class TestInitializeModel:
     def test_initialize_model(self, model):
         assert model.model_graph is not None
         assert model.number_of_edges is not None
-        #assert model.model_data['modelTheta'] is not None #TODO(tvl) restore assertion? model.model_data no longer exists.
-        #assert Path('my_model/edge_data/0.zarr').exists() # 0.zarr only exists if the model has completed step 0, which may not be the case based solely on this test.
+        assert Path('my_model/edge_data/0.zarr').exists()
         assert str(model.model_graph.device) == 'cpu'
-        #assert str(model.model_data['modelTheta'].device) == 'cpu' #TODO(tvl) restore assertion? model.model_data no longer exists.
 
     def test_create_network(self):
         model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
@@ -178,7 +169,6 @@ class TestInitializeModel:
         model.initialize_model_properties()
 
         modelTheta = torch.tensor([1., 1., 1., 1., 1.])
-        #assert (model.model_data['modelTheta'] == modelTheta).all() #TODO(tvl) restore assertion? model.model_data no longer exists.
 
     def test_initialize_agent_properties(self):
         model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
@@ -201,14 +191,12 @@ class TestInitializeModel:
         model.step()
 
         assert model.step_count == 1
-        #assert model.model_data is not None #TODO(tvl) restore assertion? model.model_data no longer exists.
         assert model.model_graph.number_of_nodes() == 100
 
     def test_run(self, model):
         model.run()
 
         assert model.step_count == 5
-        #assert model.model_data is not None #TODO(tvl) restore assertion? model.model_data no longer exists.
         assert model.model_graph.number_of_nodes() == 100
 
     def test_model_init_savestate(self, model):
@@ -217,7 +205,6 @@ class TestInitializeModel:
 
         assert model.inputs is not None
         assert Path('my_model/model_graphs.bin').exists()
-        #assert Path('my_model/model_data.bin').exists()
         assert Path('my_model/generator_state.bin').exists()
         assert model.inputs["step_count"] == 5
 
@@ -228,15 +215,16 @@ class TestInitializeModel:
         assert model.inputs["step_count"] == 4
 
     def test_model_init_restart(self, model):
+        model.savestate = 1
         model.step_target = 3 # only run the model till step 3
         model.run()
-        #expected_generator_state = set(model.inputs["generator_state"].tolist())
+        expected_generator_state = set(model.inputs["generator_state"].tolist())
 
         model.restart = True
         model.step_target = 5 # contiune the model till step 5
         model.run()
-        #stored_generator_state = set(model.inputs["generator_state"].tolist())
+        stored_generator_state = set(model.inputs["generator_state"].tolist())
 
         assert model.inputs is not None
-        assert model.inputs["step_count"] == 4 #TODO(tvl) test: was 5 before...
-        #assert stored_generator_state == expected_generator_state #TODO(tvl) restore assertion? model.inputs no longer exists.
+        assert model.inputs["step_count"] == 5
+        assert stored_generator_state == expected_generator_state 
