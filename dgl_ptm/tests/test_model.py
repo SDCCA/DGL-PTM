@@ -2,6 +2,7 @@ import pytest
 import dgl_ptm
 import os
 import xarray as xr
+import shutil
 import torch
 
 from dgl_ptm.model.data_collection import data_collection
@@ -82,6 +83,22 @@ class TestDataCollection:
         # check variable names in edge_data/1.zarr
         edge_data = xr.open_zarr('my_model/edge_data/1.zarr')
         assert 'weight' in edge_data.variables
+
+    def test_data_collection_period(self, model):
+        if Path('my_model/edge_data/').exists():
+            shutil.rmtree('my_model/edge_data/')
+
+        model.steering_parameters['data_collection_period'] = 3
+
+        model.run()
+
+        assert model.step_count == 5
+        assert Path('my_model/agent_data.zarr').exists()
+        assert not Path('my_model/edge_data/2.zarr').exists()
+        assert Path('my_model/edge_data/3.zarr').exists()
+
+        # Restore model data collection period.
+        model.set_model_parameters()
 
 
 class TestInitializeModel:
