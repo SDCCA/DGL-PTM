@@ -1,16 +1,15 @@
 import copy
-from pathlib import Path
 import dgl
 import torch
 import pickle
 import logging
+
 from pathlib import Path
+from dgl.data.utils import save_graphs, load_graphs
 
 from dgl_ptm.network.network_creation import network_creation
 from dgl_ptm.model.step import ptm_step
 from dgl_ptm.agentInteraction.weight_update import weight_update
-from dgl_ptm.model.data_collection import data_collection
-from dgl.data.utils import save_graphs, load_graphs
 from dgl_ptm.config import Config, CONFIG
 
 # Set the seed of the random number generator
@@ -56,7 +55,7 @@ def sample_distribution_tensor(type, distParameters, nSamples, round=False, deci
         uniform_samples = torch.rand(size)
         sample_ppf = torch.sqrt(torch.tensor(2.0)) * torch.erfinv(2 *(cdf_min + (cdf_max - cdf_min) * uniform_samples) - 1)
 
-        dist = destParameters[0] + destParameters[1] * sample_ppf
+        dist = distParameters[0] + distParameters[1] * sample_ppf
 
     else:
         raise NotImplementedError('Currently only uniform, normal, multinomial, and bernoulli distributions are supported')
@@ -90,8 +89,6 @@ class PovertyTrapModel(Model):
     """
     Poverty Trap model as derived model class
 
-    """
-    """
     #default values as class variable 
     default_model_parameters = {'number_agents': 100 , 
     'seed':0,
@@ -137,6 +134,7 @@ class PovertyTrapModel(Model):
 
     """
 
+    # TODO(tvl): move savestate into config parameters.
     def __init__(self,*, model_identifier, restart=False, savestate=10):
         """
         restore from a savestate or create a PVT model instance.
@@ -440,9 +438,9 @@ def _load_model(path):
     if not path_model_graph.is_file():
         raise ValueError(f'The path {path_model_graph} is not a file.')
 
-    graph, graph_lebel = load_graphs(str(path_model_graph))
+    graph, graph_label = load_graphs(str(path_model_graph))
     graph = graph[0]
-    graph_step = graph_lebel['step_count'].tolist()[0]
+    graph_step = graph_label['step_count'].tolist()[0]
 
     # Load generator_state
     path_generator_state = Path(path) / "generator_state.bin"
