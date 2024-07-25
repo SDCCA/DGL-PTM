@@ -42,9 +42,10 @@ def ptm_step(agent_graph, device, timestep, params):
         #Weight update
         weight_update(agent_graph, device, homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
 
-        #Data collection and storage
-        data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 
-                        edata = params['edata'], mode = params['mode'])
+        if timestep % params['data_collection_period'] == 0:
+            #Data collection and storage
+            data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 
+                            edata = params['edata'], mode = params['mode'])
         
 
     if params['step_type']=='custom':
@@ -75,7 +76,8 @@ def ptm_step(agent_graph, device, timestep, params):
         agent_update(agent_graph, params, device=device, method ='income')
         agent_update(agent_graph, params, device=device, method ='consumption')
 
-        #Data collection and storage
-        data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 
-                        edata = params['edata'], mode = params['mode'])
+        if timestep % params['data_collection_period'] == 0:
+            #Data collection and storage
+            data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 
+                            edata = params['edata'], mode = params['mode'])
         

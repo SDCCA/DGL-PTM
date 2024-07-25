@@ -61,6 +61,7 @@ class SteeringParams(BaseModel):
     local_ratio: float = 0.25
     truncation_weight: float = 1.0e-10
     step_type: str = "default"
+    data_collection_period: int = 1
 
     @field_validator("adapt_m")
     def _convert_adapt_m(cls, v):
