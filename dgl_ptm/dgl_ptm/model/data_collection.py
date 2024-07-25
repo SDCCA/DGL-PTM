@@ -7,19 +7,20 @@ from os.path import exists
 
 def data_collection(agent_graph, timestep, npath='./agent_data', epath='./edge_data', ndata = ['all'], edata = ['all'], format = 'xarray', mode = 'w-'):
     ''' 
-        data_collection - collects data from agents and edges for each time-step of the model
+        data_collection - collects data from agents and edges.
 
         Args:
             agent_graph: DGLGraph with agent nodes and edges connecting agents.
+            timestep = current timestep to name folder for edge properties
             npath = path to store node data.
             epath = path to store edge data with one file for each timestep.
             ndata = node data properties to be stored. 
                 ['all'] implies all node properties will be saved
             edata = edge data properties to be stored. 
                 ['all'] implies all edge properties will be saved
-            timestep = current timestep to name folder for edge properties
-            mode = storage format
+            format = storage format
                 ['xarray'] saves the properties in zarr format with xarray dataset
+            mode = zarr write mode.
 
         Output:
 
@@ -51,7 +52,7 @@ def _node_property_collector(agent_graph, npath, ndata, timestep, format, mode):
             else:
                 agent_data_instance.to_zarr(npath, append_dim='n_time')
         else:
-            raise NotImplementedError("Only 'xarray' mode currrent available")
+            raise NotImplementedError("Only 'xarray' format currrent available")
     else:
         raise NotImplementedError("Data collection currently only implemented for pytorch backend")
         
