@@ -146,7 +146,7 @@ class PovertyTrapModel(Model):
         param: restart: boolean, optional. If True, the model is run from last
         saved step. Default False.
         param: savestate: int, optional. If provided, the model state is saved
-        on this frequency. Default is 1 i.e. every time step.
+        on this frequency. Default is 10 i.e. every 10th time step.
         """
       
         super().__init__(model_identifier = model_identifier)

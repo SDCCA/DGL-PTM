@@ -48,12 +48,18 @@ def ptm_step(agent_graph, device, timestep, params):
         
 
     if params['step_type']=='custom':
-        #print("Initial k")
-        #print(agent_graph.ndata['wealth'])
 
-        if timestep!=0:
+        if timestep==0:
+            #Update agent states
+            agent_update(agent_graph, params, timestep=timestep, method ='theta')
+            agent_update(agent_graph, params, device=device, method ='income')
+            agent_update(agent_graph, params, device=device, method ='consumption')
+            data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 
+                        edata = params['edata'], mode = params['mode'])
+            return
+        
 
-            agent_update(agent_graph, params, timestep=timestep, method = 'capital')
+        agent_update(agent_graph, params, timestep=timestep, method = 'capital')
         
         #Weight update
         weight_update(agent_graph, device, homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
@@ -62,8 +68,8 @@ def ptm_step(agent_graph, device, timestep, params):
         start_edges = agent_graph.number_of_edges()
         print(f"Initial edges: {start_edges}")
         random_edge_noise(agent_graph, device, n_perturbances = int(params['noise_ratio']*agent_graph.number_of_nodes()))
-        #local_attachment_homophily(agent_graph, device, n_FoF_links = int(params['local_ratio']*agent_graph.number_of_nodes()), homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
-        local_attachment_tensor(agent_graph, n_FoF_links = int(params['local_ratio']*agent_graph.number_of_nodes()))
+        local_attachment_homophily(agent_graph, device, n_FoF_links = int(params['local_ratio']*agent_graph.number_of_nodes()), homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
+        #local_attachment_tensor(agent_graph, n_FoF_links = int(params['local_ratio']*agent_graph.number_of_nodes()))
         threshold = int((agent_graph.number_of_edges()-start_edges)/2)
         link_deletion(agent_graph, method = params['del_method'], threshold = threshold)
 
