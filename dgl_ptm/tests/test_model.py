@@ -169,7 +169,7 @@ class TestInitializeModel:
         assert model.model_graph.number_of_nodes() == 100
 
     def test_model_init_savestate(self, model):
-        model.savestate = 1
+        model.checkpoint_period = 1
         model.run()
 
         assert model.inputs is not None
@@ -178,13 +178,13 @@ class TestInitializeModel:
         assert model.inputs["step_count"] == 5
 
     def test_model_init_savestate_not_default(self, model):
-        model.savestate = 2
+        model.checkpoint_period = 2
         model.run()
 
         assert model.inputs["step_count"] == 4
 
     def test_model_init_restart(self, model):
-        model.savestate = 1
+        model.checkpoint_period = 1
         model.step_target = 3 # only run the model till step 3
         model.run()
         expected_generator_state = set(model.inputs["generator_state"].tolist())

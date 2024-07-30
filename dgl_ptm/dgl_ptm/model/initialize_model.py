@@ -134,22 +134,18 @@ class PovertyTrapModel(Model):
 
     """
 
-    # TODO(tvl): move savestate into config parameters.
-    def __init__(self,*, model_identifier, restart=False, savestate=10):
+    def __init__(self,*, model_identifier, restart=False):
         """
-        restore from a savestate or create a PVT model instance.
+        restore from a checkpoint or create a PVT model instance.
         Checks whether a model indentifier has been specified.
 
         param: model_identifier: str, required. Identifier for the model. Used to save and load model states.
         param: restart: boolean, optional. If True, the model is run from last
         saved step. Default False.
-        param: savestate: int, optional. If provided, the model state is saved
-        on this frequency. Default is 1 i.e. every time step.
         """
       
         super().__init__(model_identifier = model_identifier)
         self.restart = restart
-        self.savestate = savestate
 
         # default values
         self.device = CONFIG.device
@@ -169,6 +165,7 @@ class PovertyTrapModel(Model):
         self.model_graph = CONFIG.model_graph
         self.step_count = CONFIG.step_count
         self.step_target = CONFIG.step_target
+        self.checkpoint_period = CONFIG.checkpoint_period
         self.steering_parameters = CONFIG.steering_parameters
 
     def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
@@ -405,8 +402,8 @@ class PovertyTrapModel(Model):
         while self.step_count < self.step_target:
             self.step()
 
-            # save the model state every step reported by savestate
-            if self.savestate and self.step_count % self.savestate == 0:
+            # save the model state every step reported by checkpoint_period
+            if 0 < self.checkpoint_period and self.step_count % self.checkpoint_period == 0:
                 self.inputs = {
                     'model_graph': copy.deepcopy(self.model_graph),
                     #'model_data': copy.deepcopy(self.model_data),

@@ -205,6 +205,7 @@ class Config(BaseModel):
     model_graph: object = None # TODO: might be possible to move it from config to model
     step_count: int = 0
     step_target: PositiveInt = 5
+    checkpoint_period: int = 10
     steering_parameters: SteeringParams = SteeringParams()
     alpha_dist: AlphaDist = AlphaDist()
     capital_dist: CapitalDist = CapitalDist()
