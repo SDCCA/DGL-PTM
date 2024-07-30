@@ -1,0 +1,133 @@
+_model_identifier: testwithnn
+device: cpu
+seed: 0
+number_agents: 100
+initial_graph_type: barabasi-albert
+initial_graph_args:
+  seed: 0
+  new_node_edges: 1
+model_graph: null
+step_count: 0
+step_target: 20
+steering_parameters:
+  edata:
+  - all
+  epath: ./edge_data
+  format: xarray
+  mode: w
+  ndata:
+  - all_except
+  - - a_table
+  npath: ./agent_data.zarr
+  wealth_method: singular_transfer
+  income_method: pseudo_income_generation
+  consume_method: pseudo_consumption
+  nn_path: /Users/victoria/Documents/Scripts/Python/DGL-PTM/DGL_testing/nn_data/both_PudgeSixLayer_1024/0723_110813/model_best.pth
+  capital_update_method: default
+  characteristic_distance: 35
+  homophily_parameter: 0.69
+  adapt_m:
+  - 0.0
+  - 0.5
+  - 0.8999999761581421
+  adapt_cost:
+  - 0.0
+  - 0.25
+  - 0.44999998807907104
+  depreciation: 0.6
+  discount: 0.95
+  m_theta_dist:
+    type: multinomial
+    parameters:
+    - - 0.019999999552965164
+      - 0.029999999329447746
+      - 0.05000000074505806
+      - 0.8999999761581421
+    - - 0.699999988079071
+      - 0.800000011920929
+      - 0.8999999761581421
+      - 1.0
+    round: false
+    decimals: null
+  tech_gamma:
+  - 0.30000001192092896
+  - 0.3499999940395355
+  - 0.44999998807907104
+  tech_cost:
+  - 0.0
+  - 0.15000000596046448
+  - 0.6499999761581421
+  del_method: size
+  del_threshold: 0.05
+  noise_ratio: 0.05
+  local_ratio: 0.25
+  truncation_weight: 1.0e-10
+  step_type: custom
+alpha_dist:
+  type: normal
+  parameters:
+  - 1.0800000429153442
+  - 0.07400000095367432
+  round: false
+  decimals: null
+capital_dist:
+  type: uniform
+  parameters:
+  - 0.10000000149011612
+  - 10.0
+  round: false
+  decimals: null
+cost_vals:
+- 0.0
+- 0.44999998807907104
+gamma_vals:
+- 0.30000001192092896
+- 0.44999998807907104
+lambda_dist:
+  type: uniform
+  parameters:
+  - 0.05000000074505806
+  - 0.9399999976158142
+  round: true
+  decimals: 1
+sigma_dist:
+  type: uniform
+  parameters:
+  - 0.05000000074505806
+  - 1.940000057220459
+  round: true
+  decimals: 1
+technology_dist:
+  type: bernoulli
+  parameters:
+  - 0.5
+  - null
+  round: false
+  decimals: null
+technology_levels:
+- 0
+- 1
+a_theta_dist:
+  type: uniform
+  parameters:
+  - 0.10000000149011612
+  - 1.0
+  round: false
+  decimals: null
+sensitivity_dist:
+  type: uniform
+  parameters:
+  - 0.0
+  - 1.0
+  round: false
+  decimals: null
+adapt_m:
+- 0.0
+- 0.5
+- 0.8999999761581421
+adapt_cost:
+- 0.0
+- 0.25
+- 0.44999998807907104
+depreciation: 0.6
+discount: 0.95

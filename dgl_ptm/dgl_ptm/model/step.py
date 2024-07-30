@@ -66,10 +66,8 @@ def ptm_step(agent_graph, device, timestep, params):
 
         #Link/edge manipulation
         start_edges = agent_graph.number_of_edges()
-        print(f"Initial edges: {start_edges}")
         random_edge_noise(agent_graph, device, n_perturbances = int(params['noise_ratio']*agent_graph.number_of_nodes()))
         local_attachment_homophily(agent_graph, device, n_FoF_links = int(params['local_ratio']*agent_graph.number_of_nodes()), homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
-        #local_attachment_tensor(agent_graph, n_FoF_links = int(params['local_ratio']*agent_graph.number_of_nodes()))
         threshold = int((agent_graph.number_of_edges()-start_edges)/2)
         link_deletion(agent_graph, method = params['del_method'], threshold = threshold)
 
