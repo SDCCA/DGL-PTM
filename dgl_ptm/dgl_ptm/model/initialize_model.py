@@ -217,10 +217,12 @@ class PovertyTrapModel(Model):
         self.steering_parameters['npath'] = str(parent_dir / Path(cfg.steering_parameters.npath))
         self.steering_parameters['epath'] = str(parent_dir / Path(cfg.steering_parameters.epath))
 
-        # save updated config to yaml file
+        # save updated config to yaml files
         cfg_filename = parent_dir / f'{self._model_identifier}.yaml'
         cfg.to_yaml(cfg_filename)
-        logger.warning(f'The model parameters are saved to {cfg_filename}.')
+        cfg_filename_step = parent_dir / f'{self._model_identifier}_{self.step_count}.yaml'
+        cfg.to_yaml(cfg_filename_step)
+        logger.warning(f'The model parameters are saved to {cfg_filename} and {cfg_filename_step}.')
 
     def initialize_model(self):
         """
