@@ -173,7 +173,7 @@ class TestInitializeModel:
         model.run()
 
         assert model.inputs is not None
-        assert Path('my_model/model_graphs.bin').exists()
+        assert Path('my_model/model_graph.bin').exists()
         assert Path('my_model/generator_state.bin').exists()
         assert model.inputs["step_count"] == 5
 

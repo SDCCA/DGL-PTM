@@ -168,6 +168,10 @@ class PovertyTrapModel(Model):
         self.checkpoint_period = CONFIG.checkpoint_period
         self.steering_parameters = CONFIG.steering_parameters
 
+        # Code version.
+        self.version = Path('version.md').read_text().splitlines()[0]
+
+
     def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
         """
         Load or set model parameters
@@ -410,17 +414,18 @@ class PovertyTrapModel(Model):
                     'model_graph': copy.deepcopy(self.model_graph),
                     #'model_data': copy.deepcopy(self.model_data),
                     'generator_state': generator.get_state(),
-                    'step_count': self.step_count
+                    'step_count': self.step_count,
+                    'code_version': self.version
                 }
                 _save_model(f'./{self._model_identifier}', self.inputs)
 
 
 def _save_model(path, inputs):
-    """ save the model_graph, generator_state and model_data in files."""
+    """ save the model_graph, generator_state and code_version in files."""
 
     # save the model_graph with a label
-    graph_label = {'step_count': torch.tensor([inputs["step_count"]])}
-    save_graphs(str(Path(path) / "model_graphs.bin"), inputs["model_graph"], graph_label)
+    graph_labels = {'step_count': torch.tensor([inputs["step_count"]])}
+    save_graphs(str(Path(path) / "model_graph.bin"), inputs["model_graph"], graph_labels)
 
     # save the generator_state
     with open(Path(path) / "generator_state.bin", 'wb') as file:
@@ -430,16 +435,20 @@ def _save_model(path, inputs):
     #with open(Path(path) / "model_data.bin", 'wb') as file:
     #    pickle.dump([inputs["model_data"], inputs["step_count"]], file)
 
+    # save the code version
+    with open(Path(path) / "version.md", 'w') as file:
+        file.write(inputs["code_version"] + '\n')
+
 
 def _load_model(path):
-    # Load model graphs
-    path_model_graph = Path(path) / "model_graphs.bin"
+    # Load model graph
+    path_model_graph = Path(path) / "model_graph.bin"
     if not path_model_graph.is_file():
         raise ValueError(f'The path {path_model_graph} is not a file.')
 
-    graph, graph_label = load_graphs(str(path_model_graph))
+    graph, graph_labels = load_graphs(str(path_model_graph))
     graph = graph[0]
-    graph_step = graph_label['step_count'].tolist()[0]
+    graph_step = graph_labels['step_count'].tolist()[0]
 
     # Load generator_state
     path_generator_state = Path(path) / "generator_state.bin"
@@ -457,10 +466,23 @@ def _load_model(path):
     #with open(path_model_data, 'rb') as file:
     #    data, data_step = pickle.load(file)
 
+    # Load code version
+    path_code_version = Path(path) / "version.md"
+    if not path_code_version.is_file():
+        raise ValueError(f'The path {path_code_version} is not a file.')
+
+    with open(path_code_version, 'r') as file:
+        code_version = file.readlines()[0]
+
     # Check if graph_step, generator_step and data_step are the same
     if graph_step != generator_step: #or graph_step != data_step:
         msg = 'The step count in the model_graph and generator_state are not the same.'# and model_data are not the same.'
         raise ValueError(msg)
+    
+    # Check if the saved version and current code version are the same
+    version = Path('version.md').read_text().splitlines()[0]
+    if code_version != version:
+        logger.warning(f'Warning: loading model generated using earlier code version: {code_version}.')
 
     # Show which step is loaded
     logger.warning(f'Loading model state from step {generator_step}.')
@@ -469,6 +491,7 @@ def _load_model(path):
         'model_graph': graph,
         #'model_data': data,
         'generator_state': generator,
-        'step_count': generator_step
+        'step_count': generator_step,
+        'code_version': code_version
     }
     return inputs
