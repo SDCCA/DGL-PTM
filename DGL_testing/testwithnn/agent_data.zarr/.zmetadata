@@ -368,6 +368,34 @@
                 "n_time"
             ]
         },
+        "tech_index/.zarray": {
+            "chunks": [
+                100,
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<i8",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                100,
+                20
+            ],
+            "zarr_format": 2
+        },
+        "tech_index/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "n_agents",
+                "n_time"
+            ]
+        },
         "theta/.zarray": {
             "chunks": [
                 100,
@@ -391,6 +419,34 @@
             "zarr_format": 2
         },
         "theta/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "n_agents",
+                "n_time"
+            ]
+        },
+        "total_weight/.zarray": {
+            "chunks": [
+                100,
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f4",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                100,
+                20
+            ],
+            "zarr_format": 2
+        },
+        "total_weight/.zattrs": {
             "_ARRAY_DIMENSIONS": [
                 "n_agents",
                 "n_time"

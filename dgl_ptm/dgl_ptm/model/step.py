@@ -53,7 +53,7 @@ def ptm_step(agent_graph, device, timestep, params):
             #Update agent states
             agent_update(agent_graph, params, timestep=timestep, method ='theta')
             agent_update(agent_graph, params, device=device, method ='income')
-            agent_update(agent_graph, params, device=device, method ='consumption')
+            agent_update(agent_graph, params, timestep=timestep, device=device, method ='consumption')
             data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 
                         edata = params['edata'], mode = params['mode'])
             return
@@ -77,7 +77,7 @@ def ptm_step(agent_graph, device, timestep, params):
         #Update agent states
         agent_update(agent_graph, params, timestep=timestep, method ='theta')
         agent_update(agent_graph, params, device=device, method ='income')
-        agent_update(agent_graph, params, device=device, method ='consumption')
+        agent_update(agent_graph, params, timestep=timestep, device=device, method ='consumption')
 
         #Data collection and storage
         data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 

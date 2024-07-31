@@ -29,6 +29,35 @@
                 "n_edges"
             ]
         },
+        "percent_weight/.zarray": {
+            "chunks": [
+                198,
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f4",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                198,
+                1
+            ],
+            "zarr_format": 2
+        },
+        "percent_weight/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "n_edges",
+                "time"
+            ],
+            "coordinates": "source dest"
+        },
         "source/.zarray": {
             "chunks": [
                 198
@@ -53,6 +82,35 @@
             "_ARRAY_DIMENSIONS": [
                 "n_edges"
             ]
+        },
+        "trfr_wealth/.zarray": {
+            "chunks": [
+                198,
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f4",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                198,
+                1
+            ],
+            "zarr_format": 2
+        },
+        "trfr_wealth/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "n_edges",
+                "time"
+            ],
+            "coordinates": "source dest"
         },
         "wealth_diff/.zarray": {
             "chunks": [
