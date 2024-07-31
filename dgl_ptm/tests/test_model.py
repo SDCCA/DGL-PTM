@@ -197,3 +197,13 @@ class TestInitializeModel:
         assert model.inputs is not None
         assert model.inputs["step_count"] == 5
         assert stored_generator_state == expected_generator_state 
+
+    def test_model_milestone(self, model):
+        model.milestones = [2]
+        model.run()
+
+        assert model.inputs is not None
+        assert Path('my_model/milestone_2/model_graph.bin').exists()
+        assert Path('my_model/milestone_2/generator_state.bin').exists()
+        assert Path('my_model/milestone_2/version.md').exists()
+        assert model.inputs["step_count"] == 2
