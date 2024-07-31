@@ -189,9 +189,8 @@ class TestInitializeModel:
         model.run()
         expected_generator_state = set(model.inputs["generator_state"].tolist())
 
-        model.restart = True
-        model.step_target = 5 # contiune the model till step 5
-        model.run()
+        model.step_target = 5 # restart the model and run till step 5
+        model.run(True)
         stored_generator_state = set(model.inputs["generator_state"].tolist())
 
         assert model.inputs is not None

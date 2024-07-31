@@ -134,18 +134,15 @@ class PovertyTrapModel(Model):
 
     """
 
-    def __init__(self,*, model_identifier, restart=False):
+    def __init__(self,*, model_identifier):
         """
         restore from a checkpoint or create a PVT model instance.
         Checks whether a model indentifier has been specified.
 
         param: model_identifier: str, required. Identifier for the model. Used to save and load model states.
-        param: restart: boolean, optional. If True, the model is run from last
-        saved step. Default False.
         """
       
         super().__init__(model_identifier = model_identifier)
-        self.restart = restart
 
         # default values
         self.device = CONFIG.device
@@ -393,10 +390,15 @@ class PovertyTrapModel(Model):
             #TODO add model dump here. Also check against previous save to avoid overwriting
             raise RuntimeError(f'execution of step failed for step {self.step_count}')
 
-    def run(self):
-        """ run the model for each step until the step_target is reached."""
+    def run(self, restart=False):
+        """
+        run the model for each step until the step_target is reached.
 
-        if self.restart:
+        param: restart: boolean, optional. If True, the model is run from last
+        saved step. Default False.
+        """
+
+        if restart:
             self.inputs = _load_model(f'./{self._model_identifier}')
             self.model_graph = copy.deepcopy(self.inputs["model_graph"])
             #self.model_data = self.inputs["model_data"]
