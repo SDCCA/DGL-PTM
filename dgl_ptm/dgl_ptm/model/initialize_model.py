@@ -439,7 +439,7 @@ def _save_model(path, inputs):
 
     # save the code version
     with open(Path(path) / "version.md", 'w') as file:
-        file.write(inputs["code_version"] + '\n')
+        file.writelines([inputs["code_version"] + '\n', f'step={inputs["step_count"]}\n'])
 
 
 def _load_model(path):
