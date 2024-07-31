@@ -191,7 +191,7 @@ class TestInitializeModel:
         expected_generator_state = set(model.inputs["generator_state"].tolist())
 
         model.step_target = 5 # restart the model and run till step 5
-        model.run(True)
+        model.run(restart=True)
         stored_generator_state = set(model.inputs["generator_state"].tolist())
 
         assert model.inputs is not None
@@ -207,3 +207,19 @@ class TestInitializeModel:
         assert Path('my_model/milestone_2/generator_state.bin').exists()
         assert Path('my_model/milestone_2/version.md').exists()
         assert model.inputs["step_count"] == 2
+
+    def test_model_milestone_restart(self, model):
+        model.milestones = [1]
+        model.step_target = 3 # only run the model till step 3
+        model.run()
+        expected_generator_state = set(model.inputs["generator_state"].tolist())
+
+        model.step_target = 5 # restart the model and run till step 5
+        model.run(restart=1)
+        stored_generator_state = set(model.inputs["generator_state"].tolist())
+
+        assert model.inputs is not None
+        assert model.inputs["step_count"] == 1
+        assert model.step_count == 5
+        assert stored_generator_state == expected_generator_state 
+        
