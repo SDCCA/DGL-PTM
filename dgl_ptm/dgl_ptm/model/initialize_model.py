@@ -163,6 +163,7 @@ class PovertyTrapModel(Model):
         self.step_count = CONFIG.step_count
         self.step_target = CONFIG.step_target
         self.checkpoint_period = CONFIG.checkpoint_period
+        self.milestones = CONFIG.milestones
         self.steering_parameters = CONFIG.steering_parameters
 
         # Code version.
@@ -395,7 +396,7 @@ class PovertyTrapModel(Model):
         run the model for each step until the step_target is reached.
 
         param: restart: boolean, optional. If True, the model is run from last
-        saved step. Default False.
+        checkpoint. Default False.
         """
 
         if restart:
@@ -410,8 +411,11 @@ class PovertyTrapModel(Model):
         while self.step_count < self.step_target:
             self.step()
 
-            # save the model state every step reported by checkpoint_period
-            if 0 < self.checkpoint_period and self.step_count % self.checkpoint_period == 0:
+            # save the model state every step reported by checkpoint_period and at specific milestones.
+            # checkpoint saves overwrite the previous checkpoint; milestone get unique folders.
+            save_checkpoint = 0 < self.checkpoint_period and self.step_count % self.checkpoint_period == 0
+            save_milestone = self.milestones and self.step_count in self.milestones
+            if save_checkpoint or save_milestone:
                 self.inputs = {
                     'model_graph': copy.deepcopy(self.model_graph),
                     #'model_data': copy.deepcopy(self.model_data),
@@ -419,8 +423,23 @@ class PovertyTrapModel(Model):
                     'step_count': self.step_count,
                     'code_version': self.version
                 }
-                _save_model(f'./{self._model_identifier}', self.inputs)
 
+                # Note that a sinlge step could be both a checkpoint and a milestone.
+                # The checkpoint could be necessary to restore a crashed process while
+                # the milestone is required output.
+                if save_checkpoint:
+                    _save_model(f'./{self._model_identifier}', self.inputs)
+                if save_milestone:
+                    milestone_path = _make_path_unique(f'./{self._model_identifier}/milestone_{self.step_count}')
+                    _save_model(milestone_path, self.inputs)
+
+def _make_path_unique(path):
+    if Path(path).exists():
+        incr = 1
+        def add_incr(path, incr): return f'{path}_{incr}'
+        while Path(add_incr(path, incr)).exists(): incr += 1
+        path = add_incr(path, incr)
+    return path
 
 def _save_model(path, inputs):
     """ save the model_graph, generator_state and code_version in files."""

@@ -206,6 +206,7 @@ class Config(BaseModel):
     step_count: int = 0
     step_target: PositiveInt = 5
     checkpoint_period: int = 10
+    milestones: Optional[List[PositiveInt]] = None
     steering_parameters: SteeringParams = SteeringParams()
     alpha_dist: AlphaDist = AlphaDist()
     capital_dist: CapitalDist = CapitalDist()
