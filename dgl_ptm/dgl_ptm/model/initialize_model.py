@@ -395,12 +395,23 @@ class PovertyTrapModel(Model):
         """
         run the model for each step until the step_target is reached.
 
-        param: restart: boolean, optional. If True, the model is run from last
-        checkpoint. Default False.
+        param: restart: boolean or int or a pair of ints, optional.
+        If True, the model is run from last checkpoint,
+        if an int, the model is run from the first milestone at that step,
+        if a pair of ints, the model is run from that milestone at that step.
+        Default False.
         """
 
-        if restart:
-            self.inputs = _load_model(f'./{self._model_identifier}')
+        self.inputs = None
+        if isinstance(restart, bool):
+            if restart:
+                self.inputs = _load_model(f'./{self._model_identifier}')
+        elif isinstance(restart, int):
+            self.inputs = _load_model(f'./{self._model_identifier}/milestone_{restart}')
+        elif isinstance(restart, tuple):
+            self.inputs = _load_model(f'./{self._model_identifier}/milestone_{restart[0]}_{restart[1]}')
+
+        if self.inputs:
             self.model_graph = copy.deepcopy(self.inputs["model_graph"])
             #self.model_data = self.inputs["model_data"]
             self.generator_state = self.inputs["generator_state"]
