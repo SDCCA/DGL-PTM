@@ -33,10 +33,12 @@ class MThetaDist(BaseModel):
     model_config = ConfigDict(validate_default = True)
 
 
-# TODO(tvl): describe the difference between SteeringParams and Config.
 # TODO(tvl): there is some overlap between the parameters defined in SteeringParams and Config; this should be resolved. Otherwise, it just causes confusion.
 class SteeringParams(BaseModel):
-    """Base class for steering parameters."""
+    """
+    Base class for steering parameters.
+    These are the parameters used within each step of the model.
+    """
     edata: List[str] = ["all"]
     epath: str = "./edge_data"
     format: str = "xarray"
@@ -199,7 +201,10 @@ class SensitivityDist(BaseModel):
 
 
 class Config(BaseModel):
-    """Base class for configuration parameters."""
+    """
+    Base class for configuration parameters.
+    These are the parameters used by the overarching process.
+    """
     model_identifier: str = Field("test", alias='_model_identifier') # because pydantic does not like underscores
     device: str = "cpu"
     seed: int = 42
