@@ -46,7 +46,7 @@ class SteeringParams(BaseModel):
     wealth_method: str = "singular_transfer"
     income_method: str = "income_generation"
     consume_method: str = "fitted_consumption"
-    nn_path: str = "default"
+    nn_path: Optional[str] = "default"
     capital_update_method: str = "default"
     characteristic_distance: Union[int,float] = 35
     homophily_parameter: Union[int,float] = 0.69

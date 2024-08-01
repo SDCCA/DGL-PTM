@@ -2,7 +2,6 @@
 # import pytest
 # import dgl_ptm
 # import torch
-# from dgl_ptm.agent.agent_perception import agent_perception_update
 # from dgl_ptm.agent.capital_update import capital_update
 # from dgl_ptm.agent.income_generation import income_generation
 # from dgl_ptm.agent.wealth_consumption import wealth_consumption
@@ -16,35 +15,6 @@
 #     model.set_model_parameters()
 #     model.initialize_model()
 #     return model
-
-# class TestAgentPerceptionUpdate:
-
-#     def test_agent_perception_update_default(self, model):
-#         theta = model.model_graph.ndata['theta']
-#         sensitivity = model.model_graph.ndata['sensitivity']
-#         model_theta = model.model_data['modelTheta'][0]
-#         expected_theta = theta * (1 - sensitivity) + model_theta * sensitivity
-
-#         agent_perception_update(
-#             model.model_graph,
-#             model.model_data,
-#             1,
-#             method="default"
-#             )
-
-#         # assert _agent_theta_update was called
-#         assert (model.model_graph.ndata['theta'] == expected_theta).all()
-
-#     def test_agent_perception_update_other(self, model):
-#         # assert NotImplementedError was raised
-#         with pytest.raises(NotImplementedError):
-#             agent_perception_update(
-#                 model.model_graph,
-#                 model.model_data,
-#                 1,
-#                 method='other'
-#                 )
-
 
 # class TestCapitalUpdate:
 
