@@ -13,7 +13,7 @@ def agent_update(model_graph, model_params, device=None, timestep=None, method='
     elif method == 'theta':
         _agent_theta_update(model_graph, model_params, timestep)
     elif method == 'consumption':
-        _agent_consumption_update(model_graph, model_params,device)
+        _agent_consumption_update(model_graph, model_params, timestep, device)
     elif method == 'income':
         _agent_income_update(model_graph,model_params,device)
     elif method == 'pseudo':
@@ -21,13 +21,13 @@ def agent_update(model_graph, model_params, device=None, timestep=None, method='
     else:
         raise NotImplementedError(f"Unrecognized agent update type {method} attempted during time step implementation.'")
 
-def _pseudo_agent_update(model_graph,model_params): 
+def _pseudo_agent_update(model_graph,model_params,device): 
     '''
     agent_update - Updates the state of the agent based on income generation and money trades
     '''
     model_graph.ndata['wealth'] = model_graph.ndata['wealth'] + model_graph.ndata['net_trade']
-    income_generation(model_graph, model_params, method = model_params['income_method'])
-    wealth_consumption(model_graph, method=model_params['consume_method'])
+    income_generation(model_graph, device, model_params, method = model_params['income_method'])
+    wealth_consumption(model_graph, model_params, method=model_params['consume_method'], device=device)
     model_graph.ndata['wealth'] = model_graph.ndata['wealth'] + model_graph.ndata['income'] - model_graph.ndata['wealth_consumption']
 
 
@@ -54,9 +54,9 @@ def _agent_theta_update(model_graph,model_params,timestep):
     global_θ =model_params['modelTheta'][timestep]
     model_graph.ndata['theta'] = model_graph.ndata['theta'] * (1-model_graph.ndata['sensitivity']) + global_θ * model_graph.ndata['sensitivity']
 
-def _agent_consumption_update(model_graph, model_params, device):
+def _agent_consumption_update(model_graph, model_params, timestep, device):
     '''Updates agent consumption based on method specified in model parameters.'''
-    wealth_consumption(model_graph, model_params, device, method=model_params['consume_method'])
+    wealth_consumption(model_graph, model_params,timestep, device, method=model_params['consume_method'])
 
 def _agent_income_update(model_graph, model_params, device):
     '''Updates agent income based on method specified in model parameters.'''
