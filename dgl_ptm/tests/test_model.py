@@ -47,36 +47,6 @@ class TestPtmStep:
          model.step() # timestep 1
          assert Path('my_model/edge_data/1.zarr').exists()
 
-
-class TestDataCollection:
-    def test_data_collection(self, model):
-        data_collection(model.model_graph, timestep=0, npath = model.steering_parameters['npath'],
-                        epath = model.steering_parameters['epath'], ndata = model.steering_parameters['ndata'],
-                        edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
-                        mode = model.steering_parameters['mode'])
-
-        assert Path('my_model/agent_data.zarr').exists()
-        assert Path('my_model/edge_data/0.zarr').exists()
-
-    def test_data_collection_timestep1(self, model):
-        model.step() # timestep 0
-        data_collection(model.model_graph, timestep=1, npath = model.steering_parameters['npath'],
-                        epath = model.steering_parameters['epath'], ndata = model.steering_parameters['ndata'],
-                        edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
-                        mode = model.steering_parameters['mode'])
-
-        assert Path('my_model/agent_data.zarr').exists()
-        assert Path('my_model/edge_data/0.zarr').exists()
-        assert Path('my_model/edge_data/1.zarr').exists()
-
-        # check if dimension 'n_time' exist in agent_data.zarr
-        agent_data = xr.open_zarr('my_model/agent_data.zarr')
-        assert 'n_time' in agent_data.dims
-
-        # check variable names in edge_data/1.zarr
-        edge_data = xr.open_zarr('my_model/edge_data/1.zarr')
-        assert 'weight' in edge_data.variables
-
     def test_data_collection_period(self, model):
         if Path('my_model/edge_data/').exists():
             shutil.rmtree('my_model/edge_data/')
@@ -106,6 +76,36 @@ class TestDataCollection:
         assert not Path('my_model/edge_data/2.zarr').exists()
         assert not Path('my_model/edge_data/3.zarr').exists()
         assert Path('my_model/edge_data/4.zarr').exists()
+
+
+class TestDataCollection:
+    def test_data_collection(self, model):
+        data_collection(model.model_graph, timestep=0, npath = model.steering_parameters['npath'],
+                        epath = model.steering_parameters['epath'], ndata = model.steering_parameters['ndata'],
+                        edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
+                        mode = model.steering_parameters['mode'])
+
+        assert Path('my_model/agent_data.zarr').exists()
+        assert Path('my_model/edge_data/0.zarr').exists()
+
+    def test_data_collection_timestep1(self, model):
+        model.step() # timestep 0
+        data_collection(model.model_graph, timestep=1, npath = model.steering_parameters['npath'],
+                        epath = model.steering_parameters['epath'], ndata = model.steering_parameters['ndata'],
+                        edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
+                        mode = model.steering_parameters['mode'])
+
+        assert Path('my_model/agent_data.zarr').exists()
+        assert Path('my_model/edge_data/0.zarr').exists()
+        assert Path('my_model/edge_data/1.zarr').exists()
+
+        # check if dimension 'n_time' exist in agent_data.zarr
+        agent_data = xr.open_zarr('my_model/agent_data.zarr')
+        assert 'n_time' in agent_data.dims
+
+        # check variable names in edge_data/1.zarr
+        edge_data = xr.open_zarr('my_model/edge_data/1.zarr')
+        assert 'weight' in edge_data.variables
 
 
 class TestInitializeModel:
