@@ -33,7 +33,6 @@ class MThetaDist(BaseModel):
     model_config = ConfigDict(validate_default = True)
 
 
-# TODO(tvl): there is some overlap between the parameters defined in SteeringParams and Config; this should be resolved. Otherwise, it just causes confusion.
 class SteeringParams(BaseModel):
     """
     Base class for steering parameters.
@@ -225,24 +224,12 @@ class Config(BaseModel):
     technology_levels: list = [0, 1]
     a_theta_dist: AThetaDist = AThetaDist()
     sensitivity_dist: SensitivityDist = SensitivityDist()
-    adapt_m: list = [0.0, 0.5, 0.9]
-    adapt_cost: list = [0.0, 0.25, 0.45]
-    depreciation: float = 0.6
-    discount: float = 0.95
 
     @field_validator("step_count")
     def _validate_step_count(cls, v):
         if v < 0:
             raise ValueError("step_count must be equal or greater than 0")
         return v
-
-    @field_validator("adapt_m")
-    def _convert_adapt_m(cls, v):
-        return torch.tensor(v)
-
-    @field_validator("adapt_cost")
-    def _convert_adapt_cost(cls, v):
-        return torch.tensor(v)
 
     # Make sure pydantic validates the default values
     model_config = ConfigDict(
