@@ -2,7 +2,7 @@ import pytest
 import dgl_ptm
 import os
 
-from dgl_ptm.util.network_metrics import mean_connectivity
+from dgl_ptm.util.network_metrics import average_degree
 
 os.environ["DGLBACKEND"] = "pytorch"
 
@@ -15,13 +15,13 @@ def model():
 
 
 class TestNetworkMetrics:
-    def test_mean_connectivity_initialize(self, model):
-        mc = mean_connectivity(model.model_graph)
-        assert model.mean_connectivity == mc
-        assert isinstance(mc, float)
+    def test_average_degree_initialize(self, model):
+        ad = average_degree(model.model_graph)
+        assert model.average_degree == ad
+        assert isinstance(ad, float)
 
     def test_mean_connectivity_step(self, model):
         model.step() # timestep 1
-        mc = mean_connectivity(model.model_graph)
-        assert model.mean_connectivity == mc
-        assert isinstance(mc, float)
+        ad = average_degree(model.model_graph)
+        assert model.average_degree == ad
+        assert isinstance(ad, float)

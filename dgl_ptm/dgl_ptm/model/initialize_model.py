@@ -12,7 +12,7 @@ from dgl_ptm.agentInteraction.weight_update import weight_update
 from dgl_ptm.model.data_collection import data_collection
 from dgl.data.utils import save_graphs, load_graphs
 from dgl_ptm.config import Config, CONFIG
-from dgl_ptm.util.network_metrics import mean_connectivity
+from dgl_ptm.util.network_metrics import average_degree
 
 # Set the seed of the random number generator
 # this is global and will affect all random number generators
@@ -248,7 +248,7 @@ class PovertyTrapModel(Model):
 
         # number of edges(links) in the network
         self.number_of_edges = self.model_graph.number_of_edges()
-        self.mean_connectivity = mean_connectivity(self.model_graph)
+        self.average_degree = average_degree(self.model_graph)
 
     def create_network(self):
         """
@@ -389,7 +389,7 @@ class PovertyTrapModel(Model):
 
             # number of edges(links) in the network
             self.number_of_edges = self.model_graph.number_of_edges()
-            self.mean_connectivity = mean_connectivity(self.model_graph)
+            self.average_degree = average_degree(self.model_graph)
 
         except:
             #TODO add model dump here. Also check against previous save to avoid overwriting
