@@ -1,0 +1,175 @@
+{
+    "metadata": {
+        ".zattrs": {},
+        ".zgroup": {
+            "zarr_format": 2
+        },
+        "dest/.zarray": {
+            "chunks": [
+                198
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<i8",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                198
+            ],
+            "zarr_format": 2
+        },
+        "dest/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "n_edges"
+            ]
+        },
+        "percent_weight/.zarray": {
+            "chunks": [
+                198,
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f4",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                198,
+                1
+            ],
+            "zarr_format": 2
+        },
+        "percent_weight/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "n_edges",
+                "time"
+            ],
+            "coordinates": "source dest"
+        },
+        "source/.zarray": {
+            "chunks": [
+                198
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<i8",
+            "fill_value": null,
+            "filters": null,
+            "order": "C",
+            "shape": [
+                198
+            ],
+            "zarr_format": 2
+        },
+        "source/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "n_edges"
+            ]
+        },
+        "trfr_wealth/.zarray": {
+            "chunks": [
+                198,
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f4",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                198,
+                1
+            ],
+            "zarr_format": 2
+        },
+        "trfr_wealth/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "n_edges",
+                "time"
+            ],
+            "coordinates": "source dest"
+        },
+        "wealth_diff/.zarray": {
+            "chunks": [
+                198,
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f4",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                198,
+                1
+            ],
+            "zarr_format": 2
+        },
+        "wealth_diff/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "n_edges",
+                "time"
+            ],
+            "coordinates": "source dest"
+        },
+        "weight/.zarray": {
+            "chunks": [
+                198,
+                1
+            ],
+            "compressor": {
+                "blocksize": 0,
+                "clevel": 5,
+                "cname": "lz4",
+                "id": "blosc",
+                "shuffle": 1
+            },
+            "dtype": "<f4",
+            "fill_value": "NaN",
+            "filters": null,
+            "order": "C",
+            "shape": [
+                198,
+                1
+            ],
+            "zarr_format": 2
+        },
+        "weight/.zattrs": {
+            "_ARRAY_DIMENSIONS": [
+                "n_edges",
+                "time"
+            ],
+            "coordinates": "source dest"
+        }
+    },
+    "zarr_consolidated_format": 1
+}

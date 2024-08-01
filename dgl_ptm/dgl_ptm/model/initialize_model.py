@@ -140,6 +140,7 @@ class PovertyTrapModel(Model):
         Checks whether a model indentifier has been specified.
 
         param: model_identifier: str, required. Identifier for the model. Used to save and load model states.
+
         """
       
         super().__init__(model_identifier = model_identifier)
