@@ -199,31 +199,57 @@ class TestInitializeModel:
         assert model.model_graph.number_of_nodes() == 100
 
     def test_model_init_savestate(self, model):
-        model.savestate = 1
+        model.checkpoint_period = 1
         model.run()
 
         assert model.inputs is not None
-        assert Path('my_model/model_graphs.bin').exists()
+        assert Path('my_model/model_graph.bin').exists()
         assert Path('my_model/generator_state.bin').exists()
+        assert Path('my_model/version.md').exists()
         assert model.inputs["step_count"] == 5
 
     def test_model_init_savestate_not_default(self, model):
-        model.savestate = 2
+        model.checkpoint_period = 2
         model.run()
 
         assert model.inputs["step_count"] == 4
 
     def test_model_init_restart(self, model):
-        model.savestate = 1
+        model.checkpoint_period = 1
         model.step_target = 3 # only run the model till step 3
         model.run()
         expected_generator_state = set(model.inputs["generator_state"].tolist())
 
-        model.restart = True
-        model.step_target = 5 # contiune the model till step 5
-        model.run()
+        model.step_target = 5 # restart the model and run till step 5
+        model.run(restart=True)
         stored_generator_state = set(model.inputs["generator_state"].tolist())
 
         assert model.inputs is not None
         assert model.inputs["step_count"] == 5
         assert stored_generator_state == expected_generator_state 
+
+    def test_model_milestone(self, model):
+        model.milestones = [2]
+        model.run()
+
+        assert model.inputs is not None
+        assert Path('my_model/milestone_2/model_graph.bin').exists()
+        assert Path('my_model/milestone_2/generator_state.bin').exists()
+        assert Path('my_model/milestone_2/version.md').exists()
+        assert model.inputs["step_count"] == 2
+
+    def test_model_milestone_restart(self, model):
+        model.milestones = [1]
+        model.step_target = 3 # only run the model till step 3
+        model.run()
+        expected_generator_state = set(model.inputs["generator_state"].tolist())
+
+        model.step_target = 5 # restart the model and run till step 5
+        model.run(restart=1)
+        stored_generator_state = set(model.inputs["generator_state"].tolist())
+
+        assert model.inputs is not None
+        assert model.inputs["step_count"] == 1
+        assert model.step_count == 5
+        assert stored_generator_state == expected_generator_state 
+        

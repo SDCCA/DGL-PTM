@@ -8,6 +8,7 @@ initial_graph_args:
   new_node_edges: 1
 step_count: 0
 step_target: 5
+checkpoint_period: 10
 cost_vals:
 - 0.0
 - 0.45

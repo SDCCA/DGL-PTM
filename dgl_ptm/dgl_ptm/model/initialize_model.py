@@ -1,16 +1,15 @@
 import copy
-from pathlib import Path
 import dgl
 import torch
 import pickle
 import logging
+
 from pathlib import Path
+from dgl.data.utils import save_graphs, load_graphs
 
 from dgl_ptm.network.network_creation import network_creation
 from dgl_ptm.model.step import ptm_step
 from dgl_ptm.agentInteraction.weight_update import weight_update
-from dgl_ptm.model.data_collection import data_collection
-from dgl.data.utils import save_graphs, load_graphs
 from dgl_ptm.config import Config, CONFIG
 
 # Set the seed of the random number generator
@@ -56,7 +55,7 @@ def sample_distribution_tensor(type, distParameters, nSamples, round=False, deci
         uniform_samples = torch.rand(size)
         sample_ppf = torch.sqrt(torch.tensor(2.0)) * torch.erfinv(2 *(cdf_min + (cdf_max - cdf_min) * uniform_samples) - 1)
 
-        dist = destParameters[0] + destParameters[1] * sample_ppf
+        dist = distParameters[0] + distParameters[1] * sample_ppf
 
     else:
         raise NotImplementedError('Currently only uniform, normal, multinomial, and bernoulli distributions are supported')
@@ -134,21 +133,16 @@ class PovertyTrapModel(Model):
 
     """
 
-    def __init__(self,*, model_identifier, restart=False, savestate=10):
+    def __init__(self,*, model_identifier):
         """
-        restore from a savestate or create a PVT model instance.
+        restore from a checkpoint or create a PVT model instance.
         Checks whether a model indentifier has been specified.
 
         param: model_identifier: str, required. Identifier for the model. Used to save and load model states.
-        param: restart: boolean, optional. If True, the model is run from last
-        saved step. Default False.
-        param: savestate: int, optional. If provided, the model state is saved
-        on this frequency. Default is 10 i.e. every 10th time step.
+
         """
       
         super().__init__(model_identifier = model_identifier)
-        self.restart = restart
-        self.savestate = savestate
 
         # default values
         self.device = CONFIG.device
@@ -168,7 +162,13 @@ class PovertyTrapModel(Model):
         self.model_graph = CONFIG.model_graph
         self.step_count = CONFIG.step_count
         self.step_target = CONFIG.step_target
+        self.checkpoint_period = CONFIG.checkpoint_period
+        self.milestones = CONFIG.milestones
         self.steering_parameters = CONFIG.steering_parameters
+
+        # Code version.
+        self.version = Path('version.md').read_text().splitlines()[0]
+
 
     def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
         """
@@ -219,10 +219,12 @@ class PovertyTrapModel(Model):
         self.steering_parameters['npath'] = str(parent_dir / Path(cfg.steering_parameters.npath))
         self.steering_parameters['epath'] = str(parent_dir / Path(cfg.steering_parameters.epath))
 
-        # save updated config to yaml file
+        # save updated config to yaml files
         cfg_filename = parent_dir / f'{self._model_identifier}.yaml'
         cfg.to_yaml(cfg_filename)
-        logger.warning(f'The model parameters are saved to {cfg_filename}.')
+        cfg_filename_step = parent_dir / f'{self._model_identifier}_{self.step_count}.yaml'
+        cfg.to_yaml(cfg_filename_step)
+        logger.warning(f'The model parameters are saved to {cfg_filename} and {cfg_filename_step}.')
 
     def initialize_model(self):
         """
@@ -389,11 +391,27 @@ class PovertyTrapModel(Model):
             #TODO add model dump here. Also check against previous save to avoid overwriting
             raise RuntimeError(f'execution of step failed for step {self.step_count}')
 
-    def run(self):
-        """ run the model for each step until the step_target is reached."""
+    def run(self, restart=False):
+        """
+        run the model for each step until the step_target is reached.
 
-        if self.restart:
-            self.inputs = _load_model(f'./{self._model_identifier}')
+        param: restart: boolean or int or a pair of ints, optional.
+        If True, the model is run from last checkpoint,
+        if an int, the model is run from the first milestone at that step,
+        if a pair of ints, the model is run from that milestone at that step.
+        Default False.
+        """
+
+        self.inputs = None
+        if isinstance(restart, bool):
+            if restart:
+                self.inputs = _load_model(f'./{self._model_identifier}')
+        elif isinstance(restart, int):
+            self.inputs = _load_model(f'./{self._model_identifier}/milestone_{restart}')
+        elif isinstance(restart, tuple):
+            self.inputs = _load_model(f'./{self._model_identifier}/milestone_{restart[0]}_{restart[1]}')
+
+        if self.inputs:
             self.model_graph = copy.deepcopy(self.inputs["model_graph"])
             #self.model_data = self.inputs["model_data"]
             self.generator_state = self.inputs["generator_state"]
@@ -404,23 +422,42 @@ class PovertyTrapModel(Model):
         while self.step_count < self.step_target:
             self.step()
 
-            # save the model state every step reported by savestate
-            if self.savestate and self.step_count % self.savestate == 0:
+            # save the model state every step reported by checkpoint_period and at specific milestones.
+            # checkpoint saves overwrite the previous checkpoint; milestone get unique folders.
+            save_checkpoint = 0 < self.checkpoint_period and self.step_count % self.checkpoint_period == 0
+            save_milestone = self.milestones and self.step_count in self.milestones
+            if save_checkpoint or save_milestone:
                 self.inputs = {
                     'model_graph': copy.deepcopy(self.model_graph),
                     #'model_data': copy.deepcopy(self.model_data),
                     'generator_state': generator.get_state(),
-                    'step_count': self.step_count
+                    'step_count': self.step_count,
+                    'code_version': self.version
                 }
-                _save_model(f'./{self._model_identifier}', self.inputs)
 
+                # Note that a sinlge step could be both a checkpoint and a milestone.
+                # The checkpoint could be necessary to restore a crashed process while
+                # the milestone is required output.
+                if save_checkpoint:
+                    _save_model(f'./{self._model_identifier}', self.inputs)
+                if save_milestone:
+                    milestone_path = _make_path_unique(f'./{self._model_identifier}/milestone_{self.step_count}')
+                    _save_model(milestone_path, self.inputs)
+
+def _make_path_unique(path):
+    if Path(path).exists():
+        incr = 1
+        def add_incr(path, incr): return f'{path}_{incr}'
+        while Path(add_incr(path, incr)).exists(): incr += 1
+        path = add_incr(path, incr)
+    return path
 
 def _save_model(path, inputs):
-    """ save the model_graph, generator_state and model_data in files."""
+    """ save the model_graph, generator_state and code_version in files."""
 
     # save the model_graph with a label
-    graph_label = {'step_count': torch.tensor([inputs["step_count"]])}
-    save_graphs(str(Path(path) / "model_graphs.bin"), inputs["model_graph"], graph_label)
+    graph_labels = {'step_count': torch.tensor([inputs["step_count"]])}
+    save_graphs(str(Path(path) / "model_graph.bin"), inputs["model_graph"], graph_labels)
 
     # save the generator_state
     with open(Path(path) / "generator_state.bin", 'wb') as file:
@@ -430,16 +467,20 @@ def _save_model(path, inputs):
     #with open(Path(path) / "model_data.bin", 'wb') as file:
     #    pickle.dump([inputs["model_data"], inputs["step_count"]], file)
 
+    # save the code version
+    with open(Path(path) / "version.md", 'w') as file:
+        file.writelines([inputs["code_version"] + '\n', f'step={inputs["step_count"]}\n'])
+
 
 def _load_model(path):
-    # Load model graphs
-    path_model_graph = Path(path) / "model_graphs.bin"
+    # Load model graph
+    path_model_graph = Path(path) / "model_graph.bin"
     if not path_model_graph.is_file():
         raise ValueError(f'The path {path_model_graph} is not a file.')
 
-    graph, graph_lebel = load_graphs(str(path_model_graph))
+    graph, graph_labels = load_graphs(str(path_model_graph))
     graph = graph[0]
-    graph_step = graph_lebel['step_count'].tolist()[0]
+    graph_step = graph_labels['step_count'].tolist()[0]
 
     # Load generator_state
     path_generator_state = Path(path) / "generator_state.bin"
@@ -457,10 +498,23 @@ def _load_model(path):
     #with open(path_model_data, 'rb') as file:
     #    data, data_step = pickle.load(file)
 
+    # Load code version
+    path_code_version = Path(path) / "version.md"
+    if not path_code_version.is_file():
+        raise ValueError(f'The path {path_code_version} is not a file.')
+
+    with open(path_code_version, 'r') as file:
+        code_version = file.readlines()[0]
+
     # Check if graph_step, generator_step and data_step are the same
     if graph_step != generator_step: #or graph_step != data_step:
         msg = 'The step count in the model_graph and generator_state are not the same.'# and model_data are not the same.'
         raise ValueError(msg)
+    
+    # Check if the saved version and current code version are the same
+    version = Path('version.md').read_text().splitlines()[0]
+    if code_version != version:
+        logger.warning(f'Warning: loading model generated using earlier code version: {code_version}.')
 
     # Show which step is loaded
     logger.warning(f'Loading model state from step {generator_step}.')
@@ -469,6 +523,7 @@ def _load_model(path):
         'model_graph': graph,
         #'model_data': data,
         'generator_state': generator,
-        'step_count': generator_step
+        'step_count': generator_step,
+        'code_version': code_version
     }
     return inputs
