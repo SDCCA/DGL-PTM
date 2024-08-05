@@ -90,7 +90,6 @@ class PovertyTrapModel(Model):
     """
     Poverty Trap model as derived model class
 
-    #default values as class variable 
     default_model_parameters = {'number_agents': 100 , 
     'seed':0,
     'gamma_vals':torch.tensor([0.3,0.45]) , #for pseudo income

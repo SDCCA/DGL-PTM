@@ -42,13 +42,7 @@ def ptm_step(agent_graph, device, timestep, params):
         #Weight update
         weight_update(agent_graph, device, homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
 
-        #Data collection and storage
-        data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 
-                        edata = params['edata'], mode = params['mode'])
-        
-
-    if params['step_type']=='custom':
-
+    elif params['step_type']=='custom':
         if timestep==0:
             #Update agent states
             agent_update(agent_graph, params, timestep=timestep, method ='theta')
@@ -58,7 +52,6 @@ def ptm_step(agent_graph, device, timestep, params):
                         edata = params['edata'], mode = params['mode'])
             return
         
-
         agent_update(agent_graph, params, timestep=timestep, method = 'capital')
         
         #Weight update
@@ -79,6 +72,10 @@ def ptm_step(agent_graph, device, timestep, params):
         agent_update(agent_graph, params, device=device, method ='income')
         agent_update(agent_graph, params, timestep=timestep, device=device, method ='consumption')
 
+    # Data can be collected periodically (every X steps) and/or at specified time steps.
+    do_periodical_data_collection = 0 < params['data_collection_period'] and timestep % params['data_collection_period'] == 0
+    do_specific_data_collection = params['data_collection_list'] and timestep in params['data_collection_list']
+    if do_periodical_data_collection or do_specific_data_collection:
         #Data collection and storage
         data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 
                         edata = params['edata'], mode = params['mode'])

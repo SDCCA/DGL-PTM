@@ -2,6 +2,7 @@ import pytest
 import dgl_ptm
 import os
 import xarray as xr
+import shutil
 import torch
 
 from dgl_ptm.model.data_collection import data_collection
@@ -76,6 +77,63 @@ class TestDataCollection:
         edge_data = xr.open_zarr('my_model/edge_data/1.zarr')
         assert 'weight' in edge_data.variables
 
+    def test_data_collection_period(self, model):
+        if Path('my_model/edge_data/').exists():
+            shutil.rmtree('my_model/edge_data/')
+
+        model.steering_parameters['data_collection_period'] = 3
+
+        model.run()
+
+        assert model.step_count == 5
+        assert Path('my_model/agent_data.zarr').exists()
+        assert not Path('my_model/edge_data/2.zarr').exists()
+        assert Path('my_model/edge_data/3.zarr').exists()
+
+    def test_data_collection_list(self, model):
+        if Path('my_model/edge_data/').exists():
+            shutil.rmtree('my_model/edge_data/')
+
+        model.steering_parameters['data_collection_period'] = -1
+        model.steering_parameters['data_collection_list'] = [1, 4]
+
+        model.run()
+
+        assert model.step_count == 5
+        assert Path('my_model/agent_data.zarr').exists()
+        assert not Path('my_model/edge_data/0.zarr').exists()
+        assert Path('my_model/edge_data/1.zarr').exists()
+        assert not Path('my_model/edge_data/2.zarr').exists()
+        assert not Path('my_model/edge_data/3.zarr').exists()
+        assert Path('my_model/edge_data/4.zarr').exists()
+
+    def test_data_collection_period_and_list(self, model):
+        if Path('my_model/edge_data/').exists():
+            shutil.rmtree('my_model/edge_data/')
+
+        model.step_target = 10 # run the model till step 10
+
+        # Set periodical progress check as well as
+        # collecting data before and after specific step and at the end of the process.
+        # Note that the pediod and list could have overlapping values;
+        # this will result in collecting the data once at that step.
+        model.steering_parameters['data_collection_period'] = 4
+        model.steering_parameters['data_collection_list'] = [4, 5, 9]
+
+        model.run()
+
+        assert model.step_count == 10
+        assert Path('my_model/agent_data.zarr').exists()
+
+        assert Path('my_model/edge_data/0.zarr').exists()
+        assert Path('my_model/edge_data/4.zarr').exists()
+        assert Path('my_model/edge_data/8.zarr').exists()
+
+        # No need to test for the existence of 4.zarr a second time.
+        #assert Path('my_model/edge_data/4.zarr').exists()
+        assert Path('my_model/edge_data/5.zarr').exists()
+        assert Path('my_model/edge_data/9.zarr').exists()
+
 
 class TestInitializeModel:
     def test_set_model_parameters(self):
@@ -121,7 +179,6 @@ class TestInitializeModel:
     def test_initialize_model(self, model):
         assert model.model_graph is not None
         assert model.number_of_edges is not None
-        assert Path('my_model/edge_data/0.zarr').exists()
         assert str(model.model_graph.device) == 'cpu'
 
     def test_create_network(self):
