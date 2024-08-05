@@ -20,7 +20,7 @@ class TestNetworkMetrics:
         assert model.average_degree == ad
         assert isinstance(ad, float)
 
-    def test_mean_connectivity_step(self, model):
+    def test_average_degree_step(self, model):
         model.step() # timestep 1
         ad = average_degree(model.model_graph)
         assert model.average_degree == ad
