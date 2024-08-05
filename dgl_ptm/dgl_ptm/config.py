@@ -34,7 +34,10 @@ class MThetaDist(BaseModel):
 
 
 class SteeringParams(BaseModel):
-    """Base class for steering parameters."""
+    """
+    Base class for steering parameters.
+    These are the parameters used within each step of the model.
+    """
     edata: List[str] = ["all"]
     epath: str = "./edge_data"
     format: str = "xarray"
@@ -61,6 +64,8 @@ class SteeringParams(BaseModel):
     local_ratio: float = 0.25
     truncation_weight: float = 1.0e-10
     step_type: str = "default"
+    data_collection_period: int = 1
+    data_collection_list: Optional[List[int]] = None
 
     @field_validator("adapt_m")
     def _convert_adapt_m(cls, v):
@@ -195,7 +200,10 @@ class SensitivityDist(BaseModel):
 
 
 class Config(BaseModel):
-    """Base class for configuration parameters."""
+    """
+    Base class for configuration parameters.
+    These are the parameters used by the overarching process.
+    """
     model_identifier: str = Field("test", alias='_model_identifier') # because pydantic does not like underscores
     device: str = "cpu"
     seed: int = 42
@@ -216,24 +224,12 @@ class Config(BaseModel):
     technology_levels: list = [0, 1]
     a_theta_dist: AThetaDist = AThetaDist()
     sensitivity_dist: SensitivityDist = SensitivityDist()
-    adapt_m: list = [0.0, 0.5, 0.9]
-    adapt_cost: list = [0.0, 0.25, 0.45]
-    depreciation: float = 0.6
-    discount: float = 0.95
 
     @field_validator("step_count")
     def _validate_step_count(cls, v):
         if v < 0:
             raise ValueError("step_count must be equal or greater than 0")
         return v
-
-    @field_validator("adapt_m")
-    def _convert_adapt_m(cls, v):
-        return torch.tensor(v)
-
-    @field_validator("adapt_cost")
-    def _convert_adapt_cost(cls, v):
-        return torch.tensor(v)
 
     # Make sure pydantic validates the default values
     model_config = ConfigDict(
