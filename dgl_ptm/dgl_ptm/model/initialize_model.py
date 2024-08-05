@@ -11,6 +11,7 @@ from dgl_ptm.network.network_creation import network_creation
 from dgl_ptm.model.step import ptm_step
 from dgl_ptm.agentInteraction.weight_update import weight_update
 from dgl_ptm.config import Config, CONFIG
+from dgl_ptm.util.network_metrics import average_degree
 
 # Set the seed of the random number generator
 # this is global and will affect all random number generators
@@ -98,8 +99,8 @@ class PovertyTrapModel(Model):
     'tec_levels': torch.tensor([0,1]), #check if deletable
     'a_theta_dist': {'type':'uniform','parameters':[0.1,1],'round':False,'decimals':None},
     'sensitivity_dist':{'type':'uniform','parameters':[0.0,1],'round':False,'decimals':None},
-    'tec_dist': {'type':'bernoulli','parameters':[0.5,None],'round':False,'decimals':None}, 
-    'capital_dist': {'type':'uniform','parameters':[0.1,10.],'round':False,'decimals':None}, 
+    'tec_dist': {'type':'bernoulli','parameters':[0.5,None],'round':False,'decimals':None},
+    'capital_dist': {'type':'uniform','parameters':[0.1,10.],'round':False,'decimals':None},
     'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
     'lam_dist': {'type':'uniform','parameters':[0.05,0.94],'round':True,'decimals':1},
     'initial_graph_type': 'barabasi-albert',
@@ -108,7 +109,7 @@ class PovertyTrapModel(Model):
     'step_count':0,
     'step_target':20,
     'steering_parameters':{'npath':'./agent_data.zarr',
-                            'epath':'./edge_data', 
+                            'epath':'./edge_data',
                             'ndata':['all_except',['a_table']],
                             'edata':['all'],
                             'mode':'xarray',
@@ -128,7 +129,7 @@ class PovertyTrapModel(Model):
                             'del_threshold':0.05,
                             'ratio':0.1,
                             'weight_a':0.69,
-                            'weight_b':35, 
+                            'weight_b':35,
                             'truncation_weight':1.0e-10,
                             'step_type':'default'}}
 
@@ -142,7 +143,7 @@ class PovertyTrapModel(Model):
         param: model_identifier: str, required. Identifier for the model. Used to save and load model states.
 
         """
-      
+
         super().__init__(model_identifier = model_identifier)
 
         # default values
@@ -247,6 +248,7 @@ class PovertyTrapModel(Model):
 
         # number of edges(links) in the network
         self.number_of_edges = self.model_graph.number_of_edges()
+        self.average_degree = average_degree(self.model_graph)
 
     def create_network(self):
         """
@@ -257,7 +259,7 @@ class PovertyTrapModel(Model):
         #this should fix issues with execution oon GPU (fix by VG)
         self.model_graph = agent_graph.to(self.device)
         #self.model_graph = agent_graph
-        
+
 
     def initialize_model_properties(self):
         """
@@ -272,7 +274,7 @@ class PovertyTrapModel(Model):
     def _initialize_model_theta(self):
         modelTheta = sample_distribution_tensor(self.steering_parameters['m_theta_dist']['type'],self.steering_parameters['m_theta_dist']['parameters'],self.step_target,round=self.steering_parameters['m_theta_dist']['round'],decimals=self.steering_parameters['m_theta_dist']['decimals'])
         return modelTheta
-        
+
     def _initialize_attach_prob(self):
         attachProb = sample_distribution_tensor(self.steering_parameters['m_attach_dist']['type'],self.steering_parameters['m_attach_dist']['parameters'],self.step_target,round=self.steering_parameters['m_attach_dist']['round'],decimals=self.steering_parameters['m_attach_dist']['decimals'])
         return attachProb
@@ -358,7 +360,7 @@ class PovertyTrapModel(Model):
 
     def _initialize_agents_sigma(self):
         """
-        Initialize agent sigma as a 1d tensor 
+        Initialize agent sigma as a 1d tensor
 
         """
         agentsSigma = sample_distribution_tensor(self.sigma_dist['type'],self.sigma_dist['parameters'],self.number_agents,round=self.sigma_dist['round'],decimals=self.sigma_dist['decimals'])
@@ -387,6 +389,7 @@ class PovertyTrapModel(Model):
 
             # number of edges(links) in the network
             self.number_of_edges = self.model_graph.number_of_edges()
+            self.average_degree = average_degree(self.model_graph)
 
         except:
             #TODO add model dump here. Also check against previous save to avoid overwriting
