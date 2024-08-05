@@ -29,3 +29,7 @@ env
 env3
 venv
 venv3
+
+# Testing
+my_model/
+test_model/
