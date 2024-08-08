@@ -6,6 +6,8 @@
 import torch
 import dgl
 
+import dgl_ptm.util.matrix_utils as matrix_utils
+
 def local_attachment(graph,n_FoF_links,edge_prop=None,p_attach=1.):
     created_links = 0
     if edge_prop != None:
@@ -41,31 +43,15 @@ def graph_norm_edge_prop(graph,edgeprop):
     else:
         raise RuntimeError('only homogenous graphs are currently supported')
 
-def FoF_nodes(srcid,dstid,graph):
-    """
-    For an edge in a homogenous graph defined by its src and dst nodes find all Friends-of-Friends (FoF), defiined as (downstream) neighbours of the dst node,
-    removing src node as may result from bidirectional edges. For a bidirectional graph this is equivalent to all neighbours.
-    """
-    successors_ = graph.successors(dstid)
-    successors = successors_[successors_!=srcid]
-    return successors
-
-def existing_connections(srcid,nodelist,graph):
-    """
-    identify all exisitng links between a src node and a list of dst nodes 
-    """
-    existing_connection=graph.has_edges_between(srcid,nodelist)
-    return existing_connection 
-
 def select_FoF_attachment(srcid,dstid,graph,edgeprop=None):
     """
     select possible FoF attachment by identifying potential FoF nodes {F} of the src-dst edge, discarding exisiting  src-F connections and selecting a
     possible FoF attachment target node T E {F} by weighted draw form the normalized weight distribution of all edges dst-{F}
     """
     selected_FoF=None
-    possible_FoF_nodes = FoF_nodes(srcid,dstid,graph)
+    possible_FoF_nodes = matrix_utils.downstream_nodes(srcid, dstid, graph)
     if possible_FoF_nodes.numel() !=0:
-        already_connected = existing_connections(srcid,possible_FoF_nodes,graph)
+        already_connected = matrix_utils.existing_connections(srcid, possible_FoF_nodes, graph)
         if torch.all(already_connected):
             print(f'all FoF nodes are already directly connected to node {srcid}.')
         else:
