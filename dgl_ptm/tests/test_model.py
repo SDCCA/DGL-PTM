@@ -13,7 +13,7 @@ os.environ["DGLBACKEND"] = "pytorch"
 
 @pytest.fixture
 def model():
-    model = dgl_ptm.PovertyTrapModel(model_identifier='my_model')
+    model = dgl_ptm.PovertyTrapModel(model_identifier='my_model', root_path='test_models')
     model.set_model_parameters()
     model.initialize_model()
     return model
@@ -39,30 +39,30 @@ class TestPtmStep:
         assert 'wealth_consumption' in model.model_graph.ndata
         assert 'income' in model.model_graph.ndata
 
-        assert Path('my_model/agent_data.zarr').exists()
-        assert Path('my_model/edge_data/0.zarr').exists()
+        assert Path('test_models/my_model/agent_data.zarr').exists()
+        assert Path('test_models/my_model/edge_data/0.zarr').exists()
 
     def test_ptm_step_timestep1(self, model):
          model.step() # timestep 0
          model.step() # timestep 1
-         assert Path('my_model/edge_data/1.zarr').exists()
+         assert Path('test_models/my_model/edge_data/1.zarr').exists()
 
     def test_data_collection_period(self, model):
-        if Path('my_model/edge_data/').exists():
-            shutil.rmtree('my_model/edge_data/')
+        if Path('test_models/my_model/edge_data/').exists():
+            shutil.rmtree('test_models/my_model/edge_data/')
 
         model.steering_parameters['data_collection_period'] = 3
 
         model.run()
 
         assert model.step_count == 5
-        assert Path('my_model/agent_data.zarr').exists()
-        assert not Path('my_model/edge_data/2.zarr').exists()
-        assert Path('my_model/edge_data/3.zarr').exists()
+        assert Path('test_models/my_model/agent_data.zarr').exists()
+        assert not Path('test_models/my_model/edge_data/2.zarr').exists()
+        assert Path('test_models/my_model/edge_data/3.zarr').exists()
 
     def test_data_collection_list(self, model):
-        if Path('my_model/edge_data/').exists():
-            shutil.rmtree('my_model/edge_data/')
+        if Path('test_models/my_model/edge_data/').exists():
+            shutil.rmtree('test_models/my_model/edge_data/')
 
         model.steering_parameters['data_collection_period'] = -1
         model.steering_parameters['data_collection_list'] = [1, 4]
@@ -70,16 +70,16 @@ class TestPtmStep:
         model.run()
 
         assert model.step_count == 5
-        assert Path('my_model/agent_data.zarr').exists()
-        assert not Path('my_model/edge_data/0.zarr').exists()
-        assert Path('my_model/edge_data/1.zarr').exists()
-        assert not Path('my_model/edge_data/2.zarr').exists()
-        assert not Path('my_model/edge_data/3.zarr').exists()
-        assert Path('my_model/edge_data/4.zarr').exists()
+        assert Path('test_models/my_model/agent_data.zarr').exists()
+        assert not Path('test_models/my_model/edge_data/0.zarr').exists()
+        assert Path('test_models/my_model/edge_data/1.zarr').exists()
+        assert not Path('test_models/my_model/edge_data/2.zarr').exists()
+        assert not Path('test_models/my_model/edge_data/3.zarr').exists()
+        assert Path('test_models/my_model/edge_data/4.zarr').exists()
 
     def test_data_collection_period_and_list(self, model):
-        if Path('my_model/edge_data/').exists():
-            shutil.rmtree('my_model/edge_data/')
+        if Path('test_models/my_model/edge_data/').exists():
+            shutil.rmtree('test_models/my_model/edge_data/')
 
         model.step_target = 10 # run the model till step 10
 
@@ -93,16 +93,16 @@ class TestPtmStep:
         model.run()
 
         assert model.step_count == 10
-        assert Path('my_model/agent_data.zarr').exists()
+        assert Path('test_models/my_model/agent_data.zarr').exists()
 
-        assert Path('my_model/edge_data/0.zarr').exists()
-        assert Path('my_model/edge_data/4.zarr').exists()
-        assert Path('my_model/edge_data/8.zarr').exists()
+        assert Path('test_models/my_model/edge_data/0.zarr').exists()
+        assert Path('test_models/my_model/edge_data/4.zarr').exists()
+        assert Path('test_models/my_model/edge_data/8.zarr').exists()
 
         # No need to test for the existence of 4.zarr a second time.
-        #assert Path('my_model/edge_data/4.zarr').exists()
-        assert Path('my_model/edge_data/5.zarr').exists()
-        assert Path('my_model/edge_data/9.zarr').exists()
+        #assert Path('test_models/my_model/edge_data/4.zarr').exists()
+        assert Path('test_models/my_model/edge_data/5.zarr').exists()
+        assert Path('test_models/my_model/edge_data/9.zarr').exists()
 
 
 class TestDataCollection:
@@ -112,8 +112,8 @@ class TestDataCollection:
                         edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
                         mode = model.steering_parameters['mode'])
 
-        assert Path('my_model/agent_data.zarr').exists()
-        assert Path('my_model/edge_data/0.zarr').exists()
+        assert Path('test_models/my_model/agent_data.zarr').exists()
+        assert Path('test_models/my_model/edge_data/0.zarr').exists()
 
     def test_data_collection_timestep1(self, model):
         model.step() # timestep 0
@@ -122,35 +122,35 @@ class TestDataCollection:
                         edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
                         mode = model.steering_parameters['mode'])
 
-        assert Path('my_model/agent_data.zarr').exists()
-        assert Path('my_model/edge_data/0.zarr').exists()
-        assert Path('my_model/edge_data/1.zarr').exists()
+        assert Path('test_models/my_model/agent_data.zarr').exists()
+        assert Path('test_models/my_model/edge_data/0.zarr').exists()
+        assert Path('test_models/my_model/edge_data/1.zarr').exists()
 
         # check if dimension 'n_time' exist in agent_data.zarr
-        agent_data = xr.open_zarr('my_model/agent_data.zarr')
+        agent_data = xr.open_zarr('test_models/my_model/agent_data.zarr')
         assert 'n_time' in agent_data.dims
 
         # check variable names in edge_data/1.zarr
-        edge_data = xr.open_zarr('my_model/edge_data/1.zarr')
+        edge_data = xr.open_zarr('test_models/my_model/edge_data/1.zarr')
         assert 'weight' in edge_data.variables
 
 
 class TestInitializeModel:
     def test_set_model_parameters(self):
-        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
+        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model', root_path='test_models')
         model.set_model_parameters()
 
         assert model.step_count == 0
-        assert Path(model.steering_parameters['npath']) == Path('test_model/agent_data.zarr')
-        assert Path(model.steering_parameters['epath']) == Path('test_model/edge_data')
-        assert Path('test_model/test_model_0.yaml').exists()
+        assert Path(model.steering_parameters['npath']) == Path('test_models/test_model/agent_data.zarr')
+        assert Path(model.steering_parameters['epath']) == Path('test_models/test_model/edge_data')
+        assert Path('test_models/test_model/test_model_0.yaml').exists()
         assert model.steering_parameters['edata'] == ['all']
         assert model.steering_parameters['format'] == 'xarray'
         assert model.number_agents == 100
         assert model.step_target == 5
 
     def test_set_model_parameters_with_file(self, config_file):
-        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
+        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model', root_path='test_models')
         model.set_model_parameters(parameterFilePath=config_file)
 
         assert model._model_identifier == 'test_model'
@@ -159,7 +159,7 @@ class TestInitializeModel:
         assert model.number_agents == 100
 
     def test_set_model_parameters_with_kwargs(self):
-        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
+        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model', root_path='test_models')
         model.set_model_parameters(steering_parameters={'del_method': 'probability','del_threshold': 0.04})
 
         assert model.steering_parameters['del_method'] == 'probability'
@@ -167,7 +167,7 @@ class TestInitializeModel:
         assert model.number_agents == 100
 
     def test_set_model_parameters_with_file_and_kwargs(self, config_file):
-        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
+        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model', root_path='test_models')
         model.set_model_parameters(
             parameterFilePath=config_file,
             steering_parameters={'del_method': 'probability','del_threshold': 0.06}
@@ -183,7 +183,7 @@ class TestInitializeModel:
         assert str(model.model_graph.device) == 'cpu'
 
     def test_create_network(self):
-        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
+        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model', root_path='test_models')
         model.set_model_parameters()
         model.create_network()
 
@@ -191,14 +191,14 @@ class TestInitializeModel:
         assert model.model_graph.number_of_nodes() == 100
 
     def test_initialize_model_properties(self):
-        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
+        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model', root_path='test_models')
         model.set_model_parameters()
         model.initialize_model_properties()
 
         modelTheta = torch.tensor([1., 1., 1., 1., 1.])
 
     def test_initialize_agent_properties(self):
-        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model')
+        model = dgl_ptm.PovertyTrapModel(model_identifier='test_model', root_path='test_models')
         model.set_model_parameters()
         model.create_network()
         model.initialize_agent_properties()
@@ -231,9 +231,9 @@ class TestInitializeModel:
         model.run()
 
         assert model.inputs is not None
-        assert Path('my_model/model_graph.bin').exists()
-        assert Path('my_model/generator_state.bin').exists()
-        assert Path('my_model/version.md').exists()
+        assert Path('test_models/my_model/model_graph.bin').exists()
+        assert Path('test_models/my_model/generator_state.bin').exists()
+        assert Path('test_models/my_model/version.md').exists()
         assert model.inputs["step_count"] == 5
 
     def test_model_init_savestate_not_default(self, model):
@@ -261,9 +261,9 @@ class TestInitializeModel:
         model.run()
 
         assert model.inputs is not None
-        assert Path('my_model/milestone_2/model_graph.bin').exists()
-        assert Path('my_model/milestone_2/generator_state.bin').exists()
-        assert Path('my_model/milestone_2/version.md').exists()
+        assert Path('test_models/my_model/milestone_2/model_graph.bin').exists()
+        assert Path('test_models/my_model/milestone_2/generator_state.bin').exists()
+        assert Path('test_models/my_model/milestone_2/version.md').exists()
         assert model.inputs["step_count"] == 2
 
     def test_model_milestone_restart(self, model):

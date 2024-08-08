@@ -74,8 +74,9 @@ class Model(object):
     Abstract model class
     """
 
-    def __init__(self,model_identifier=None):
+    def __init__(self, model_identifier = None, root_path = '.'):
         self._model_identifier = model_identifier
+        self.root_path = root_path
 
     def create_network(self):
         raise NotImplementedError('network creaion is not implemented for this class.')
@@ -134,16 +135,16 @@ class PovertyTrapModel(Model):
 
     """
 
-    def __init__(self,*, model_identifier):
+    def __init__(self, *, model_identifier, root_path = '.'):
         """
         restore from a checkpoint or create a PVT model instance.
         Checks whether a model indentifier has been specified.
 
         param: model_identifier: str, required. Identifier for the model. Used to save and load model states.
-
+        param: root_path: str, optional. Root path where to store the model data and states.
         """
 
-        super().__init__(model_identifier = model_identifier)
+        super().__init__(model_identifier = model_identifier, root_path = root_path)
 
         # default values
         self.device = CONFIG.device
@@ -215,7 +216,7 @@ class PovertyTrapModel(Model):
             setattr(self, key, value)
 
         # Correct the paths
-        parent_dir = "." / Path(self._model_identifier)
+        parent_dir = self.root_path / Path(self._model_identifier)
         parent_dir.mkdir(parents=True, exist_ok=True)
         self.steering_parameters['npath'] = str(parent_dir / Path(cfg.steering_parameters.npath))
         self.steering_parameters['epath'] = str(parent_dir / Path(cfg.steering_parameters.epath))
@@ -406,11 +407,11 @@ class PovertyTrapModel(Model):
         self.inputs = None
         if isinstance(restart, bool):
             if restart:
-                self.inputs = _load_model(f'./{self._model_identifier}')
+                self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}')
         elif isinstance(restart, int):
-            self.inputs = _load_model(f'./{self._model_identifier}/milestone_{restart}')
+            self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}/milestone_{restart}')
         elif isinstance(restart, tuple):
-            self.inputs = _load_model(f'./{self._model_identifier}/milestone_{restart[0]}_{restart[1]}')
+            self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}/milestone_{restart[0]}_{restart[1]}')
 
         if self.inputs:
             self.model_graph = copy.deepcopy(self.inputs["model_graph"])
@@ -440,9 +441,9 @@ class PovertyTrapModel(Model):
                 # The checkpoint could be necessary to restore a crashed process while
                 # the milestone is required output.
                 if save_checkpoint:
-                    _save_model(f'./{self._model_identifier}', self.inputs)
+                    _save_model(f'{self.root_path}/{self._model_identifier}', self.inputs)
                 if save_milestone:
-                    milestone_path = _make_path_unique(f'./{self._model_identifier}/milestone_{self.step_count}')
+                    milestone_path = _make_path_unique(f'{self.root_path}/{self._model_identifier}/milestone_{self.step_count}')
                     _save_model(milestone_path, self.inputs)
 
 def _make_path_unique(path):

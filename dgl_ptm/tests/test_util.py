@@ -8,7 +8,7 @@ os.environ["DGLBACKEND"] = "pytorch"
 
 @pytest.fixture
 def model():
-    model = dgl_ptm.PovertyTrapModel(model_identifier='my_model')
+    model = dgl_ptm.PovertyTrapModel(model_identifier='my_model', root_path='test_models')
     # to make sure the results are reproducible
     model.set_model_parameters(
         initial_graph_args={'seed': 100, 'new_node_edges': 1},
