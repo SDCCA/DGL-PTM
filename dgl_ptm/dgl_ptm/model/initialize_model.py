@@ -143,8 +143,8 @@ class PovertyTrapModel(Model):
 
     def __init__(self, *, model_identifier, root_path = '.'):
         """
-        restore from a checkpoint or create a PVT model instance.
-        Checks whether a model indentifier has been specified.
+        Create a new PVT model instance.
+        Checks whether a model identifier has been specified.
 
         param: model_identifier: str, required. Identifier for the model. Used to save and load model states.
         param: root_path: str, optional. Root path where to store the model data and states.
@@ -154,6 +154,7 @@ class PovertyTrapModel(Model):
 
         # default values
         self.device = CONFIG.device
+        self.seed = CONFIG.seed
         self.number_agents = CONFIG.number_agents
         self.gamma_vals = CONFIG.gamma_vals
         self.sigma_dist = CONFIG.sigma_dist
@@ -230,11 +231,35 @@ class PovertyTrapModel(Model):
         cfg.to_yaml(cfg_filename)
         logger.warning(f'The model parameters are saved to {cfg_filename}.')
 
-    def initialize_model(self):
+    def initialize_model(self, restart = False):
         """
-        convenience fucntion to create network and initiliize agent properties in correct order, thereby initializing a model
+        Create network and initialize agent properties in correct order, thereby initializing a model.
+
+        param: restart: boolean or int or a pair of ints, optional.
+        If True, the model is initialized from the last checkpoint,
+        if an int, the model is initialized from the first milestone at that step,
+        if a pair of ints, the model is initialized from that milestone at that step.
+        Default False.
         """
-        torch.manual_seed(self.seed)
+
+        self.inputs = None
+        if isinstance(restart, bool):
+            if restart:
+                self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}')
+        elif isinstance(restart, int):
+            self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}/milestone_{restart}')
+        elif isinstance(restart, tuple):
+            self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}/milestone_{restart[0]}_{restart[1]}')
+
+        if self.inputs:
+            self.model_graph = copy.deepcopy(self.inputs["model_graph"])
+            #self.model_data = self.inputs["model_data"]
+            self.generator_state = self.inputs["generator_state"]
+            generator.set_state(self.generator_state)
+            self.step_count = self.inputs["step_count"]
+        else:
+            torch.manual_seed(self.seed)
+        
         self.create_network()
         self.initialize_agent_properties()
         self.model_graph = self.model_graph.to(self.device)
@@ -420,34 +445,8 @@ class PovertyTrapModel(Model):
 
         self.step_count +=1
 
-    def run(self, restart=False):
-        """
-        run the model for each step until the step_target is reached.
-
-        param: restart: boolean or int or a pair of ints, optional.
-        If True, the model is run from last checkpoint,
-        if an int, the model is run from the first milestone at that step,
-        if a pair of ints, the model is run from that milestone at that step.
-        Default False.
-        """
-
-        self.inputs = None
-        if isinstance(restart, bool):
-            if restart:
-                self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}')
-        elif isinstance(restart, int):
-            self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}/milestone_{restart}')
-        elif isinstance(restart, tuple):
-            self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}/milestone_{restart[0]}_{restart[1]}')
-
-        if self.inputs:
-            self.model_graph = copy.deepcopy(self.inputs["model_graph"])
-            #self.model_data = self.inputs["model_data"]
-            self.generator_state = self.inputs["generator_state"]
-            self.step_count = self.inputs["step_count"]
-
-        generator.set_state(self.generator_state)
-
+    def run(self):
+        """run the model for each step until the step_target is reached."""
         while self.step_count < self.step_target:
             self.step()
 
