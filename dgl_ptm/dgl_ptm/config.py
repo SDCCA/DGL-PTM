@@ -210,7 +210,6 @@ class Config(BaseModel):
     number_agents: PositiveInt = 100
     initial_graph_type: str = "barabasi-albert"
     initial_graph_args: InitialGraphArgs = InitialGraphArgs()
-    model_graph: object = None # TODO: might be possible to move it from config to model
     step_target: PositiveInt = 5
     checkpoint_period: int = 10
     milestones: Optional[List[PositiveInt]] = None
