@@ -168,11 +168,11 @@ class PovertyTrapModel(Model):
         self.lambda_dist = CONFIG.lambda_dist
         self.initial_graph_type = CONFIG.initial_graph_type
         self.initial_graph_args = CONFIG.initial_graph_args
-        self.model_graph = CONFIG.model_graph
         self.step_target = CONFIG.step_target
         self.checkpoint_period = CONFIG.checkpoint_period
         self.milestones = CONFIG.milestones
         self.steering_parameters = CONFIG.steering_parameters
+        self.model_graph = None
 
         # Code version.
         self.version = Path('version.md').read_text().splitlines()[0]
