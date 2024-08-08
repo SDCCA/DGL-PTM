@@ -259,14 +259,14 @@ class TestInitializeModel:
         assert Path('test_models/initialize_model/model_graph.bin').exists()
         assert Path('test_models/initialize_model/generator_state.bin').exists()
         assert Path('test_models/initialize_model/version.md').exists()
-        assert model.inputs["step_count"] == 5
+        assert model.inputs["step_count"] == 4 # Note that the inputs are set at the end of the last step, which is the step before the step target.
 
     def test_model_init_savestate_not_default(self, initialize_model_model):
         model = initialize_model_model
         model.checkpoint_period = 2
         model.run()
 
-        assert model.inputs["step_count"] == 4
+        assert model.inputs["step_count"] == 4 # Note that the inputs are set at the end of the last step, which is the step before the step target.
 
     def test_model_init_restart(self, initialize_model_model):
         model = initialize_model_model
@@ -280,7 +280,7 @@ class TestInitializeModel:
         stored_generator_state = set(model.inputs["generator_state"].tolist())
 
         assert model.inputs is not None
-        assert model.inputs["step_count"] == 5
+        assert model.inputs["step_count"] == 4 # Note that the inputs are set at the end of the last step, which is the step before the step target.
         assert stored_generator_state == expected_generator_state 
 
     def test_model_milestone(self, initialize_model_model):

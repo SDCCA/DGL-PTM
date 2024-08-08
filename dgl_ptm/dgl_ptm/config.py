@@ -211,7 +211,6 @@ class Config(BaseModel):
     initial_graph_type: str = "barabasi-albert"
     initial_graph_args: InitialGraphArgs = InitialGraphArgs()
     model_graph: object = None # TODO: might be possible to move it from config to model
-    step_count: int = 0
     step_target: PositiveInt = 5
     checkpoint_period: int = 10
     milestones: Optional[List[PositiveInt]] = None
@@ -226,12 +225,6 @@ class Config(BaseModel):
     technology_levels: list = [0, 1]
     a_theta_dist: AThetaDist = AThetaDist()
     sensitivity_dist: SensitivityDist = SensitivityDist()
-
-    @field_validator("step_count")
-    def _validate_step_count(cls, v):
-        if v < 0:
-            raise ValueError("step_count must be equal or greater than 0")
-        return v
 
     # Make sure pydantic validates the default values
     model_config = ConfigDict(

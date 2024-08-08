@@ -77,6 +77,13 @@ class Model(object):
     def __init__(self, model_identifier = None, root_path = '.'):
         self._model_identifier = model_identifier
         self.root_path = root_path
+        
+        # Step count.
+        # Note that the config no longer contains the step count:
+        # the config is determined before a starting run;
+        # the step count may not be correct when loading a config to continue a run
+        # (whether restoring a run after a crash or continuing from a milestone).
+        self.step_count = 0
 
     def create_network(self):
         raise NotImplementedError('network creaion is not implemented for this class.')
@@ -106,7 +113,6 @@ class PovertyTrapModel(Model):
     'initial_graph_type': 'barabasi-albert',
     'initial_graph_args': {'seed': 0, 'new_node_edges':1},
     'device': 'cpu',
-    'step_count':0,
     'step_target':20,
     'steering_parameters':{'npath':'./agent_data.zarr',
                             'epath':'./edge_data',
@@ -162,7 +168,6 @@ class PovertyTrapModel(Model):
         self.initial_graph_type = CONFIG.initial_graph_type
         self.initial_graph_args = CONFIG.initial_graph_args
         self.model_graph = CONFIG.model_graph
-        self.step_count = CONFIG.step_count
         self.step_target = CONFIG.step_target
         self.checkpoint_period = CONFIG.checkpoint_period
         self.milestones = CONFIG.milestones
@@ -170,7 +175,6 @@ class PovertyTrapModel(Model):
 
         # Code version.
         self.version = Path('version.md').read_text().splitlines()[0]
-
 
     def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
         """
@@ -383,7 +387,6 @@ class PovertyTrapModel(Model):
         try:
             print(f'performing step {self.step_count} of {self.step_target}')
             ptm_step(self.model_graph, self.device, self.step_count, self.steering_parameters)
-            self.step_count +=1
 
             # number of edges(links) in the network
             self.number_of_edges = self.model_graph.number_of_edges()
@@ -392,6 +395,30 @@ class PovertyTrapModel(Model):
         except:
             #TODO add model dump here. Also check against previous save to avoid overwriting
             raise RuntimeError(f'execution of step failed for step {self.step_count}')
+
+        # save the model state every step reported by checkpoint_period and at specific milestones.
+        # checkpoint saves overwrite the previous checkpoint; milestone get unique folders.
+        save_checkpoint = 0 < self.checkpoint_period and self.step_count % self.checkpoint_period == 0
+        save_milestone = self.milestones and self.step_count in self.milestones
+        if save_checkpoint or save_milestone:
+            self.inputs = {
+                'model_graph': copy.deepcopy(self.model_graph),
+                #'model_data': copy.deepcopy(self.model_data),
+                'generator_state': generator.get_state(),
+                'step_count': self.step_count,
+                'code_version': self.version
+            }
+
+            # Note that a sinlge step could be both a checkpoint and a milestone.
+            # The checkpoint could be necessary to restore a crashed process while
+            # the milestone is required output.
+            if save_checkpoint:
+                _save_model(f'{self.root_path}/{self._model_identifier}', self.inputs)
+            if save_milestone:
+                milestone_path = _make_path_unique(f'{self.root_path}/{self._model_identifier}/milestone_{self.step_count}')
+                _save_model(milestone_path, self.inputs)
+
+        self.step_count +=1
 
     def run(self, restart=False):
         """
@@ -424,28 +451,6 @@ class PovertyTrapModel(Model):
         while self.step_count < self.step_target:
             self.step()
 
-            # save the model state every step reported by checkpoint_period and at specific milestones.
-            # checkpoint saves overwrite the previous checkpoint; milestone get unique folders.
-            save_checkpoint = 0 < self.checkpoint_period and self.step_count % self.checkpoint_period == 0
-            save_milestone = self.milestones and self.step_count in self.milestones
-            if save_checkpoint or save_milestone:
-                self.inputs = {
-                    'model_graph': copy.deepcopy(self.model_graph),
-                    #'model_data': copy.deepcopy(self.model_data),
-                    'generator_state': generator.get_state(),
-                    'step_count': self.step_count,
-                    'code_version': self.version
-                }
-
-                # Note that a sinlge step could be both a checkpoint and a milestone.
-                # The checkpoint could be necessary to restore a crashed process while
-                # the milestone is required output.
-                if save_checkpoint:
-                    _save_model(f'{self.root_path}/{self._model_identifier}', self.inputs)
-                if save_milestone:
-                    milestone_path = _make_path_unique(f'{self.root_path}/{self._model_identifier}/milestone_{self.step_count}')
-                    _save_model(milestone_path, self.inputs)
-
 def _make_path_unique(path):
     if Path(path).exists():
         incr = 1
@@ -464,10 +469,6 @@ def _save_model(path, inputs):
     # save the generator_state
     with open(Path(path) / "generator_state.bin", 'wb') as file:
         pickle.dump([inputs["generator_state"], inputs["step_count"]], file)
-
-    # save model_data
-    #with open(Path(path) / "model_data.bin", 'wb') as file:
-    #    pickle.dump([inputs["model_data"], inputs["step_count"]], file)
 
     # save the code version
     with open(Path(path) / "version.md", 'w') as file:
@@ -492,14 +493,6 @@ def _load_model(path):
     with open(path_generator_state, 'rb') as file:
         generator, generator_step = pickle.load(file)
 
-    # Load model_data
-    #path_model_data = Path(path) / "model_data.bin"
-    #if not path_model_data.is_file():
-    #    raise ValueError(f'The path {path_model_data} is not a file.')
-
-    #with open(path_model_data, 'rb') as file:
-    #    data, data_step = pickle.load(file)
-
     # Load code version
     path_code_version = Path(path) / "version.md"
     if not path_code_version.is_file():
@@ -509,8 +502,8 @@ def _load_model(path):
         code_version = file.readlines()[0]
 
     # Check if graph_step, generator_step and data_step are the same
-    if graph_step != generator_step: #or graph_step != data_step:
-        msg = 'The step count in the model_graph and generator_state are not the same.'# and model_data are not the same.'
+    if graph_step != generator_step:
+        msg = 'The step count in the model_graph and generator_state are not the same.'
         raise ValueError(msg)
     
     # Check if the saved version and current code version are the same
