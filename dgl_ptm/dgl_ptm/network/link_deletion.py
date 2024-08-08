@@ -1,6 +1,8 @@
 import dgl
 import torch
 
+import dgl_ptm.util.matrix_utils as matrix_utils
+
 
 def link_deletion(agent_graph, method: str, threshold: float):
     '''
@@ -54,7 +56,7 @@ def _select_edges(agent_graph, method: str, threshold: float):
         Return:
             agent_graph.edge_ids: edge_ids for agent edges to be deleted
     '''
-    upper_triangular = _sparse_upper_triangular(agent_graph.adj())
+    upper_triangular = matrix_utils.sparse_matrix_to_upper_triangular(agent_graph.adj())
 
     if method == "probability":
         mask_edges = torch.rand(upper_triangular.val.size()[0]) < threshold
@@ -71,46 +73,7 @@ def _select_edges(agent_graph, method: str, threshold: float):
         mask_edges = torch.zeros(upper_triangular.val.size()[0])
 
 
-    deletion_matrix_upper_tri = _sparse_matrix_apply_mask(upper_triangular, mask_edges)
-    deletion_matrix = _symmetrical_from_upper_triangular(deletion_matrix_upper_tri)
+    deletion_matrix_upper_tri = matrix_utils.apply_mask_to_sparse_matrix(upper_triangular, mask_edges)
+    deletion_matrix = matrix_utils.upper_triangular_to_symmetrical(deletion_matrix_upper_tri)
 
     return agent_graph.edge_ids(deletion_matrix.row, deletion_matrix.col)
-
-
-def _sparse_matrix_apply_mask(om, mask):
-    """
-    apply mask to a sparse matrix and return an appropriately masked sparse matrix
-
-    Args:
-        om: the original sparse matrix (dgl.sparse.SparseMatrix)
-        mask: the mask to be applied (tensor)
-    
-    Return: dgl.sparse.SparseMatrix
-    """
-    return dgl.sparse.from_coo(om.row[mask], om.col[mask], om.val[mask], shape=om.shape)
-
-
-def _sparse_upper_triangular(spm):
-    """
-    Select the upper triangular matrix from a sparse matrix.
-
-    Args:
-        spm: the sparse matrix (dgl.sparse.SparseMatrix)
-        
-    Return: dgl.sparse.SparseMatrix
-    """
-    mask = spm.row < spm.col
-    return _sparse_matrix_apply_mask(spm, mask)
-
-
-def _symmetrical_from_upper_triangular(triu):
-    """
-    Create a symmetrical matrix based on an input upper triangular matrix.
-    Note, this works because the diagonal is zero as we have no self-loops.
-
-    Args:
-        triu: upper triangular matrix
-    
-    Return: dgl.sparse.SparseMatrix
-    """
-    return triu + triu.T
