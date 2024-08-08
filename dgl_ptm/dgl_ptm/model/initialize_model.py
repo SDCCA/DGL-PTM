@@ -90,7 +90,7 @@ class PovertyTrapModel(Model):
     """
     Poverty Trap model as derived model class
 
-    default_model_parameters = {'number_agents': 100 , 
+    default_model_parameters = {'number_agents': 100 ,
     'seed':0,
     'gamma_vals':torch.tensor([0.3,0.45]) , #for pseudo income
     'sigma_dist': {'type':'uniform','parameters':[0.05,1.94],'round':True,'decimals':1},
@@ -255,9 +255,7 @@ class PovertyTrapModel(Model):
         """
 
         agent_graph = network_creation(self.number_agents, self.initial_graph_type, **self.initial_graph_args)
-        #this should fix issues with execution oon GPU (fix by VG)
-        self.model_graph = agent_graph.to(self.device)
-        #self.model_graph = agent_graph
+        self.model_graph = agent_graph
 
 
     def initialize_model_properties(self):
@@ -296,21 +294,21 @@ class PovertyTrapModel(Model):
         # TODO: add comment explaining what each variable is (here? where?).
         if isinstance(self.model_graph,dgl.DGLGraph):
           #send to device!!
-            self.model_graph.ndata['wealth'] = agentsCapital.to(self.device)
-            self.model_graph.ndata['alpha'] = agentsAlpha.to(self.device)
-            self.model_graph.ndata['theta'] = agentsTheta.to(self.device)
-            self.model_graph.ndata['sensitivity'] = agentsSensitivity.to(self.device)
-            self.model_graph.ndata['lambda'] = agentsLam.to(self.device)
-            self.model_graph.ndata['sigma'] = agentsSigma.to(self.device)
-            self.model_graph.ndata['tec'] = agentsTecLevel.to(self.device)
-            self.model_graph.ndata['gamma'] = agentsGamma.to(self.device)
-            self.model_graph.ndata['cost'] = agentsCost.to(self.device)
-            self.model_graph.ndata['a_table'] = agentsAdaptTable.to(self.device)
-            self.model_graph.ndata['wealth_consumption'] = torch.zeros(self.model_graph.num_nodes()).to(self.device)
-            self.model_graph.ndata['i_a'] = torch.zeros(self.model_graph.num_nodes()).to(self.device)
-            self.model_graph.ndata['m'] = torch.zeros(self.model_graph.num_nodes()).to(self.device)
-            self.model_graph.ndata['zeros'] = torch.zeros(self.model_graph.num_nodes()).to(self.device)
-            self.model_graph.ndata['ones'] = torch.ones(self.model_graph.num_nodes()).to(self.device)
+            self.model_graph.ndata['wealth'] = agentsCapital
+            self.model_graph.ndata['alpha'] = agentsAlpha
+            self.model_graph.ndata['theta'] = agentsTheta
+            self.model_graph.ndata['sensitivity'] = agentsSensitivity
+            self.model_graph.ndata['lambda'] = agentsLam
+            self.model_graph.ndata['sigma'] = agentsSigma
+            self.model_graph.ndata['tec'] = agentsTecLevel
+            self.model_graph.ndata['gamma'] = agentsGamma
+            self.model_graph.ndata['cost'] = agentsCost
+            self.model_graph.ndata['a_table'] = agentsAdaptTable
+            self.model_graph.ndata['wealth_consumption'] = torch.zeros(self.model_graph.num_nodes())
+            self.model_graph.ndata['i_a'] = torch.zeros(self.model_graph.num_nodes())
+            self.model_graph.ndata['m'] = torch.zeros(self.model_graph.num_nodes())
+            self.model_graph.ndata['zeros'] = torch.zeros(self.model_graph.num_nodes())
+            self.model_graph.ndata['ones'] = torch.ones(self.model_graph.num_nodes())
         else:
             raise RuntimeError('model graph must be a defined as DGLgraph object. Consider running `create_network` before initializing agent properties')
 
@@ -513,7 +511,7 @@ def _load_model(path):
     if graph_step != generator_step: #or graph_step != data_step:
         msg = 'The step count in the model_graph and generator_state are not the same.'# and model_data are not the same.'
         raise ValueError(msg)
-    
+
     # Check if the saved version and current code version are the same
     version = Path('version.md').read_text().splitlines()[0]
     if code_version != version:
