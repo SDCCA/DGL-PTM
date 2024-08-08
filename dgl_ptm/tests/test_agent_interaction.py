@@ -9,7 +9,7 @@ os.environ["DGLBACKEND"] = "pytorch"
 
 @pytest.fixture
 def model():
-    model = dgl_ptm.PovertyTrapModel(model_identifier='my_model', root_path='test_models')
+    model = dgl_ptm.PovertyTrapModel(model_identifier='agent_interaction', root_path='test_models')
     model.set_model_parameters()
     model.initialize_model()
     return model
