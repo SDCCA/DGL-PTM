@@ -4,10 +4,10 @@
 # step - time-stepping for the poverty-trap model
 
 from dgl_ptm.agentInteraction.trade_money import trade_money
-from dgl_ptm.network.local_attachment import local_attachment 
-from dgl_ptm.network.local_attachment_basic_homophily import local_attachment_homophily 
-from dgl_ptm.network.local_attachment_tensor import local_attachment_tensor 
-from dgl_ptm.network.link_deletion import link_deletion 
+from dgl_ptm.network.local_attachment import local_attachment
+from dgl_ptm.network.local_attachment_basic_homophily import local_attachment_homophily
+from dgl_ptm.network.local_attachment_tensor import local_attachment_tensor
+from dgl_ptm.network.link_deletion import link_deletion
 from dgl_ptm.network.global_attachment import global_attachment
 from dgl_ptm.network.random_edge_noise import random_edge_noise
 from dgl_ptm.agent.agent_update import agent_update
@@ -30,14 +30,14 @@ def ptm_step(agent_graph, device, timestep, params):
     if params['step_type']=='default':
         #Wealth transfer
         trade_money(agent_graph, device, method = params['wealth_method'])
-        
+
         #Link/edge manipulation
         local_attachment(agent_graph, n_FoF_links = 1, edge_prop = 'weight', p_attach=1. )
         link_deletion(agent_graph, method = params['del_method'], threshold = params['del_threshold'])
         global_attachment(agent_graph, device, ratio = params['noise_ratio'])
-        
+
         #Update agent states
-        agent_update(agent_graph, params)
+        agent_update(agent_graph, params, device=device)
 
         #Weight update
         weight_update(agent_graph, device, homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
@@ -45,15 +45,15 @@ def ptm_step(agent_graph, device, timestep, params):
     elif params['step_type']=='custom':
         if timestep==0:
             #Update agent states
-            agent_update(agent_graph, params, timestep=timestep, method ='theta')
+            agent_update(agent_graph, params, device=device, timestep=timestep, method ='theta')
             agent_update(agent_graph, params, device=device, method ='income')
-            agent_update(agent_graph, params, timestep=timestep, device=device, method ='consumption')
-            data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 
+            agent_update(agent_graph, params, device=device, timestep=timestep, method ='consumption')
+            data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'],
                         edata = params['edata'], mode = params['mode'])
             return
-        
-        agent_update(agent_graph, params, timestep=timestep, method = 'capital')
-        
+
+        agent_update(agent_graph, params, device=device, timestep=timestep, method = 'capital')
+
         #Weight update
         weight_update(agent_graph, device, homophily_parameter = params['homophily_parameter'], characteristic_distance = params['characteristic_distance'],truncation_weight = params['truncation_weight'])
 
@@ -68,15 +68,14 @@ def ptm_step(agent_graph, device, timestep, params):
         trade_money(agent_graph, device, method = params['wealth_method'])
 
         #Update agent states
-        agent_update(agent_graph, params, timestep=timestep, method ='theta')
+        agent_update(agent_graph, params, device=device, timestep=timestep, method ='theta')
         agent_update(agent_graph, params, device=device, method ='income')
-        agent_update(agent_graph, params, timestep=timestep, device=device, method ='consumption')
+        agent_update(agent_graph, params, device=device, timestep=timestep, method ='consumption')
 
     # Data can be collected periodically (every X steps) and/or at specified time steps.
     do_periodical_data_collection = 0 < params['data_collection_period'] and timestep % params['data_collection_period'] == 0
     do_specific_data_collection = params['data_collection_list'] and timestep in params['data_collection_list']
     if do_periodical_data_collection or do_specific_data_collection:
         #Data collection and storage
-        data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'], 
+        data_collection(agent_graph, timestep = timestep, npath = params['npath'], epath = params['epath'], ndata = params['ndata'],
                         edata = params['edata'], mode = params['mode'])
-        
