@@ -362,6 +362,19 @@ class PovertyTrapModel(Model):
         return agentsTecLevel, agentsGamma, agentsCost
 
     def step(self):
+        """
+        Perform a single step of the model.
+
+        After the step, the current state (graph, generator, step, and version) can be saved.
+
+        The state can be saved with a fixed period (checkpoints) to keep a restore point in case of a crash.
+        Only the newest checkpoint is retained.
+
+        The state can also be saved at specific steps (milestones) to store specific (interesting) states.
+        For example, specific states can be stored to start multiple runs from the same state with different parameters going forward.
+        All milstones are retained. The first milestone at each time step X is stored in the subdirectory `./milestone_X`;
+        any subsequent milestones at the same time step X are stored in the subdirectory `./milestone_X_i` (where i is the instance).
+        """
         try:
             print(f'performing step {self.step_count} of {self.config.step_target}')
             ptm_step(self.graph, self.config.device, self.step_count, self.steering_parameters)
