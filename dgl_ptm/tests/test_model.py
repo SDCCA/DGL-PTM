@@ -49,10 +49,10 @@ class TestPtmStep:
         model = ptm_model
         model.step() # timestep 0
 
-        assert 'disposable_wealth' in model.model_graph.ndata
-        assert 'theta' in model.model_graph.ndata
-        assert 'wealth_consumption' in model.model_graph.ndata
-        assert 'income' in model.model_graph.ndata
+        assert 'disposable_wealth' in model.graph.ndata
+        assert 'theta' in model.graph.ndata
+        assert 'wealth_consumption' in model.graph.ndata
+        assert 'income' in model.graph.ndata
 
         assert Path('test_models/ptm_step/agent_data.zarr').exists()
         assert Path('test_models/ptm_step/edge_data/0.zarr').exists()
@@ -127,7 +127,7 @@ class TestPtmStep:
 class TestDataCollection:
     def test_data_collection(self, data_collection_model):
         model = data_collection_model
-        data_collection(model.model_graph, timestep=0, npath = model.steering_parameters['npath'],
+        data_collection(model.graph, timestep=0, npath = model.steering_parameters['npath'],
                         epath = model.steering_parameters['epath'], ndata = model.steering_parameters['ndata'],
                         edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
                         mode = model.steering_parameters['mode'])
@@ -138,7 +138,7 @@ class TestDataCollection:
     def test_data_collection_timestep1(self, data_collection_model):
         model = data_collection_model
         model.step() # timestep 0
-        data_collection(model.model_graph, timestep=1, npath = model.steering_parameters['npath'],
+        data_collection(model.graph, timestep=1, npath = model.steering_parameters['npath'],
                         epath = model.steering_parameters['epath'], ndata = model.steering_parameters['ndata'],
                         edata = model.steering_parameters['edata'], format = model.steering_parameters['format'],
                         mode = model.steering_parameters['mode'])
@@ -200,17 +200,17 @@ class TestInitializeModel:
 
     def test_initialize_model(self, initialize_model_model):
         model = initialize_model_model
-        assert model.model_graph is not None
+        assert model.graph is not None
         assert model.number_of_edges is not None
-        assert str(model.model_graph.device) == 'cpu'
+        assert str(model.graph.device) == 'cpu'
 
     def test_create_network(self):
         model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
         model.set_model_parameters()
         model.create_network()
 
-        assert model.model_graph is not None
-        assert model.model_graph.number_of_nodes() == 100
+        assert model.graph is not None
+        assert model.graph.number_of_nodes() == 100
 
     def test_initialize_model_properties(self):
         model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
@@ -225,30 +225,30 @@ class TestInitializeModel:
         model.create_network()
         model.initialize_agent_properties()
 
-        wealth_consumption = torch.zeros(model.model_graph.num_nodes())
-        ones = torch.ones(model.model_graph.num_nodes())
+        wealth_consumption = torch.zeros(model.graph.num_nodes())
+        ones = torch.ones(model.graph.num_nodes())
 
-        assert model.model_graph.ndata['wealth'] is not None
-        assert model.model_graph.ndata['alpha'] is not None
-        assert model.model_graph.ndata['theta'] is not None
-        assert model.model_graph.ndata['sensitivity'] is not None
-        assert model.model_graph.ndata['lambda'] is not None
-        assert (model.model_graph.ndata['wealth_consumption'] == wealth_consumption).all()
-        assert (model.model_graph.ndata['ones'] == ones).all()
+        assert model.graph.ndata['wealth'] is not None
+        assert model.graph.ndata['alpha'] is not None
+        assert model.graph.ndata['theta'] is not None
+        assert model.graph.ndata['sensitivity'] is not None
+        assert model.graph.ndata['lambda'] is not None
+        assert (model.graph.ndata['wealth_consumption'] == wealth_consumption).all()
+        assert (model.graph.ndata['ones'] == ones).all()
 
     def test_step(self, initialize_model_model):
         model = initialize_model_model
         model.step()
 
         assert model.step_count == 1
-        assert model.model_graph.number_of_nodes() == 100
+        assert model.graph.number_of_nodes() == 100
 
     def test_run(self, initialize_model_model):
         model = initialize_model_model
         model.run()
 
         assert model.step_count == 5
-        assert model.model_graph.number_of_nodes() == 100
+        assert model.graph.number_of_nodes() == 100
 
     def test_model_init_savestate(self, initialize_model_model):
         model = initialize_model_model
@@ -256,7 +256,7 @@ class TestInitializeModel:
         model.run()
 
         assert model.inputs is not None
-        assert Path('test_models/initialize_model/model_graph.bin').exists()
+        assert Path('test_models/initialize_model/graph.bin').exists()
         assert Path('test_models/initialize_model/generator_state.bin').exists()
         assert Path('test_models/initialize_model/version.md').exists()
         assert model.inputs["step_count"] == 4 # Note that the inputs are set at the end of the last step, which is the step before the step target.
@@ -290,7 +290,7 @@ class TestInitializeModel:
         model.run()
 
         assert model.inputs is not None
-        assert Path('test_models/initialize_model/milestone_2/model_graph.bin').exists()
+        assert Path('test_models/initialize_model/milestone_2/graph.bin').exists()
         assert Path('test_models/initialize_model/milestone_2/generator_state.bin').exists()
         assert Path('test_models/initialize_model/milestone_2/version.md').exists()
         assert model.inputs["step_count"] == 2

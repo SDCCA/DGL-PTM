@@ -25,6 +25,6 @@ class TestNetworkMetrics:
 
     def test_average_degree_step(self, model):
         model.step() # timestep 1
-        ad = average_degree(model.model_graph)
+        ad = average_degree(model.graph)
         assert model.average_degree == ad
         assert isinstance(ad, float)

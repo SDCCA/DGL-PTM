@@ -172,7 +172,7 @@ class PovertyTrapModel(Model):
         self.checkpoint_period = CONFIG.checkpoint_period
         self.milestones = CONFIG.milestones
         self.steering_parameters = CONFIG.steering_parameters
-        self.model_graph = None
+        self.graph = None
 
         # Code version.
         self.version = Path('version.md').read_text().splitlines()[0]
@@ -252,7 +252,7 @@ class PovertyTrapModel(Model):
             self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}/milestone_{restart[0]}_{restart[1]}')
 
         if self.inputs:
-            self.model_graph = copy.deepcopy(self.inputs["model_graph"])
+            self.graph = copy.deepcopy(self.inputs["graph"])
             #self.model_data = self.inputs["model_data"]
             self.generator_state = self.inputs["generator_state"]
             generator.set_state(self.generator_state)
@@ -262,20 +262,20 @@ class PovertyTrapModel(Model):
         
         self.create_network()
         self.initialize_agent_properties()
-        self.model_graph = self.model_graph.to(self.device)
+        self.graph = self.graph.to(self.device)
         self.initialize_model_properties()
         self.steering_parameters['modelTheta'] = self.steering_parameters['modelTheta'].to(self.device)
 
-        weight_update(self.model_graph, self.device, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
-        #data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
+        weight_update(self.graph, self.device, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
+        #data_collection(self.graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
                     #edata = self.steering_parameters['edata'], format = self.steering_parameters['format'], mode = self.steering_parameters['mode'])
 
         # store random generator state
         self.generator_state = generator.get_state()
 
         # number of edges(links) in the network
-        self.number_of_edges = self.model_graph.number_of_edges()
-        self.average_degree = average_degree(self.model_graph)
+        self.number_of_edges = self.graph.number_of_edges()
+        self.average_degree = average_degree(self.graph)
 
     def create_network(self):
         """
@@ -284,8 +284,8 @@ class PovertyTrapModel(Model):
 
         agent_graph = network_creation(self.number_agents, self.initial_graph_type, **self.initial_graph_args)
         #this should fix issues with execution oon GPU (fix by VG)
-        self.model_graph = agent_graph.to(self.device)
-        #self.model_graph = agent_graph
+        self.graph = agent_graph.to(self.device)
+        #self.graph = agent_graph
 
 
     def initialize_model_properties(self):
@@ -322,23 +322,23 @@ class PovertyTrapModel(Model):
         agentsTecLevel, agentsGamma, agentsCost = self._initialize_agents_tec()
 
         # TODO: add comment explaining what each variable is (here? where?).
-        if isinstance(self.model_graph,dgl.DGLGraph):
+        if isinstance(self.graph,dgl.DGLGraph):
           #send to device!!
-            self.model_graph.ndata['wealth'] = agentsCapital.to(self.device)
-            self.model_graph.ndata['alpha'] = agentsAlpha.to(self.device)
-            self.model_graph.ndata['theta'] = agentsTheta.to(self.device)
-            self.model_graph.ndata['sensitivity'] = agentsSensitivity.to(self.device)
-            self.model_graph.ndata['lambda'] = agentsLam.to(self.device)
-            self.model_graph.ndata['sigma'] = agentsSigma.to(self.device)
-            self.model_graph.ndata['tec'] = agentsTecLevel.to(self.device)
-            self.model_graph.ndata['gamma'] = agentsGamma.to(self.device)
-            self.model_graph.ndata['cost'] = agentsCost.to(self.device)
-            self.model_graph.ndata['a_table'] = agentsAdaptTable.to(self.device)
-            self.model_graph.ndata['wealth_consumption'] = torch.zeros(self.model_graph.num_nodes()).to(self.device)
-            self.model_graph.ndata['i_a'] = torch.zeros(self.model_graph.num_nodes()).to(self.device)
-            self.model_graph.ndata['m'] = torch.zeros(self.model_graph.num_nodes()).to(self.device)
-            self.model_graph.ndata['zeros'] = torch.zeros(self.model_graph.num_nodes()).to(self.device)
-            self.model_graph.ndata['ones'] = torch.ones(self.model_graph.num_nodes()).to(self.device)
+            self.graph.ndata['wealth'] = agentsCapital.to(self.device)
+            self.graph.ndata['alpha'] = agentsAlpha.to(self.device)
+            self.graph.ndata['theta'] = agentsTheta.to(self.device)
+            self.graph.ndata['sensitivity'] = agentsSensitivity.to(self.device)
+            self.graph.ndata['lambda'] = agentsLam.to(self.device)
+            self.graph.ndata['sigma'] = agentsSigma.to(self.device)
+            self.graph.ndata['tec'] = agentsTecLevel.to(self.device)
+            self.graph.ndata['gamma'] = agentsGamma.to(self.device)
+            self.graph.ndata['cost'] = agentsCost.to(self.device)
+            self.graph.ndata['a_table'] = agentsAdaptTable.to(self.device)
+            self.graph.ndata['wealth_consumption'] = torch.zeros(self.graph.num_nodes()).to(self.device)
+            self.graph.ndata['i_a'] = torch.zeros(self.graph.num_nodes()).to(self.device)
+            self.graph.ndata['m'] = torch.zeros(self.graph.num_nodes()).to(self.device)
+            self.graph.ndata['zeros'] = torch.zeros(self.graph.num_nodes()).to(self.device)
+            self.graph.ndata['ones'] = torch.ones(self.graph.num_nodes()).to(self.device)
         else:
             raise RuntimeError('model graph must be a defined as DGLgraph object. Consider running `create_network` before initializing agent properties')
 
@@ -411,11 +411,11 @@ class PovertyTrapModel(Model):
     def step(self):
         try:
             print(f'performing step {self.step_count} of {self.step_target}')
-            ptm_step(self.model_graph, self.device, self.step_count, self.steering_parameters)
+            ptm_step(self.graph, self.device, self.step_count, self.steering_parameters)
 
             # number of edges(links) in the network
-            self.number_of_edges = self.model_graph.number_of_edges()
-            self.average_degree = average_degree(self.model_graph)
+            self.number_of_edges = self.graph.number_of_edges()
+            self.average_degree = average_degree(self.graph)
 
         except:
             #TODO add model dump here. Also check against previous save to avoid overwriting
@@ -427,7 +427,7 @@ class PovertyTrapModel(Model):
         save_milestone = self.milestones and self.step_count in self.milestones
         if save_checkpoint or save_milestone:
             self.inputs = {
-                'model_graph': copy.deepcopy(self.model_graph),
+                'graph': copy.deepcopy(self.graph),
                 #'model_data': copy.deepcopy(self.model_data),
                 'generator_state': generator.get_state(),
                 'step_count': self.step_count,
@@ -459,11 +459,11 @@ def _make_path_unique(path):
     return path
 
 def _save_model(path, inputs):
-    """ save the model_graph, generator_state and code_version in files."""
+    """ save the graph, generator_state and code_version in files."""
 
-    # save the model_graph with a label
+    # save the graph with a label
     graph_labels = {'step_count': torch.tensor([inputs["step_count"]])}
-    save_graphs(str(Path(path) / "model_graph.bin"), inputs["model_graph"], graph_labels)
+    save_graphs(str(Path(path) / "graph.bin"), inputs["graph"], graph_labels)
 
     # save the generator_state
     with open(Path(path) / "generator_state.bin", 'wb') as file:
@@ -476,11 +476,11 @@ def _save_model(path, inputs):
 
 def _load_model(path):
     # Load model graph
-    path_model_graph = Path(path) / "model_graph.bin"
-    if not path_model_graph.is_file():
-        raise ValueError(f'The path {path_model_graph} is not a file.')
+    path_graph = Path(path) / "graph.bin"
+    if not path_graph.is_file():
+        raise ValueError(f'The path {path_graph} is not a file.')
 
-    graph, graph_labels = load_graphs(str(path_model_graph))
+    graph, graph_labels = load_graphs(str(path_graph))
     graph = graph[0]
     graph_step = graph_labels['step_count'].tolist()[0]
 
@@ -502,7 +502,7 @@ def _load_model(path):
 
     # Check if graph_step, generator_step and data_step are the same
     if graph_step != generator_step:
-        msg = 'The step count in the model_graph and generator_state are not the same.'
+        msg = 'The step count in the graph and generator_state are not the same.'
         raise ValueError(msg)
     
     # Check if the saved version and current code version are the same
@@ -514,7 +514,7 @@ def _load_model(path):
     logger.warning(f'Loading model state from step {generator_step}.')
 
     inputs = {
-        'model_graph': graph,
+        'graph': graph,
         #'model_data': data,
         'generator_state': generator,
         'step_count': generator_step,
