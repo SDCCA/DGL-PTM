@@ -323,4 +323,45 @@ class TestInitializeModel:
         assert model.step_count == 5
         assert stored_generator_state == expected_generator_state
         assert Path('test_models/initialize_model/initialize_model_1.yaml').exists() # The second run also saves its config at the start.
-        
+
+    def test_model_milestone_multiple(self, initialize_model_model):
+        model = initialize_model_model
+
+        # Run once.
+        model.config.milestones = [3]
+        assert model.step_count == 0 # The step count is the start of the run.
+        model.run()
+        assert model.config.step_target == 5
+        expected_generator_state = set(model.inputs["generator_state"].tolist())
+
+        # Re-run from the start.
+        model.initialize_model(restart=True)
+        assert model.step_count == 0 # The step count is the start of the run.
+        model.run()
+        assert model.config.step_target == 5
+
+        assert model.inputs is not None
+        assert model.inputs["step_count"] == 3
+
+        # Note, the first instance of a milestone at step 3 is stored in milestone_3
+        assert Path('test_models/initialize_model/milestone_3/graph.bin').exists()
+        assert Path('test_models/initialize_model/milestone_3/generator_state.bin').exists()
+        assert Path('test_models/initialize_model/milestone_3/version.md').exists()
+
+        # Note, the second instance of a milestone at step 3 is stored in milestone_3_1
+        assert Path('test_models/initialize_model/milestone_3_1/graph.bin').exists()
+        assert Path('test_models/initialize_model/milestone_3_1/generator_state.bin').exists()
+        assert Path('test_models/initialize_model/milestone_3_1/version.md').exists()
+
+        # Continue from the second milestone.
+        model.initialize_model(restart=(3,1))
+        assert model.step_count == 3 # The step count is that of the milestone.
+        model.run()
+        assert model.config.step_target == 5
+        stored_generator_state = set(model.inputs["generator_state"].tolist())
+
+        assert model.inputs is not None
+        assert model.inputs["step_count"] == 3
+        assert model.step_count == 5
+        assert stored_generator_state == expected_generator_state
+        assert Path('test_models/initialize_model/initialize_model_3.yaml').exists() # The third run also saves its config at the start.
