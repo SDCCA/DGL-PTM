@@ -116,11 +116,14 @@ class PovertyTrapModel(Model):
 
         # Attach config.
         self.config = copy.deepcopy(CONFIG)
-        self.steering_parameters = self.config.steering_parameters
+        self.steering_parameters = self.config.steering_parameters.__dict__
         self.graph = None
 
         # Code version.
         self.version = Path('version.md').read_text().splitlines()[0]
+
+    def save_model_parameters(self):
+        test = True
 
     def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
         """
@@ -135,20 +138,23 @@ class PovertyTrapModel(Model):
 
         if parameterFilePath:
             cfg = Config.from_yaml(parameterFilePath)
-
-        if kwargs:
+            if kwargs:
+                # if both parameterFilePath and kwargs are set, combine them into one.
+                # if fields are duplicated, kwargs will overwrite parameterFilePath
+                for key, value in kwargs.items():
+                    if isinstance(value, dict):
+                        # Special recursive case for steering_parameters:
+                        # this makes sure to append to, not overwrite, the steering parameters.
+                        for subkey, subvalue in value.items():
+                            setattr(cfg.__dict__[key], subkey, subvalue)
+                    else:
+                        setattr(cfg, key, value)
+                logger.warning(
+                    'model parameters have been provided via parameterFilePath and **kwargs. '
+                    '**kwargs will overwrite parameterFilePath'
+                    )
+        elif kwargs:
             cfg = Config.from_dict(kwargs)
-
-        # if both parameterFilePath and kwargs are set, combine them into one.
-        # if fields are duplicated, kwargs will overwrite parameterFilePath
-        if parameterFilePath and kwargs:
-            cfg = Config.from_yaml(parameterFilePath)
-            for key, value in kwargs.items():
-                setattr(cfg, key, value)
-            logger.warning(
-                'model parameters have been provided via parameterFilePath and **kwargs. '
-                '**kwargs will overwrite parameterFilePath'
-                )
 
         if parameterFilePath is None and not kwargs:
             logger.warning('no model parameters have been provided, Default values are used')
@@ -163,17 +169,18 @@ class PovertyTrapModel(Model):
         # update model parameters/ attributes
         cfg_dict = cfg.model_dump(by_alias=True, warnings=False)
         for key, value in cfg_dict.items():
-            setattr(self, key, value)
-
+            setattr(self.config, key, value)
+        self.steering_parameters = self.config.steering_parameters.__dict__
+        
         # Correct the paths
         parent_dir = self.root_path / Path(self._model_identifier)
         parent_dir.mkdir(parents=True, exist_ok=True)
-        self.steering_parameters['npath'] = str(parent_dir / Path(cfg.steering_parameters.npath))
-        self.steering_parameters['epath'] = str(parent_dir / Path(cfg.steering_parameters.epath))
+        self.steering_parameters['npath'] = str(parent_dir / Path(self.config.steering_parameters.npath))
+        self.steering_parameters['epath'] = str(parent_dir / Path(self.config.steering_parameters.epath))
 
         # Save updated config to yaml file.
         cfg_filename = parent_dir / f'{self._model_identifier}_{self.step_count}.yaml'
-        cfg.to_yaml(cfg_filename)
+        self.config.to_yaml(cfg_filename)
         logger.warning(f'The model parameters are saved to {cfg_filename}.')
 
     def initialize_model(self, restart = False):
@@ -243,11 +250,11 @@ class PovertyTrapModel(Model):
         #self.steering_parameters['attachProb'] = attachProb
 
     def _initialize_model_theta(self):
-        modelTheta = sample_distribution(self.steering_parameters['m_theta_dist'], self.config.step_target)
+        modelTheta = sample_distribution(self.steering_parameters['m_theta_dist'].__dict__, self.config.step_target)
         return modelTheta
 
     def _initialize_attach_prob(self):
-        attachProb = sample_distribution(self.steering_parameters['m_attach_dist'], self.config.step_target)
+        attachProb = sample_distribution(self.steering_parameters['m_attach_dist'].__dict__, self.config.step_target)
         return attachProb
 
     def initialize_agent_properties(self):

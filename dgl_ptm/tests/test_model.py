@@ -39,7 +39,8 @@ def config_file(tmp_path):
         file.write('''
         model_identifier: new_model
         steering_parameters:
-            deletion_prob: 0.04
+            del_threshold: 0.07
+            step_type: custom
         ''')
     return tmp_path / 'test_config.yaml'
 
@@ -176,7 +177,8 @@ class TestInitializeModel:
 
         assert model._model_identifier == 'initialize_model'
         assert model.steering_parameters['del_method'] == 'probability'
-        assert model.steering_parameters['del_threshold'] == 0.05
+        assert model.steering_parameters['del_threshold'] == 0.07
+        assert model.steering_parameters['step_type'] == 'custom'
         assert model.config.number_agents == 100
 
     def test_set_model_parameters_with_kwargs(self):
@@ -194,8 +196,10 @@ class TestInitializeModel:
             steering_parameters={'del_method': 'probability','del_threshold': 0.06}
             )
 
+        assert model._model_identifier == 'initialize_model' # Note, not 'new_model' as set in config_file.
         assert model.steering_parameters['del_method'] == 'probability'
         assert model.steering_parameters['del_threshold'] == 0.06
+        assert model.steering_parameters['step_type'] == 'custom'
         assert model.config.number_agents == 100
 
     def test_initialize_model(self, initialize_model_model):
