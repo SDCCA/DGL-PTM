@@ -119,6 +119,7 @@ class PovertyTrapModel(Model):
         self.config = copy.deepcopy(CONFIG)
         self.steering_parameters = self.config.steering_parameters.__dict__
         self.graph = None
+        self.step_first = -1
 
         # Code version.
         self.version = Path('version.md').read_text().splitlines()[0]
@@ -375,8 +376,11 @@ class PovertyTrapModel(Model):
 
         # save the model state every step reported by checkpoint_period and at specific milestones.
         # checkpoint saves overwrite the previous checkpoint; milestone get unique folders.
+        # Note that milestones are not created at the first step of a run;
+        # this prevents duplicate saves when running from a milestone.
+        first_step = self.step_count == self.step_first
         save_checkpoint = 0 < self.config.checkpoint_period and self.step_count % self.config.checkpoint_period == 0
-        save_milestone = self.config.milestones and self.step_count in self.config.milestones
+        save_milestone = self.config.milestones and self.step_count in self.config.milestones and not first_step
         if save_checkpoint or save_milestone:
             self.inputs = {
                 'graph': copy.deepcopy(self.graph),
@@ -401,6 +405,7 @@ class PovertyTrapModel(Model):
         # Save config to yaml file.
         self.save_model_parameters()
 
+        self.step_first = self.step_count
         while self.step_count < self.config.step_target:
             self.step()
 
