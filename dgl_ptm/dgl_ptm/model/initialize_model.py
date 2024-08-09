@@ -68,7 +68,7 @@ def sample_distribution_tensor(type, distParameters, nSamples, round=False, deci
             return torch.round(dist,decimals=decimals)
     else:
         return dist
-    
+
 def sample_distribution(distribution, nSamples):
     return sample_distribution_tensor(distribution['type'], distribution['parameters'], nSamples, round = distribution['round'], decimals = distribution['decimals'])
     
@@ -101,48 +101,6 @@ class Model(object):
 class PovertyTrapModel(Model):
     """
     Poverty Trap model as derived model class
-
-    default_model_parameters = {'number_agents': 100 , 
-    'seed':0,
-    'gamma_vals':torch.tensor([0.3,0.45]) , #for pseudo income
-    'sigma_dist': {'type':'uniform','parameters':[0.05,1.94],'round':True,'decimals':1},
-    'cost_vals': torch.tensor([0.,0.45]), #for pseudo income
-    'tec_levels': torch.tensor([0,1]), #check if deletable
-    'a_theta_dist': {'type':'uniform','parameters':[0.1,1],'round':False,'decimals':None},
-    'sensitivity_dist':{'type':'uniform','parameters':[0.0,1],'round':False,'decimals':None},
-    'tec_dist': {'type':'bernoulli','parameters':[0.5,None],'round':False,'decimals':None},
-    'capital_dist': {'type':'uniform','parameters':[0.1,10.],'round':False,'decimals':None},
-    'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
-    'lam_dist': {'type':'uniform','parameters':[0.05,0.94],'round':True,'decimals':1},
-    'initial_graph_type': 'barabasi-albert',
-    'initial_graph_args': {'seed': 0, 'new_node_edges':1},
-    'device': 'cpu',
-    'step_target':20,
-    'steering_parameters':{'npath':'./agent_data.zarr',
-                            'epath':'./edge_data',
-                            'ndata':['all_except',['a_table']],
-                            'edata':['all'],
-                            'mode':'xarray',
-                            'wealth_method':'singular_transfer',
-                            'income_method':'pseudo_income_generation',
-                            'tech_gamma': torch.tensor([0.3,0.35,0.45]),
-                            'tech_cost': torch.tensor([0,0.15,0.65]),
-                            'consume_method':'pseudo_consumption',
-                            'nn_path': None,
-                            'adapt_m':torch.tensor([0,0.5,0.9]),
-                            'adapt_cost':torch.tensor([0,0.25,0.45]),
-                            'depreciation': 0.6,
-                            'discount': 0.95,
-                            'm_theta_dist': {'type':'multinomial','parameters':[[0.02 ,0.03, 0.05, 0.9],[0.7, 0.8, 0.9, 1]],'round':False,'decimals':None},
-                            'm_attach_dist': {'type':'uniform','parameters':[0.001,1],'round':False,'decimals':None},
-                            'del_method':'probability',
-                            'del_threshold':0.05,
-                            'ratio':0.1,
-                            'weight_a':0.69,
-                            'weight_b':35,
-                            'truncation_weight':1.0e-10,
-                            'step_type':'default'}}
-
     """
 
     def __init__(self, *, model_identifier, root_path = '.'):
@@ -156,26 +114,9 @@ class PovertyTrapModel(Model):
 
         super().__init__(model_identifier = model_identifier, root_path = root_path)
 
-        # default values
-        self.device = CONFIG.device
-        self.seed = CONFIG.seed
-        self.number_agents = CONFIG.number_agents
-        self.gamma_vals = CONFIG.gamma_vals
-        self.sigma_dist = CONFIG.sigma_dist
-        self.cost_vals = CONFIG.cost_vals
-        self.technology_levels = CONFIG.technology_levels
-        self.technology_dist = CONFIG.technology_dist
-        self.a_theta_dist = CONFIG.a_theta_dist
-        self.sensitivity_dist = CONFIG.sensitivity_dist
-        self.capital_dist = CONFIG.capital_dist
-        self.alpha_dist = CONFIG.alpha_dist
-        self.lambda_dist = CONFIG.lambda_dist
-        self.initial_graph_type = CONFIG.initial_graph_type
-        self.initial_graph_args = CONFIG.initial_graph_args
-        self.step_target = CONFIG.step_target
-        self.checkpoint_period = CONFIG.checkpoint_period
-        self.milestones = CONFIG.milestones
-        self.steering_parameters = CONFIG.steering_parameters
+        # Attach config.
+        self.config = copy.deepcopy(CONFIG)
+        self.steering_parameters = self.config.steering_parameters
         self.graph = None
 
         # Code version.
@@ -257,20 +198,19 @@ class PovertyTrapModel(Model):
 
         if self.inputs:
             self.graph = copy.deepcopy(self.inputs["graph"])
-            #self.model_data = self.inputs["model_data"]
             self.generator_state = self.inputs["generator_state"]
             generator.set_state(self.generator_state)
             self.step_count = self.inputs["step_count"]
         else:
-            torch.manual_seed(self.seed)
+            torch.manual_seed(self.config.seed)
         
         self.create_network()
         self.initialize_agent_properties()
-        self.graph = self.graph.to(self.device)
+        self.graph = self.graph.to(self.config.device)
         self.initialize_model_properties()
-        self.steering_parameters['modelTheta'] = self.steering_parameters['modelTheta'].to(self.device)
+        self.steering_parameters['modelTheta'] = self.steering_parameters['modelTheta'].to(self.config.device)
 
-        weight_update(self.graph, self.device, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
+        weight_update(self.graph, self.config.device, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
         #data_collection(self.graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
                     #edata = self.steering_parameters['edata'], format = self.steering_parameters['format'], mode = self.steering_parameters['mode'])
 
@@ -286,9 +226,9 @@ class PovertyTrapModel(Model):
         Create intial network connecting agents. Makes use of intial graph type specified as model parameter
         """
 
-        agent_graph = network_creation(self.number_agents, self.initial_graph_type, **self.initial_graph_args)
+        agent_graph = network_creation(self.config.number_agents, self.config.initial_graph_type, **self.config.initial_graph_args.__dict__)
         #this should fix issues with execution oon GPU (fix by VG)
-        self.graph = agent_graph.to(self.device)
+        self.graph = agent_graph.to(self.config.device)
         #self.graph = agent_graph
 
 
@@ -303,11 +243,11 @@ class PovertyTrapModel(Model):
         #self.steering_parameters['attachProb'] = attachProb
 
     def _initialize_model_theta(self):
-        modelTheta = sample_distribution(self.steering_parameters['m_theta_dist'], self.step_target)
+        modelTheta = sample_distribution(self.steering_parameters['m_theta_dist'], self.config.step_target)
         return modelTheta
 
     def _initialize_attach_prob(self):
-        attachProb = sample_distribution(self.steering_parameters['m_attach_dist'], self.step_target)
+        attachProb = sample_distribution(self.steering_parameters['m_attach_dist'], self.config.step_target)
         return attachProb
 
     def initialize_agent_properties(self):
@@ -328,21 +268,21 @@ class PovertyTrapModel(Model):
         # TODO: add comment explaining what each variable is (here? where?).
         if isinstance(self.graph,dgl.DGLGraph):
           #send to device!!
-            self.graph.ndata['wealth'] = agentsCapital.to(self.device)
-            self.graph.ndata['alpha'] = agentsAlpha.to(self.device)
-            self.graph.ndata['theta'] = agentsTheta.to(self.device)
-            self.graph.ndata['sensitivity'] = agentsSensitivity.to(self.device)
-            self.graph.ndata['lambda'] = agentsLam.to(self.device)
-            self.graph.ndata['sigma'] = agentsSigma.to(self.device)
-            self.graph.ndata['tec'] = agentsTecLevel.to(self.device)
-            self.graph.ndata['gamma'] = agentsGamma.to(self.device)
-            self.graph.ndata['cost'] = agentsCost.to(self.device)
-            self.graph.ndata['a_table'] = agentsAdaptTable.to(self.device)
-            self.graph.ndata['wealth_consumption'] = torch.zeros(self.graph.num_nodes()).to(self.device)
-            self.graph.ndata['i_a'] = torch.zeros(self.graph.num_nodes()).to(self.device)
-            self.graph.ndata['m'] = torch.zeros(self.graph.num_nodes()).to(self.device)
-            self.graph.ndata['zeros'] = torch.zeros(self.graph.num_nodes()).to(self.device)
-            self.graph.ndata['ones'] = torch.ones(self.graph.num_nodes()).to(self.device)
+            self.graph.ndata['wealth'] = agentsCapital.to(self.config.device)
+            self.graph.ndata['alpha'] = agentsAlpha.to(self.config.device)
+            self.graph.ndata['theta'] = agentsTheta.to(self.config.device)
+            self.graph.ndata['sensitivity'] = agentsSensitivity.to(self.config.device)
+            self.graph.ndata['lambda'] = agentsLam.to(self.config.device)
+            self.graph.ndata['sigma'] = agentsSigma.to(self.config.device)
+            self.graph.ndata['tec'] = agentsTecLevel.to(self.config.device)
+            self.graph.ndata['gamma'] = agentsGamma.to(self.config.device)
+            self.graph.ndata['cost'] = agentsCost.to(self.config.device)
+            self.graph.ndata['a_table'] = agentsAdaptTable.to(self.config.device)
+            self.graph.ndata['wealth_consumption'] = torch.zeros(self.graph.num_nodes()).to(self.config.device)
+            self.graph.ndata['i_a'] = torch.zeros(self.graph.num_nodes()).to(self.config.device)
+            self.graph.ndata['m'] = torch.zeros(self.graph.num_nodes()).to(self.config.device)
+            self.graph.ndata['zeros'] = torch.zeros(self.graph.num_nodes()).to(self.config.device)
+            self.graph.ndata['ones'] = torch.ones(self.graph.num_nodes()).to(self.config.device)
         else:
             raise RuntimeError('model graph must be a defined as DGLgraph object. Consider running `create_network` before initializing agent properties')
 
@@ -358,42 +298,42 @@ class PovertyTrapModel(Model):
         """
         Initialize agent theta as a 1d tensor sampled from the specified initial theta distribution
         """
-        agentsTheta = sample_distribution(self.a_theta_dist, self.config.number_agents)
+        agentsTheta = sample_distribution(self.config.a_theta_dist.__dict__, self.config.number_agents)
         return agentsTheta
 
     def _initialize_agents_sensitivity(self):
         """
         Initialize agent sensitivity as a 1d tensor sampled from the specified initial sensitivity distribution
         """
-        agentsSensitivity = sample_distribution(self.sensitivity_dist, self.config.number_agents)
+        agentsSensitivity = sample_distribution(self.config.sensitivity_dist.__dict__, self.config.number_agents)
         return agentsSensitivity
 
     def _initialize_agents_capital(self):
         """
         Initialize agent captial as a 1d tensor sampled from the specified initial capital distribution
         """
-        agentsCapital = sample_distribution(self.capital_dist, self.config.number_agents)
+        agentsCapital = sample_distribution(self.config.capital_dist.__dict__, self.config.number_agents)
         return agentsCapital
 
     def _initialize_agents_alpha(self):
         """
         Initialize agent alpha as a 1d tensor sampled from the specified initial alpha distribution
         """
-        agentsAlpha = sample_distribution(self.alpha_dist, self.config.number_agents)
+        agentsAlpha = sample_distribution(self.config.alpha_dist.__dict__, self.config.number_agents)
         return agentsAlpha
 
     def _initialize_agents_lam(self):
         """
         Initialize agent lambda as a 1d tensor sampled from the specified initial lambda distribution
         """
-        agentsLam = sample_distribution(self.lambda_dist, self.config.number_agents)
+        agentsLam = sample_distribution(self.config.lambda_dist.__dict__, self.config.number_agents)
         return agentsLam
 
     def _initialize_agents_sigma(self):
         """
         Initialize agent sigma as a 1d tensor
         """
-        agentsSigma = sample_distribution(self.sigma_dist, self.config.number_agents)
+        agentsSigma = sample_distribution(self.config.sigma_dist.__dict__, self.config.number_agents)
         return agentsSigma
 
     def _initialize_agents_tec(self):
@@ -402,19 +342,19 @@ class PovertyTrapModel(Model):
         Initialize agents gamma and cost distributions according to their technology level and the speci fied initial gamma and cost
         values associated with that tech level
         """
-        agentsTecLevel = sample_distribution(self.technology_dist, self.config.number_agents)
-        agentsGamma = torch.zeros(self.number_agents)
-        agentsCost = torch.zeros(self.number_agents)
-        for i in range(len(self.technology_levels)):
+        agentsTecLevel = sample_distribution(self.config.technology_dist.__dict__, self.config.number_agents)
+        agentsGamma = torch.zeros(self.config.number_agents)
+        agentsCost = torch.zeros(self.config.number_agents)
+        for i in range(len(self.config.technology_levels)):
             technology_mask = agentsTecLevel == i
-            agentsGamma[technology_mask] = self.gamma_vals[i]
-            agentsCost[technology_mask] = self.cost_vals[i]
+            agentsGamma[technology_mask] = self.config.gamma_vals[i]
+            agentsCost[technology_mask] = self.config.cost_vals[i]
         return agentsTecLevel, agentsGamma, agentsCost
 
     def step(self):
         try:
-            print(f'performing step {self.step_count} of {self.step_target}')
-            ptm_step(self.graph, self.device, self.step_count, self.steering_parameters)
+            print(f'performing step {self.step_count} of {self.config.step_target}')
+            ptm_step(self.graph, self.config.device, self.step_count, self.steering_parameters)
 
             # number of edges(links) in the network
             self.number_of_edges = self.graph.number_of_edges()
@@ -426,12 +366,11 @@ class PovertyTrapModel(Model):
 
         # save the model state every step reported by checkpoint_period and at specific milestones.
         # checkpoint saves overwrite the previous checkpoint; milestone get unique folders.
-        save_checkpoint = 0 < self.checkpoint_period and self.step_count % self.checkpoint_period == 0
-        save_milestone = self.milestones and self.step_count in self.milestones
+        save_checkpoint = 0 < self.config.checkpoint_period and self.step_count % self.config.checkpoint_period == 0
+        save_milestone = self.config.milestones and self.step_count in self.config.milestones
         if save_checkpoint or save_milestone:
             self.inputs = {
                 'graph': copy.deepcopy(self.graph),
-                #'model_data': copy.deepcopy(self.model_data),
                 'generator_state': generator.get_state(),
                 'step_count': self.step_count,
                 'code_version': self.version
@@ -450,7 +389,7 @@ class PovertyTrapModel(Model):
 
     def run(self):
         """run the model for each step until the step_target is reached."""
-        while self.step_count < self.step_target:
+        while self.step_count < self.config.step_target:
             self.step()
 
 def _make_path_unique(path):
@@ -518,7 +457,6 @@ def _load_model(path):
 
     inputs = {
         'graph': graph,
-        #'model_data': data,
         'generator_state': generator,
         'step_count': generator_step,
         'code_version': code_version

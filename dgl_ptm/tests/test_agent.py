@@ -66,7 +66,7 @@
 
 #         income_generation(
 #             model.graph,
-#             model.device,
+#             model.config.device,
 #             model.steering_parameters,
 #             method='income_generation'
 #             )
@@ -80,7 +80,7 @@
 #         with pytest.raises(NotImplementedError):
 #             income_generation(
 #                 model.graph,
-#                 model.device,
+#                 model.config.device,
 #                 model.steering_parameters,
 #                 method='other'
 #                 )
@@ -126,7 +126,7 @@
 #         with pytest.raises(NotImplementedError):
 #             agent_update(
 #                 model.graph,
-#                 model.device,
+#                 model.config.device,
 #                 model.steering_parameters,
 #                 model.model_data,
 #                 1,
@@ -138,7 +138,7 @@
 #         model.graph.ndata['income'] = torch.rand(100)
 #         agent_update(
 #             model.graph,
-#             model.device,
+#             model.config.device,
 #             model.steering_parameters,
 #             model.model_data,
 #             1,
@@ -149,7 +149,7 @@
 #     def test_agent_update_theta(self, model):
 #         agent_update(
 #             model.graph,
-#             model.device,
+#             model.config.device,
 #             model.steering_parameters,
 #             model.model_data,
 #             1,
@@ -160,7 +160,7 @@
 #     def test_agent_update_consumption(self, model):
 #         agent_update(
 #             model.graph,
-#             model.device,
+#             model.config.device,
 #             model.steering_parameters,
 #             model.model_data,
 #             1,
@@ -171,7 +171,7 @@
 #     def test_agent_update_income(self, model):
 #         agent_update(
 #             model.graph,
-#             model.device,
+#             model.config.device,
 #             model.steering_parameters,
 #             model.model_data,
 #             1,

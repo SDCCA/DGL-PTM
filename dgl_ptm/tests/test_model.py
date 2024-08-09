@@ -100,7 +100,7 @@ class TestPtmStep:
         if Path('test_models/ptm_step/edge_data/').exists():
             shutil.rmtree('test_models/ptm_step/edge_data/')
 
-        model.step_target = 10 # run the model till step 10
+        model.config.step_target = 10 # run the model till step 10
 
         # Set periodical progress check as well as
         # collecting data before and after specific step and at the end of the process.
@@ -167,8 +167,8 @@ class TestInitializeModel:
         assert Path('test_models/initialize_model/initialize_model_0.yaml').exists()
         assert model.steering_parameters['edata'] == ['all']
         assert model.steering_parameters['format'] == 'xarray'
-        assert model.number_agents == 100
-        assert model.step_target == 5
+        assert model.config.number_agents == 100
+        assert model.config.step_target == 5
 
     def test_set_model_parameters_with_file(self, config_file):
         model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
@@ -177,7 +177,7 @@ class TestInitializeModel:
         assert model._model_identifier == 'initialize_model'
         assert model.steering_parameters['del_method'] == 'probability'
         assert model.steering_parameters['del_threshold'] == 0.05
-        assert model.number_agents == 100
+        assert model.config.number_agents == 100
 
     def test_set_model_parameters_with_kwargs(self):
         model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
@@ -185,7 +185,7 @@ class TestInitializeModel:
 
         assert model.steering_parameters['del_method'] == 'probability'
         assert model.steering_parameters['del_threshold'] == 0.04
-        assert model.number_agents == 100
+        assert model.config.number_agents == 100
 
     def test_set_model_parameters_with_file_and_kwargs(self, config_file):
         model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
@@ -196,7 +196,7 @@ class TestInitializeModel:
 
         assert model.steering_parameters['del_method'] == 'probability'
         assert model.steering_parameters['del_threshold'] == 0.06
-        assert model.number_agents == 100
+        assert model.config.number_agents == 100
 
     def test_initialize_model(self, initialize_model_model):
         model = initialize_model_model
@@ -252,7 +252,7 @@ class TestInitializeModel:
 
     def test_model_init_savestate(self, initialize_model_model):
         model = initialize_model_model
-        model.checkpoint_period = 1
+        model.config.checkpoint_period = 1
         model.run()
 
         assert model.inputs is not None
@@ -263,21 +263,23 @@ class TestInitializeModel:
 
     def test_model_init_savestate_not_default(self, initialize_model_model):
         model = initialize_model_model
-        model.checkpoint_period = 2
+        model.config.checkpoint_period = 2
         model.run()
 
         assert model.inputs["step_count"] == 4 # Note that the inputs are set at the end of the last step, which is the step before the step target.
 
     def test_model_init_restart(self, initialize_model_model):
         model = initialize_model_model
-        model.checkpoint_period = 1
-        model.step_target = 3 # only run the model till step 3
+        model.config.checkpoint_period = 1
+        model.config.step_target = 3 # only run the model till step 3
         model.run()
+        assert model.config.step_target == 3
         expected_generator_state = set(model.inputs["generator_state"].tolist())
 
         model.initialize_model(restart=True)
-        model.step_target = 5 # restart the model and run till step 5
+        model.config.step_target = 5 # restart the model and run till step 5
         model.run()
+        assert model.config.step_target == 5
         stored_generator_state = set(model.inputs["generator_state"].tolist())
 
         assert model.inputs is not None
@@ -286,7 +288,7 @@ class TestInitializeModel:
 
     def test_model_milestone(self, initialize_model_model):
         model = initialize_model_model
-        model.milestones = [2]
+        model.config.milestones = [2]
         model.run()
 
         assert model.inputs is not None
@@ -297,16 +299,18 @@ class TestInitializeModel:
 
     def test_model_milestone_continue(self, initialize_model_model):
         model = initialize_model_model
-        model.milestones = [1]
+        model.config.milestones = [1]
         assert model.step_count == 0 # The step count is the start of the run.
-        model.step_target = 3 # only run the model till step 3
+        model.config.step_target = 3 # only run the model till step 3
         model.run()
+        assert model.config.step_target == 3
         expected_generator_state = set(model.inputs["generator_state"].tolist())
 
         model.initialize_model(restart=1)
         assert model.step_count == 1 # The step count is that of the milestone.
-        model.step_target = 5 # continue the model and run till step 5
+        model.config.step_target = 5 # continue the model and run till step 5
         model.run()
+        assert model.config.step_target == 5
         stored_generator_state = set(model.inputs["generator_state"].tolist())
 
         assert model.inputs is not None

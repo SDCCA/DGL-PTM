@@ -23,7 +23,7 @@ class TestGlobalAttachment:
         ratio = model.steering_parameters['noise_ratio']
         current_number_of_edges = model.graph.number_of_edges()
 
-        global_attachment(model.graph, model.device, ratio)
+        global_attachment(model.graph, model.config.device, ratio)
         updated_number_of_edges = model.graph.number_of_edges()
         assert updated_number_of_edges > 0
         assert updated_number_of_edges > ratio * current_number_of_edges
@@ -61,13 +61,13 @@ class TestLocalAttachment:
 
 class TestNetworkCreation:
     def test_network_creation_barabasi_albert(self, model):
-        agent_graph = network_creation(model.number_agents, model.initial_graph_type)
+        agent_graph = network_creation(model.config.number_agents, model.config.initial_graph_type)
 
         # TODO: fix: not very informative tests due to not setting the random generator
-        assert agent_graph.number_of_nodes() == model.number_agents
+        assert agent_graph.number_of_nodes() == model.config.number_agents
         assert agent_graph.number_of_edges() == model.graph.number_of_edges()
         assert agent_graph.number_of_nodes() == model.graph.number_of_nodes()
 
     def test_network_creation_not_implemented(self, model):
         with pytest.raises(NotImplementedError):
-            network_creation(model.number_agents, 'not_implemented')
+            network_creation(model.config.number_agents, 'not_implemented')
