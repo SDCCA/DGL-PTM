@@ -81,6 +81,7 @@ class Model(object):
     def __init__(self, model_identifier = None, root_path = '.'):
         self._model_identifier = model_identifier
         self.root_path = root_path
+        self.model_dir = self.root_path / Path(self._model_identifier)
         
         # Step count.
         # Note that the config no longer contains the step count:
@@ -123,7 +124,10 @@ class PovertyTrapModel(Model):
         self.version = Path('version.md').read_text().splitlines()[0]
 
     def save_model_parameters(self):
-        test = True
+        # Save config to yaml file.
+        cfg_filename = self.model_dir / f'{self._model_identifier}_{self.step_count}.yaml'
+        self.config.to_yaml(cfg_filename)
+        logger.warning(f'The model parameters are saved to {cfg_filename}.')
 
     def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
         """
@@ -173,15 +177,13 @@ class PovertyTrapModel(Model):
         self.steering_parameters = self.config.steering_parameters.__dict__
         
         # Correct the paths
-        parent_dir = self.root_path / Path(self._model_identifier)
-        parent_dir.mkdir(parents=True, exist_ok=True)
-        self.steering_parameters['npath'] = str(parent_dir / Path(self.config.steering_parameters.npath))
-        self.steering_parameters['epath'] = str(parent_dir / Path(self.config.steering_parameters.epath))
+        self.model_dir = self.root_path / Path(self._model_identifier)
+        self.model_dir.mkdir(parents=True, exist_ok=True)
+        self.steering_parameters['npath'] = str(self.model_dir / Path(self.config.steering_parameters.npath))
+        self.steering_parameters['epath'] = str(self.model_dir / Path(self.config.steering_parameters.epath))
 
         # Save updated config to yaml file.
-        cfg_filename = parent_dir / f'{self._model_identifier}_{self.step_count}.yaml'
-        self.config.to_yaml(cfg_filename)
-        logger.warning(f'The model parameters are saved to {cfg_filename}.')
+        self.save_model_parameters()
 
     def initialize_model(self, restart = False):
         """
