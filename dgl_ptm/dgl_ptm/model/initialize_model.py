@@ -68,6 +68,10 @@ def sample_distribution_tensor(type, distParameters, nSamples, round=False, deci
             return torch.round(dist,decimals=decimals)
     else:
         return dist
+    
+def sample_distribution(distribution, nSamples):
+    return sample_distribution_tensor(distribution['type'], distribution['parameters'], nSamples, round = distribution['round'], decimals = distribution['decimals'])
+    
 
 class Model(object):
     """
@@ -299,11 +303,11 @@ class PovertyTrapModel(Model):
         #self.steering_parameters['attachProb'] = attachProb
 
     def _initialize_model_theta(self):
-        modelTheta = sample_distribution_tensor(self.steering_parameters['m_theta_dist']['type'],self.steering_parameters['m_theta_dist']['parameters'],self.step_target,round=self.steering_parameters['m_theta_dist']['round'],decimals=self.steering_parameters['m_theta_dist']['decimals'])
+        modelTheta = sample_distribution(self.steering_parameters['m_theta_dist'], self.step_target)
         return modelTheta
 
     def _initialize_attach_prob(self):
-        attachProb = sample_distribution_tensor(self.steering_parameters['m_attach_dist']['type'],self.steering_parameters['m_attach_dist']['parameters'],self.step_target,round=self.steering_parameters['m_attach_dist']['round'],decimals=self.steering_parameters['m_attach_dist']['decimals'])
+        attachProb = sample_distribution(self.steering_parameters['m_attach_dist'], self.step_target)
         return attachProb
 
     def initialize_agent_properties(self):
@@ -347,50 +351,49 @@ class PovertyTrapModel(Model):
         """
         Initialize agent adaptation measure knowledge, currently uniform.
         """
-        agentsAdaptTable =torch.stack([self.steering_parameters['adapt_m'],self.steering_parameters['adapt_cost']]).repeat(self.number_agents,1,1)
+        agentsAdaptTable =torch.stack([self.steering_parameters['adapt_m'],self.steering_parameters['adapt_cost']]).repeat(self.config.number_agents,1,1)
         return agentsAdaptTable
 
     def _initialize_agents_theta(self):
         """
         Initialize agent theta as a 1d tensor sampled from the specified initial theta distribution
         """
-        agentsTheta = sample_distribution_tensor(self.a_theta_dist['type'],self.a_theta_dist['parameters'],self.number_agents,round=self.a_theta_dist['round'],decimals=self.a_theta_dist['decimals'])
+        agentsTheta = sample_distribution(self.a_theta_dist, self.config.number_agents)
         return agentsTheta
 
     def _initialize_agents_sensitivity(self):
         """
         Initialize agent sensitivity as a 1d tensor sampled from the specified initial sensitivity distribution
         """
-        agentsSensitivity = sample_distribution_tensor(self.sensitivity_dist['type'],self.sensitivity_dist['parameters'],self.number_agents,round=self.sensitivity_dist['round'],decimals=self.sensitivity_dist['decimals'])
+        agentsSensitivity = sample_distribution(self.sensitivity_dist, self.config.number_agents)
         return agentsSensitivity
 
     def _initialize_agents_capital(self):
         """
         Initialize agent captial as a 1d tensor sampled from the specified initial capital distribution
         """
-        agentsCapital = sample_distribution_tensor(self.capital_dist['type'],self.capital_dist['parameters'],self.number_agents,round=self.capital_dist['round'],decimals=self.capital_dist['decimals'])
+        agentsCapital = sample_distribution(self.capital_dist, self.config.number_agents)
         return agentsCapital
 
     def _initialize_agents_alpha(self):
         """
         Initialize agent alpha as a 1d tensor sampled from the specified initial alpha distribution
         """
-        agentsAlpha = sample_distribution_tensor(self.alpha_dist['type'],self.alpha_dist['parameters'],self.number_agents,round=self.alpha_dist['round'],decimals=self.alpha_dist['decimals'])
+        agentsAlpha = sample_distribution(self.alpha_dist, self.config.number_agents)
         return agentsAlpha
 
     def _initialize_agents_lam(self):
         """
         Initialize agent lambda as a 1d tensor sampled from the specified initial lambda distribution
         """
-        agentsLam = sample_distribution_tensor(self.lambda_dist['type'],self.lambda_dist['parameters'],self.number_agents,round=self.lambda_dist['round'],decimals=self.lambda_dist['decimals'])
+        agentsLam = sample_distribution(self.lambda_dist, self.config.number_agents)
         return agentsLam
 
     def _initialize_agents_sigma(self):
         """
         Initialize agent sigma as a 1d tensor
-
         """
-        agentsSigma = sample_distribution_tensor(self.sigma_dist['type'],self.sigma_dist['parameters'],self.number_agents,round=self.sigma_dist['round'],decimals=self.sigma_dist['decimals'])
+        agentsSigma = sample_distribution(self.sigma_dist, self.config.number_agents)
         return agentsSigma
 
     def _initialize_agents_tec(self):
@@ -399,7 +402,7 @@ class PovertyTrapModel(Model):
         Initialize agents gamma and cost distributions according to their technology level and the speci fied initial gamma and cost
         values associated with that tech level
         """
-        agentsTecLevel = sample_distribution_tensor(self.technology_dist['type'],self.technology_dist['parameters'],self.number_agents,round=self.technology_dist['round'],decimals=self.technology_dist['decimals'])
+        agentsTecLevel = sample_distribution(self.technology_dist, self.config.number_agents)
         agentsGamma = torch.zeros(self.number_agents)
         agentsCost = torch.zeros(self.number_agents)
         for i in range(len(self.technology_levels)):
