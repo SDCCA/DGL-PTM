@@ -398,6 +398,9 @@ class PovertyTrapModel(Model):
 
     def run(self):
         """run the model for each step until the step_target is reached."""
+        # Save config to yaml file.
+        self.save_model_parameters()
+
         while self.step_count < self.config.step_target:
             self.step()
 

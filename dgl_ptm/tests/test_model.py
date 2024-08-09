@@ -288,7 +288,8 @@ class TestInitializeModel:
 
         assert model.inputs is not None
         assert model.inputs["step_count"] == 4 # Note that the inputs are set at the end of the last step, which is the step before the step target.
-        assert stored_generator_state == expected_generator_state 
+        assert stored_generator_state == expected_generator_state
+        assert Path('test_models/initialize_model/initialize_model_2.yaml').exists() # The second run also saves its config at the start.
 
     def test_model_milestone(self, initialize_model_model):
         model = initialize_model_model
@@ -320,5 +321,6 @@ class TestInitializeModel:
         assert model.inputs is not None
         assert model.inputs["step_count"] == 1
         assert model.step_count == 5
-        assert stored_generator_state == expected_generator_state 
+        assert stored_generator_state == expected_generator_state
+        assert Path('test_models/initialize_model/initialize_model_1.yaml').exists() # The second run also saves its config at the start.
         
