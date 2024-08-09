@@ -199,11 +199,11 @@ class PovertyTrapModel(Model):
         self.inputs = None
         if isinstance(restart, bool):
             if restart:
-                self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}')
+                self.inputs = _load_model(self.model_dir)
         elif isinstance(restart, int):
-            self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}/milestone_{restart}')
+            self.inputs = _load_model(f'{self.model_dir}/milestone_{restart}')
         elif isinstance(restart, tuple):
-            self.inputs = _load_model(f'{self.root_path}/{self._model_identifier}/milestone_{restart[0]}_{restart[1]}')
+            self.inputs = _load_model(f'{self.model_dir}/milestone_{restart[0]}_{restart[1]}')
 
         if self.inputs:
             self.graph = copy.deepcopy(self.inputs["graph"])
@@ -389,9 +389,9 @@ class PovertyTrapModel(Model):
             # The checkpoint could be necessary to restore a crashed process while
             # the milestone is required output.
             if save_checkpoint:
-                _save_model(f'{self.root_path}/{self._model_identifier}', self.inputs)
+                _save_model(self.model_dir, self.inputs)
             if save_milestone:
-                milestone_path = _make_path_unique(f'{self.root_path}/{self._model_identifier}/milestone_{self.step_count}')
+                milestone_path = _make_path_unique(f'{self.model_dir}/milestone_{self.step_count}')
                 _save_model(milestone_path, self.inputs)
 
         self.step_count +=1
@@ -414,6 +414,7 @@ def _make_path_unique(path):
 
 def _save_model(path, inputs):
     """ save the graph, generator_state and code_version in files."""
+    Path(path).mkdir(parents=True, exist_ok=True)
 
     # save the graph with a label
     graph_labels = {'step_count': torch.tensor([inputs["step_count"]])}
