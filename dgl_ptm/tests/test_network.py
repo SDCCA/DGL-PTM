@@ -52,6 +52,7 @@ class TestGlobalAttachment:
         simple_agent_graph = dgl.to_simple(agent_graph, return_counts='cnt')
         assert 'weight' not in simple_agent_graph.edata
         assert 'wealth_diff' not in simple_agent_graph.edata
+        assert 'theta' in simple_agent_graph.ndata  # check ndata
 
         # copy edata explicitly
         simple_agent_graph = dgl.to_simple(agent_graph, return_counts='cnt', copy_edata=True)
