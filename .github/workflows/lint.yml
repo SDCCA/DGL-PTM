@@ -12,6 +12,8 @@ jobs:
           working-directory: ./dgl_ptm
       steps:
         - uses: actions/checkout@v3
+          with:
+            fetch-depth: 0
         - name: Set up Python 3.11
           uses: actions/setup-python@v3
           with:
@@ -23,12 +25,14 @@ jobs:
         - name: Get changed files in dgl_ptm folder  # for now, we only lint the changed files
           id: dgl_ptm
           run: |
-            echo "::set-output name=dgl_ptm::$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '^dgl_ptm/')"
+            git diff --name-only ${{ github.base_ref }}...HEAD | grep '^dgl_ptm/' > $GITHUB_ENV
+            echo "dgl_ptm=$(cat $GITHUB_ENV)" >> $GITHUB_ENV
         - name: Check source code style against standards
           run: ruff check ${{ steps.dgl_ptm.outputs.dgl_ptm }}
         - name: Get changed files in tests folder  # for now, we only lint the changed files
           id: tests
           run: |
-            echo "::set-output name=tests::$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep '^tests/')"
+            git diff --name-only ${{ github.base_ref }}...HEAD | grep '^dgl_ptm/' > $GITHUB_ENV
+            echo "tests=$(cat $GITHUB_ENV)" >> $GITHUB_ENV
         - name: Check tests code style against standards
           run: ruff check ${{ steps.tests.outputs.tests }}
