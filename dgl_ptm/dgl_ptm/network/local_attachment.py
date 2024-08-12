@@ -6,7 +6,7 @@
 import torch
 import dgl
 
-import dgl_ptm.util.matrix_utils as matrix_utils
+from dgl_ptm.util import matrix_utils
 
 def local_attachment(graph,n_FoF_links,edge_prop=None,p_attach=1.):
     created_links = 0

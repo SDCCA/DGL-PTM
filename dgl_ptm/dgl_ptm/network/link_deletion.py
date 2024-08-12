@@ -1,7 +1,7 @@
 import dgl
 import torch
 
-import dgl_ptm.util.matrix_utils as matrix_utils
+from dgl_ptm.util import matrix_utils
 
 
 def link_deletion(agent_graph, method: str, threshold: float):
