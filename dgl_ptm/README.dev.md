@@ -129,6 +129,15 @@ bumpversion minor
 bumpversion patch
 ```
 
+The code also compares stored model versions to the current code version when loading existing models.
+
+Updating the current code version, stored in `dgl_ptm/version.md` is done with a script:
+
+```shell
+cd dgl_ptm
+regen_version.sh
+```
+
 ## Making a release
 
 This section describes how to make a release in 3 parts:
