@@ -121,7 +121,7 @@ class PovertyTrapModel(Model):
         self.graph = None
         self.step_first = -1
 
-        # Code version.
+        # Process version.
         self.version = Path('version.md').read_text().splitlines()[0]
 
     def save_model_parameters(self):
@@ -399,7 +399,7 @@ class PovertyTrapModel(Model):
                 'graph': copy.deepcopy(self.graph),
                 'generator_state': generator.get_state(),
                 'step_count': self.step_count,
-                'code_version': self.version
+                'process_version': self.version
             }
 
             # Note that a sinlge step could be both a checkpoint and a milestone.
@@ -431,7 +431,7 @@ def _make_path_unique(path):
     return path
 
 def _save_model(path, inputs):
-    """ save the graph, generator_state and code_version in files."""
+    """ save the graph, generator_state and process_version in files."""
     Path(path).mkdir(parents=True, exist_ok=True)
 
     # save the graph with a label
@@ -442,9 +442,9 @@ def _save_model(path, inputs):
     with open(Path(path) / "generator_state.bin", 'wb') as file:
         pickle.dump([inputs["generator_state"], inputs["step_count"]], file)
 
-    # save the code version
-    with open(Path(path) / "version.md", 'w') as file:
-        file.writelines([inputs["code_version"] + '\n', f'step={inputs["step_count"]}\n'])
+    # save the process version
+    with open(Path(path) / "process_version.md", 'w') as file:
+        file.writelines([inputs["process_version"] + '\n', f'step={inputs["step_count"]}\n'])
 
 
 def _load_model(path):
@@ -465,23 +465,23 @@ def _load_model(path):
     with open(path_generator_state, 'rb') as file:
         generator, generator_step = pickle.load(file)
 
-    # Load code version
-    path_code_version = Path(path) / "version.md"
-    if not path_code_version.is_file():
-        raise ValueError(f'The path {path_code_version} is not a file.')
+    # Load process version
+    path_process_version = Path(path) / "process_version.md"
+    if not path_process_version.is_file():
+        raise ValueError(f'The path {path_process_version} is not a file.')
 
-    with open(path_code_version, 'r') as file:
-        code_version = file.readlines()[0]
+    with open(path_process_version, 'r') as file:
+        process_version = file.readlines()[0]
 
     # Check if graph_step, generator_step and data_step are the same
     if graph_step != generator_step:
         msg = 'The step count in the graph and generator_state are not the same.'
         raise ValueError(msg)
     
-    # Check if the saved version and current code version are the same
-    version = Path('version.md').read_text().splitlines()[0]
-    if code_version != version:
-        logger.warning(f'Warning: loading model generated using earlier code version: {code_version}.')
+    # Check if the saved version and current process version are the same
+    current_version = Path('version.md').read_text().splitlines()[0]
+    if process_version != current_version:
+        logger.warning(f'Warning: loading model generated using earlier process version: {process_version}.')
 
     # Show which step is loaded
     logger.warning(f'Loading model state from step {generator_step}.')
@@ -490,6 +490,6 @@ def _load_model(path):
         'graph': graph,
         'generator_state': generator,
         'step_count': generator_step,
-        'code_version': code_version
+        'process_version': process_version
     }
     return inputs

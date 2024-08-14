@@ -262,7 +262,7 @@ class TestInitializeModel:
         assert model.inputs is not None
         assert Path('test_models/initialize_model/graph.bin').exists()
         assert Path('test_models/initialize_model/generator_state.bin').exists()
-        assert Path('test_models/initialize_model/version.md').exists()
+        assert Path('test_models/initialize_model/process_version.md').exists()
         assert model.inputs["step_count"] == 4 # Note that the inputs are set at the end of the last step, which is the step before the step target.
 
     def test_model_init_savestate_not_default(self, initialize_model_model):
@@ -299,7 +299,7 @@ class TestInitializeModel:
         assert model.inputs is not None
         assert Path('test_models/initialize_model/milestone_2/graph.bin').exists()
         assert Path('test_models/initialize_model/milestone_2/generator_state.bin').exists()
-        assert Path('test_models/initialize_model/milestone_2/version.md').exists()
+        assert Path('test_models/initialize_model/milestone_2/process_version.md').exists()
         assert model.inputs["step_count"] == 2
 
     def test_model_milestone_continue(self, initialize_model_model):
@@ -346,12 +346,12 @@ class TestInitializeModel:
         # Note, the first instance of a milestone at step 3 is stored in milestone_3
         assert Path('test_models/initialize_model/milestone_3/graph.bin').exists()
         assert Path('test_models/initialize_model/milestone_3/generator_state.bin').exists()
-        assert Path('test_models/initialize_model/milestone_3/version.md').exists()
+        assert Path('test_models/initialize_model/milestone_3/process_version.md').exists()
 
         # Note, the second instance of a milestone at step 3 is stored in milestone_3_1
         assert Path('test_models/initialize_model/milestone_3_1/graph.bin').exists()
         assert Path('test_models/initialize_model/milestone_3_1/generator_state.bin').exists()
-        assert Path('test_models/initialize_model/milestone_3_1/version.md').exists()
+        assert Path('test_models/initialize_model/milestone_3_1/process_version.md').exists()
 
         # Continue from the second milestone.
         model.initialize_model(restart=(3,1))
