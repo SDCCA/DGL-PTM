@@ -18,13 +18,13 @@ jobs:
           uses: actions/setup-python@v3
           with:
             python-version: "3.11"
-        - name: Install dependencies
-          run: |
-            python -m pip install --upgrade pip
-            python -m pip install .[dev]
         - name: Get changed files in dgl_ptm # for now, we only lint the changed files
           id: files
           run: |
             echo "files=$(git diff --name-only --diff-filter=d origin/$GITHUB_BASE_REF...origin/$GITHUB_HEAD_REF -- ./dgl_ptm)" >> $GITHUB_ENV
-        - name: Check source code style against standards
-          run: ruff check $(echo ${{ env.files }} | tr ' ' '\n')
+        - name: Check code style against standards
+          if: env.files != ''
+          run: |
+            python -m pip install --upgrade pip
+            python -m pip install .[dev]
+            ruff check $(echo ${{ env.files }} | tr ' ' '\n')
