@@ -7,6 +7,9 @@ on:
 jobs:
   lint:
       runs-on: ubuntu-latest
+      defaults:
+        run:
+          working-directory: ./dgl_ptm
       steps:
         - uses: actions/checkout@v3
           with:
@@ -15,15 +18,16 @@ jobs:
           uses: actions/setup-python@v3
           with:
             python-version: "3.11"
-        - name: Get changed python files # for now, we only lint the changed files
+        - name: Get changed files in dgl_ptm # for now, we only lint the changed files
           id: files
           run: |
-            echo "files=$(git diff --name-only --diff-filter=d origin/$GITHUB_BASE_REF...origin/$GITHUB_HEAD_REF -- '*.py')" >> $GITHUB_ENV
+            echo "files=$(git diff --name-only --relative --diff-filter=d origin/$GITHUB_BASE_REF...origin/$GITHUB_HEAD_REF)" >> $GITHUB_ENV
+            echo ${{ env.files }}
         - name: Check code style against standards
           if: env.files != ''
           run: |
             python -m pip install --upgrade pip
-            python -m pip install ruff
+            python -m pip install .[dev]
             ruff check $(echo ${{ env.files }} | tr ' ' '\n')
         - name: Print message when files is empty
           if: env.files == ''
