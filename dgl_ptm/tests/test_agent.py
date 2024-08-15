@@ -12,7 +12,7 @@
 # @pytest.fixture
 # def model():
 #     model = dgl_ptm.PovertyTrapModel(model_identifier='agent', root_path='test_models')
-#     model.set_model_parameters()
+#     model.set_model_parameters(overwrite=True)
 #     model.initialize_model()
 #     return model
 

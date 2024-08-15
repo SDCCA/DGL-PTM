@@ -124,13 +124,15 @@ class PovertyTrapModel(Model):
         # Process version.
         self.version = Path('version.md').read_text().splitlines()[0]
 
-    def save_model_parameters(self):
+    def save_model_parameters(self, overwrite = False):
         # Save config to yaml file.
-        cfg_filename = self.model_dir / f'{self._model_identifier}_{self.step_count}.yaml'
+        cfg_filename = f'{self.model_dir}/{self._model_identifier}_{self.step_count}'
+        if overwrite: cfg_filename = cfg_filename + '.yaml'
+        else: cfg_filename = _make_path_unique(cfg_filename, '.yaml')
         self.config.to_yaml(cfg_filename)
         logger.warning(f'The model parameters are saved to {cfg_filename}.')
 
-    def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
+    def set_model_parameters(self, *, parameterFilePath=None, overwrite = False, **kwargs):
         """
         Load or set model parameters
 
@@ -184,7 +186,7 @@ class PovertyTrapModel(Model):
         self.steering_parameters['epath'] = str(self.model_dir / Path(self.config.steering_parameters.epath))
 
         # Save updated config to yaml file.
-        self.save_model_parameters()
+        self.save_model_parameters(overwrite)
 
     def initialize_model(self, restart = False):
         """
@@ -422,12 +424,15 @@ class PovertyTrapModel(Model):
         while self.step_count < self.config.step_target:
             self.step()
 
-def _make_path_unique(path):
-    if Path(path).exists():
+def _make_path_unique(path, extension = ''):
+    # Note that extension should include the dot.
+    if Path(f'{path}{extension}').exists():
         incr = 1
-        def add_incr(path, incr): return f'{path}_{incr}'
-        while Path(add_incr(path, incr)).exists(): incr += 1
-        path = add_incr(path, incr)
+        def add_incr(path, incr, extension): return f'{path}_{incr}{extension}'
+        while Path(add_incr(path, incr, extension)).exists(): incr += 1
+        path = add_incr(path, incr, extension)
+    else:
+        path = path + extension
     return path
 
 def _save_model(path, inputs):

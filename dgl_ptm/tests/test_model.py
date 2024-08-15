@@ -14,21 +14,21 @@ os.environ["DGLBACKEND"] = "pytorch"
 @pytest.fixture
 def ptm_model():
     model = dgl_ptm.PovertyTrapModel(model_identifier='ptm_step', root_path='test_models')
-    model.set_model_parameters()
+    model.set_model_parameters(overwrite=True)
     model.initialize_model()
     return model
 
 @pytest.fixture
 def data_collection_model():
     model = dgl_ptm.PovertyTrapModel(model_identifier='data_collection', root_path='test_models')
-    model.set_model_parameters()
+    model.set_model_parameters(overwrite=True)
     model.initialize_model()
     return model
 
 @pytest.fixture
 def initialize_model_model():
     model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
-    model.set_model_parameters()
+    model.set_model_parameters(overwrite=True)
     model.initialize_model()
     return model
 
@@ -160,7 +160,7 @@ class TestDataCollection:
 class TestInitializeModel:
     def test_set_model_parameters(self):
         model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
-        model.set_model_parameters()
+        model.set_model_parameters(overwrite=True)
 
         assert model.step_count == 0
         assert Path(model.steering_parameters['npath']) == Path('test_models/initialize_model/agent_data.zarr')
@@ -202,6 +202,17 @@ class TestInitializeModel:
         assert model.steering_parameters['step_type'] == 'custom'
         assert model.config.number_agents == 100
 
+    def test_save_model_parameters(self):
+        model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
+        model.set_model_parameters(overwrite=True)
+        model.save_model_parameters(overwrite=False)
+        model.save_model_parameters()
+
+        # Saving to unique config files becomes useful when starting multiple runs from the same step.
+        assert Path('test_models/initialize_model/initialize_model_0.yaml').exists()
+        assert Path('test_models/initialize_model/initialize_model_0_1.yaml').exists()
+        assert Path('test_models/initialize_model/initialize_model_0_2.yaml').exists()
+
     def test_initialize_model(self, initialize_model_model):
         model = initialize_model_model
         assert model.graph is not None
@@ -210,7 +221,7 @@ class TestInitializeModel:
 
     def test_create_network(self):
         model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
-        model.set_model_parameters()
+        model.set_model_parameters(overwrite=True)
         model.create_network()
 
         assert model.graph is not None
@@ -218,14 +229,14 @@ class TestInitializeModel:
 
     def test_initialize_model_properties(self):
         model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
-        model.set_model_parameters()
+        model.set_model_parameters(overwrite=True)
         model.initialize_model_properties()
 
         modelTheta = torch.tensor([1., 1., 1., 1., 1.])
 
     def test_initialize_agent_properties(self):
         model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
-        model.set_model_parameters()
+        model.set_model_parameters(overwrite=True)
         model.create_network()
         model.initialize_agent_properties()
 

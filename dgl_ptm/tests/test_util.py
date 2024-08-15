@@ -11,6 +11,7 @@ def model():
     model = dgl_ptm.PovertyTrapModel(model_identifier='util', root_path='test_models')
     # to make sure the results are reproducible
     model.set_model_parameters(
+        overwrite=True,
         initial_graph_args={'seed': 100, 'new_node_edges': 1},
         number_agents=100,
         initial_graph_type="barabasi-albert")
