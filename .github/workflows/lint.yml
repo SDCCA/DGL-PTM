@@ -25,6 +25,6 @@ jobs:
         - name: Get changed files folder  # for now, we only lint the changed files
           id: files
           run: |
-            echo "files=$(git diff --name-only --diff-filter=d $GITHUB_BASE_REF...HEAD)" >> $GITHUB_ENV
+            echo "files=$(git diff --name-only --diff-filter=d origin/$GITHUB_BASE_REF...origin/$GITHUB_HEAD_REF)" >> $GITHUB_ENV
         - name: Check source code style against standards
           run: ruff check $(echo ${{ env.files }} | tr ' ' '\n')
