@@ -59,7 +59,7 @@ def test_invalid_fields(config_parameters):
         _ = Config.from_dict(config_parameters)
 
 def test_invalid_values(config_parameters):
-    """Test that invalid values are not accepted."""
+    """Test invalid values."""
     config_parameters["number_agents"] = -100
     with pytest.raises(ValueError):
         _ = Config.from_dict(config_parameters)
