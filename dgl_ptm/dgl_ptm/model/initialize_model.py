@@ -447,10 +447,10 @@ def _make_path_unique(path, extension = ''):
         the modified path, which does not currently exist.
     """
     if Path(f'{path}{extension}').exists():
-        incr = 1
-        def add_incr(path, incr, extension): return f'{path}_{incr}{extension}'
-        while Path(add_incr(path, incr, extension)).exists(): incr += 1
-        path = add_incr(path, incr, extension)
+        instance = 1
+        def add_instance(path, instance, extension): return f'{path}_{instance}{extension}'
+        while Path(add_instance(path, instance, extension)).exists(): instance += 1
+        path = add_instance(path, instance, extension)
     else:
         path = path + extension
     return path
