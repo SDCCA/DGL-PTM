@@ -432,7 +432,20 @@ class PovertyTrapModel(Model):
             self.step()
 
 def _make_path_unique(path, extension = ''):
-    # Note that extension should include the dot.
+    """
+    Check whether a path already exists and make it unique if it does.
+
+    Paths are made unique by adding "_x" to the path,
+    where x is the lowest positive integer for which the path does not exist.
+
+    Params:
+        path: the path to make unique
+        extension: str, optional, this extension is added to the path
+          after any integer added to make the path unique.
+          Note that for true extensions, this should start with a dot, e.g ".yaml"
+    Returns:
+        the modified path, which does not currently exist.
+    """
     if Path(f'{path}{extension}').exists():
         incr = 1
         def add_incr(path, incr, extension): return f'{path}_{incr}{extension}'
