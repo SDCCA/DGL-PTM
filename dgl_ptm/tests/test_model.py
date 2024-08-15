@@ -316,15 +316,17 @@ class TestInitializeModel:
     def test_model_milestone_continue(self, initialize_model_model):
         model = initialize_model_model
         model.config.milestones = [1]
-        assert model.step_count == 0 # The step count is the start of the run.
+        model.config.description = "Initialize network."
         model.config.step_target = 3 # only run the model till step 3
+        assert model.step_count == 0 # The step count is the start of the run.
         model.run()
         assert model.config.step_target == 3
         expected_generator_state = set(model.inputs["generator_state"].tolist())
 
         model.initialize_model(restart=(1,0))
-        assert model.step_count == 1 # The step count is that of the milestone.
         model.config.step_target = 5 # continue the model and run till step 5
+        model.config.description = "Policy 0: just run for a while using default parameters."
+        assert model.step_count == 1 # The step count is that of the milestone.
         model.run()
         assert model.config.step_target == 5
         stored_generator_state = set(model.inputs["generator_state"].tolist())

@@ -205,6 +205,7 @@ class Config(BaseModel):
     These are the parameters used by the overarching process.
     """
     model_identifier: str = Field("test", alias='_model_identifier') # because pydantic does not like underscores
+    description: str = "" # Never used to influence processing. This value is meant purely to add a description to identify a parameter setting.
     device: str = "cpu"
     seed: int = 42
     number_agents: PositiveInt = 100
