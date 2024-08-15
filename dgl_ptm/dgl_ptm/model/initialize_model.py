@@ -192,21 +192,28 @@ class PovertyTrapModel(Model):
         """
         Create network and initialize agent properties in correct order, thereby initializing a model.
 
-        param: restart: boolean or int or a pair of ints, optional.
-        If True, the model is initialized from the last checkpoint,
-        if an int, the model is initialized from the first milestone at that step,
-        if a pair of ints, the model is initialized from that milestone at that step.
-        Default False.
+        Params:
+            restart: boolean or a pair of ints, optional.
+            If True, the model is initialized from the last checkpoint,
+            if a pair of ints, the model is initialized at that step from that milestone,
+                e.g (2,0) would be the first milestone at step 2
+                and (2,1) would be the second milestone at step 2.
+            Default False.
         """
 
         self.inputs = None
         if isinstance(restart, bool):
             if restart:
+                logger.info(f'Loading model state from checkpoint: {self.model_dir}')
                 self.inputs = _load_model(self.model_dir)
-        elif isinstance(restart, int):
-            self.inputs = _load_model(f'{self.model_dir}/milestone_{restart}')
         elif isinstance(restart, tuple):
-            self.inputs = _load_model(f'{self.model_dir}/milestone_{restart[0]}_{restart[1]}')
+            milestone_dir = None
+            if restart[1] == 0:
+                milestone_dir = f'{self.model_dir}/milestone_{restart[0]}'
+            else:
+                milestone_dir = f'{self.model_dir}/milestone_{restart[0]}_{restart[1]}'
+            logger.info(f'Loading model state from milestone: {milestone_dir}')
+            self.inputs = _load_model(milestone_dir)
 
         if self.inputs:
             self.graph = copy.deepcopy(self.inputs["graph"])

@@ -322,7 +322,7 @@ class TestInitializeModel:
         assert model.config.step_target == 3
         expected_generator_state = set(model.inputs["generator_state"].tolist())
 
-        model.initialize_model(restart=1)
+        model.initialize_model(restart=(1,0))
         assert model.step_count == 1 # The step count is that of the milestone.
         model.config.step_target = 5 # continue the model and run till step 5
         model.run()
