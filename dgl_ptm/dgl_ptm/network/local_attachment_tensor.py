@@ -2,6 +2,8 @@ import torch
 import dgl 
 from dgl.sparse import spmatrix
 
+import dgl_ptm.util.matrix_utils as matrix_utils
+
 # TODO: check readability variables.
 
 # TODO: confirm that the behavior for sum(weight)=0 agents is the same as for plain local attachment
@@ -11,10 +13,10 @@ def local_attachment_tensor(graph,n_FoF_links,edge_prop=None,p_attach=1.):
 
     #sample n_FoF_links from the entire normalized edge property graph weighted by weight
     selected_links = norm_prop.multinomial(num_samples=n_FoF_links,replacement=False)
-    selected_links_matrix = sparse_from_mask(adj_matrix, selected_links)
+    selected_links_matrix = matrix_utils.apply_mask_to_sparse_matrix(adj_matrix, selected_links)
     FoF_field_matrix, FoF_field_matrix_norm_eprop = neighbour_field_matrix(selected_links_matrix,adj_matrix)
     new_FoF = FoF_field_matrix.val > 0
-    new_FoF_norm_eprop = sparse_from_mask(FoF_field_matrix_norm_eprop, new_FoF)
+    new_FoF_norm_eprop = matrix_utils.apply_mask_to_sparse_matrix(FoF_field_matrix_norm_eprop, new_FoF)
     if torch.count_nonzero(new_FoF) <= n_FoF_links:
         probe_p_attach = torch.rand(new_FoF_norm_eprop.val.shape[0]) 
         to_link = probe_p_attach < p_attach
@@ -26,20 +28,9 @@ def local_attachment_tensor(graph,n_FoF_links,edge_prop=None,p_attach=1.):
         #to_link = torch.logical_and((probe_p_attach > p_attach),selected_FoF)
         probe_selected = probe_p_attach < p_attach
         to_link = selected_FoF[probe_selected]
-    FoF_to_link_matrix = sparse_from_mask(new_FoF_norm_eprop, to_link)
+    FoF_to_link_matrix = matrix_utils.apply_mask_to_sparse_matrix(new_FoF_norm_eprop, to_link)
     graph.add_edges(FoF_to_link_matrix.row,FoF_to_link_matrix.col)
     graph.add_edges(FoF_to_link_matrix.col,FoF_to_link_matrix.row)
-
-
-def symmetrical_from_upper_triangular(u_triangular):
-    return u_triangular + u_triangular.T
-
-def sparse_from_mask(orig_spm, mask):
-    return dgl.sparse.from_coo(orig_spm.row[mask],orig_spm.col[mask],orig_spm.val[mask],orig_spm.shape)
-
-def upper_triangular_sparse(sparse_matrix):
-    mask = sparse_matrix.row <= sparse_matrix.col
-    return sparse_from_mask(sparse_matrix,mask)
 
 def adjacency_matrix_with_edge_prop(graph,etype=None, eprop=None):
     etype = graph.to_canonical_etype(etype)
