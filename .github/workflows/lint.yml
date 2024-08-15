@@ -21,7 +21,7 @@ jobs:
         - name: Get changed files in dgl_ptm # for now, we only lint the changed files
           id: files
           run: |
-            echo "files=$(git diff --name-only --relative --diff-filter=d origin/$GITHUB_BASE_REF...origin/$GITHUB_HEAD_REF)" >> $GITHUB_ENV
+            echo "files=$(git diff --name-only --relative --diff-filter=d origin/$GITHUB_BASE_REF...origin/$GITHUB_HEAD_REF | tr '\n' ' ')" >> $GITHUB_ENV
             echo ${{ env.files }}
         - name: Check code style against standards
           if: env.files != ''
