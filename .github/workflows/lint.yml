@@ -28,3 +28,6 @@ jobs:
             python -m pip install --upgrade pip
             python -m pip install .[dev]
             ruff check $(echo ${{ env.files }} | tr ' ' '\n')
+        - name: Print message when files is empty
+          if: env.files == ''
+          run: echo "No files were changed."
