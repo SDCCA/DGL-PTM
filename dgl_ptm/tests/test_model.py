@@ -289,12 +289,17 @@ class TestInitializeModel:
         model.config.step_target = 3 # only run the model till step 3
         model.run()
         assert model.config.step_target == 3
+        assert Path('test_models/initialize_model/initialize_model_0.yaml').exists()
+        assert Path('test_models/initialize_model/graph.bin').exists()
+        assert Path('test_models/initialize_model/generator_state.bin').exists()
+        assert Path('test_models/initialize_model/process_version.md').exists()
         expected_generator_state = set(model.inputs["generator_state"].tolist())
 
         model.initialize_model(restart=True)
         model.config.step_target = 5 # restart the model and run till step 5
         model.run()
         assert model.config.step_target == 5
+        assert Path('test_models/initialize_model/initialize_model_0_1.yaml').exists()
         stored_generator_state = set(model.inputs["generator_state"].tolist())
 
         assert model.inputs is not None
