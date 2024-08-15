@@ -122,7 +122,8 @@ class PovertyTrapModel(Model):
         self.step_first = -1
 
         # Process version.
-        self.version = Path('version.md').read_text().splitlines()[0]
+        version_path = Path(__file__).resolve().parents[2] / 'version.md'
+        self.version = version_path.read_text().splitlines()[0]
 
     def save_model_parameters(self, overwrite = False):
         # Save config to yaml file.
@@ -504,7 +505,8 @@ def _load_model(path):
         raise ValueError(msg)
     
     # Check if the saved version and current process version are the same
-    current_version = Path('version.md').read_text().splitlines()[0]
+    version_path = Path(__file__).resolve().parents[2] / 'version.md'
+    current_version = version_path.read_text().splitlines()[0]
     if process_version != current_version:
         logger.warning(f'Warning: loading model generated using earlier process version: {process_version}.')
 
