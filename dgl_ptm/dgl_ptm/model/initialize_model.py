@@ -90,48 +90,6 @@ class PovertyTrapModel(Model):
     """
     Poverty Trap model as derived model class
 
-    default_model_parameters = {'number_agents': 100 , 
-    'seed':0,
-    'gamma_vals':torch.tensor([0.3,0.45]) , #for pseudo income
-    'sigma_dist': {'type':'uniform','parameters':[0.05,1.94],'round':True,'decimals':1},
-    'cost_vals': torch.tensor([0.,0.45]), #for pseudo income
-    'tec_levels': torch.tensor([0,1]), #check if deletable
-    'a_theta_dist': {'type':'uniform','parameters':[0.1,1],'round':False,'decimals':None},
-    'sensitivity_dist':{'type':'uniform','parameters':[0.0,1],'round':False,'decimals':None},
-    'tec_dist': {'type':'bernoulli','parameters':[0.5,None],'round':False,'decimals':None},
-    'capital_dist': {'type':'uniform','parameters':[0.1,10.],'round':False,'decimals':None},
-    'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
-    'lam_dist': {'type':'uniform','parameters':[0.05,0.94],'round':True,'decimals':1},
-    'initial_graph_type': 'barabasi-albert',
-    'initial_graph_args': {'seed': 0, 'new_node_edges':1},
-    'device': 'cpu',
-    'step_count':0,
-    'step_target':20,
-    'steering_parameters':{'npath':'./agent_data.zarr',
-                            'epath':'./edge_data',
-                            'ndata':['all_except',['a_table']],
-                            'edata':['all'],
-                            'mode':'xarray',
-                            'wealth_method':'singular_transfer',
-                            'income_method':'pseudo_income_generation',
-                            'tech_gamma': torch.tensor([0.3,0.35,0.45]),
-                            'tech_cost': torch.tensor([0,0.15,0.65]),
-                            'consume_method':'pseudo_consumption',
-                            'nn_path': None,
-                            'adapt_m':torch.tensor([0,0.5,0.9]),
-                            'adapt_cost':torch.tensor([0,0.25,0.45]),
-                            'depreciation': 0.6,
-                            'discount': 0.95,
-                            'm_theta_dist': {'type':'multinomial','parameters':[[0.02 ,0.03, 0.05, 0.9],[0.7, 0.8, 0.9, 1]],'round':False,'decimals':None},
-                            'm_attach_dist': {'type':'uniform','parameters':[0.001,1],'round':False,'decimals':None},
-                            'del_method':'probability',
-                            'del_threshold':0.05,
-                            'ratio':0.1,
-                            'weight_a':0.69,
-                            'weight_b':35,
-                            'truncation_weight':1.0e-10,
-                            'step_type':'default'}}
-
     """
 
     def __init__(self,*, model_identifier):
