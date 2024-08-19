@@ -21,7 +21,7 @@ jobs:
         - name: Get changed python files in dgl_ptm # for now, we only lint the changed files
           id: files
           run: |
-            echo "files=$(git diff --name-only --relative --diff-filter=d -- "*.py" origin/$GITHUB_BASE_REF...origin/$GITHUB_HEAD_REF | tr '\n' ' ')" >> $GITHUB_ENV
+            echo "files=$(git diff --name-only --relative --diff-filter=d origin/$GITHUB_BASE_REF...origin/$GITHUB_HEAD_REF -- "*.py" | tr '\n' ' ')" >> $GITHUB_ENV
         - name:  Install dependencies  # ruff tools are installed in the dev dependencies
           if: env.files != ''
           run: |
