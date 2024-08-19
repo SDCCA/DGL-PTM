@@ -1,4 +1,4 @@
-name: Linting
+name: Linting with ruff  # settings are in pyproject.toml
 
 on:
   pull_request:  # only run on pull requests for now
@@ -18,10 +18,10 @@ jobs:
           uses: actions/setup-python@v3
           with:
             python-version: "3.11"
-        - name: Get changed files in dgl_ptm # for now, we only lint the changed files
+        - name: Get changed python files in dgl_ptm # for now, we only lint the changed files
           id: files
           run: |
-            echo "files=$(git diff --name-only --relative --diff-filter=d origin/$GITHUB_BASE_REF...origin/$GITHUB_HEAD_REF | tr '\n' ' ')" >> $GITHUB_ENV
+            echo "files=$(git diff --name-only --relative --diff-filter=d "*.py" origin/$GITHUB_BASE_REF...origin/$GITHUB_HEAD_REF | tr '\n' ' ')" >> $GITHUB_ENV
         - name:  Install dependencies  # ruff tools are installed in the dev dependencies
           if: env.files != ''
           run: |
@@ -33,4 +33,4 @@ jobs:
             ruff check $(echo ${{ env.files }} | tr ' ' '\n')
         - name: Print message when files is empty
           if: env.files == ''
-          run: echo "No files were changed."
+          run: echo "No python files were changed."
