@@ -4,6 +4,7 @@
 import dgl
 import networkx as nx
 import random
+import torch
 
 # network_creation - Creates the network between the initialized nodes using edges from DGL
 
@@ -25,7 +26,7 @@ def network_creation(num_agents, method, **kwargs):
             seed  = kwargs['seed']
             print(f"using seed {seed} for network creation.")
         else:
-            seed = random.randint(1, 100000)
+            seed = torch.initial_seed() 
         
         if 'new_node_edges' in kwargs.keys(): 
             new_node_edges = kwargs['new_node_edges']
