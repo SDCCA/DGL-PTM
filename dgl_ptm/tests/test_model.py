@@ -173,7 +173,7 @@ class TestInitializeModel:
 
     def test_set_model_parameters_with_file(self, config_file):
         model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
-        model.set_model_parameters(parameterFilePath=config_file)
+        model.set_model_parameters(parameter_file_path=config_file)
 
         assert model._model_identifier == 'initialize_model'
         assert model.steering_parameters['del_method'] == 'probability'
@@ -192,7 +192,7 @@ class TestInitializeModel:
     def test_set_model_parameters_with_file_and_kwargs(self, config_file):
         model = dgl_ptm.PovertyTrapModel(model_identifier='initialize_model', root_path='test_models')
         model.set_model_parameters(
-            parameterFilePath=config_file,
+            parameter_file_path=config_file,
             steering_parameters={'del_method': 'probability','del_threshold': 0.06}
             )
 
