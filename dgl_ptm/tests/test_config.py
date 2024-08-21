@@ -4,6 +4,7 @@ import yaml
 
 from dgl_ptm.config import Config
 
+
 @pytest.fixture
 def config_parameters():
     return {
@@ -43,7 +44,7 @@ def test_to_yaml(tmp_path):
     cfg = Config()
     cfg.to_yaml(tmp_path / "config.yaml")
 
-    with open(tmp_path / "config.yaml", "r") as f:
+    with open(tmp_path / "config.yaml") as f:
         cfg_dict = yaml.safe_load(f)
     assert cfg_dict["_model_identifier"] == "test"
     assert cfg_dict["number_agents"] == 100
@@ -58,7 +59,7 @@ def test_invalid_fields(config_parameters):
         _ = Config.from_dict(config_parameters)
 
 def test_invalid_values(config_parameters):
-    """Test that invalid values are not accepted."""
+    """Test invalid values."""
     config_parameters["number_agents"] = -100
     with pytest.raises(ValueError):
         _ = Config.from_dict(config_parameters)

@@ -69,13 +69,26 @@ def sample_distribution_tensor(type, distParameters, nSamples, round=False, deci
     else:
         return dist
 
+def sample_distribution(distribution, nSamples):
+    return sample_distribution_tensor(distribution['type'], distribution['parameters'], nSamples, round = distribution['round'], decimals = distribution['decimals'])
+
+
 class Model(object):
     """
     Abstract model class
     """
 
-    def __init__(self,model_identifier=None):
+    def __init__(self, model_identifier = None, root_path = '.'):
         self._model_identifier = model_identifier
+        self.root_path = root_path
+        self.model_dir = self.root_path / Path(self._model_identifier)
+
+        # Step count.
+        # Note that the config no longer contains the step count:
+        # the config is determined before a starting run;
+        # the step count may not be correct when loading a config to continue a run
+        # (whether restoring a run after a crash or continuing from a milestone).
+        self.step_count = 0
 
     def create_network(self):
         raise NotImplementedError('network creaion is not implemented for this class.')
@@ -89,89 +102,38 @@ class Model(object):
 class PovertyTrapModel(Model):
     """
     Poverty Trap model as derived model class
-
-    default_model_parameters = {'number_agents': 100 ,
-    'seed':0,
-    'gamma_vals':torch.tensor([0.3,0.45]) , #for pseudo income
-    'sigma_dist': {'type':'uniform','parameters':[0.05,1.94],'round':True,'decimals':1},
-    'cost_vals': torch.tensor([0.,0.45]), #for pseudo income
-    'tec_levels': torch.tensor([0,1]), #check if deletable
-    'a_theta_dist': {'type':'uniform','parameters':[0.1,1],'round':False,'decimals':None},
-    'sensitivity_dist':{'type':'uniform','parameters':[0.0,1],'round':False,'decimals':None},
-    'tec_dist': {'type':'bernoulli','parameters':[0.5,None],'round':False,'decimals':None},
-    'capital_dist': {'type':'uniform','parameters':[0.1,10.],'round':False,'decimals':None},
-    'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
-    'lam_dist': {'type':'uniform','parameters':[0.05,0.94],'round':True,'decimals':1},
-    'initial_graph_type': 'barabasi-albert',
-    'initial_graph_args': {'seed': 0, 'new_node_edges':1},
-    'device': 'cpu',
-    'step_count':0,
-    'step_target':20,
-    'steering_parameters':{'npath':'./agent_data.zarr',
-                            'epath':'./edge_data',
-                            'ndata':['all_except',['a_table']],
-                            'edata':['all'],
-                            'mode':'xarray',
-                            'wealth_method':'singular_transfer',
-                            'income_method':'pseudo_income_generation',
-                            'tech_gamma': torch.tensor([0.3,0.35,0.45]),
-                            'tech_cost': torch.tensor([0,0.15,0.65]),
-                            'consume_method':'pseudo_consumption',
-                            'nn_path': None,
-                            'adapt_m':torch.tensor([0,0.5,0.9]),
-                            'adapt_cost':torch.tensor([0,0.25,0.45]),
-                            'depreciation': 0.6,
-                            'discount': 0.95,
-                            'm_theta_dist': {'type':'multinomial','parameters':[[0.02 ,0.03, 0.05, 0.9],[0.7, 0.8, 0.9, 1]],'round':False,'decimals':None},
-                            'm_attach_dist': {'type':'uniform','parameters':[0.001,1],'round':False,'decimals':None},
-                            'del_method':'probability',
-                            'del_threshold':0.05,
-                            'ratio':0.1,
-                            'weight_a':0.69,
-                            'weight_b':35,
-                            'truncation_weight':1.0e-10,
-                            'step_type':'default'}}
-
     """
 
-    def __init__(self,*, model_identifier):
+    def __init__(self, *, model_identifier, root_path = '.'):
         """
-        restore from a checkpoint or create a PVT model instance.
-        Checks whether a model indentifier has been specified.
+        Create a new PVT model instance.
+        Checks whether a model identifier has been specified.
 
         param: model_identifier: str, required. Identifier for the model. Used to save and load model states.
-
+        param: root_path: str, optional. Root path where to store the model data and states.
         """
 
-        super().__init__(model_identifier = model_identifier)
+        super().__init__(model_identifier = model_identifier, root_path = root_path)
 
-        # default values
-        self.device = CONFIG.device
-        self.number_agents = CONFIG.number_agents
-        self.gamma_vals = CONFIG.gamma_vals
-        self.sigma_dist = CONFIG.sigma_dist
-        self.cost_vals = CONFIG.cost_vals
-        self.technology_levels = CONFIG.technology_levels
-        self.technology_dist = CONFIG.technology_dist
-        self.a_theta_dist = CONFIG.a_theta_dist
-        self.sensitivity_dist = CONFIG.sensitivity_dist
-        self.capital_dist = CONFIG.capital_dist
-        self.alpha_dist = CONFIG.alpha_dist
-        self.lambda_dist = CONFIG.lambda_dist
-        self.initial_graph_type = CONFIG.initial_graph_type
-        self.initial_graph_args = CONFIG.initial_graph_args
-        self.model_graph = CONFIG.model_graph
-        self.step_count = CONFIG.step_count
-        self.step_target = CONFIG.step_target
-        self.checkpoint_period = CONFIG.checkpoint_period
-        self.milestones = CONFIG.milestones
-        self.steering_parameters = CONFIG.steering_parameters
+        # Attach config.
+        self.config = copy.deepcopy(CONFIG)
+        self.steering_parameters = self.config.steering_parameters.__dict__
+        self.graph = None
+        self.step_first = -1
 
-        # Code version.
-        self.version = Path('version.md').read_text().splitlines()[0]
+        # Process version.
+        version_path = Path(__file__).resolve().parents[2] / 'version.md'
+        self.version = version_path.read_text().splitlines()[0]
 
+    def save_model_parameters(self, overwrite = False):
+        # Save config to yaml file.
+        cfg_filename = f'{self.model_dir}/{self._model_identifier}_{self.step_count}'
+        if overwrite: cfg_filename = cfg_filename + '.yaml'
+        else: cfg_filename = _make_path_unique(cfg_filename, '.yaml')
+        self.config.to_yaml(cfg_filename)
+        logger.warning(f'The model parameters are saved to {cfg_filename}.')
 
-    def set_model_parameters(self, *, parameterFilePath=None, **kwargs):
+    def set_model_parameters(self, *, parameterFilePath=None, overwrite = False, **kwargs):
         """
         Load or set model parameters
 
@@ -184,20 +146,23 @@ class PovertyTrapModel(Model):
 
         if parameterFilePath:
             cfg = Config.from_yaml(parameterFilePath)
-
-        if kwargs:
+            if kwargs:
+                # if both parameterFilePath and kwargs are set, combine them into one.
+                # if fields are duplicated, kwargs will overwrite parameterFilePath
+                for key, value in kwargs.items():
+                    if isinstance(value, dict):
+                        # Special recursive case for steering_parameters:
+                        # this makes sure to append to, not overwrite, the steering parameters.
+                        for subkey, subvalue in value.items():
+                            setattr(cfg.__dict__[key], subkey, subvalue)
+                    else:
+                        setattr(cfg, key, value)
+                logger.warning(
+                    'model parameters have been provided via parameterFilePath and **kwargs. '
+                    '**kwargs will overwrite parameterFilePath'
+                    )
+        elif kwargs:
             cfg = Config.from_dict(kwargs)
-
-        # if both parameterFilePath and kwargs are set, combine them into one.
-        # if fields are duplicated, kwargs will overwrite parameterFilePath
-        if parameterFilePath and kwargs:
-            cfg = Config.from_yaml(parameterFilePath)
-            for key, value in kwargs.items():
-                setattr(cfg, key, value)
-            logger.warning(
-                'model parameters have been provided via parameterFilePath and **kwargs. '
-                '**kwargs will overwrite parameterFilePath'
-                )
 
         if parameterFilePath is None and not kwargs:
             logger.warning('no model parameters have been provided, Default values are used')
@@ -212,51 +177,77 @@ class PovertyTrapModel(Model):
         # update model parameters/ attributes
         cfg_dict = cfg.model_dump(by_alias=True, warnings=False)
         for key, value in cfg_dict.items():
-            setattr(self, key, value)
+            setattr(self.config, key, value)
+        self.steering_parameters = self.config.steering_parameters.__dict__
 
         # Correct the paths
-        parent_dir = "." / Path(self._model_identifier)
-        parent_dir.mkdir(parents=True, exist_ok=True)
-        self.steering_parameters['npath'] = str(parent_dir / Path(cfg.steering_parameters.npath))
-        self.steering_parameters['epath'] = str(parent_dir / Path(cfg.steering_parameters.epath))
+        self.model_dir = self.root_path / Path(self._model_identifier)
+        self.model_dir.mkdir(parents=True, exist_ok=True)
+        self.steering_parameters['npath'] = str(self.model_dir / Path(self.config.steering_parameters.npath))
+        self.steering_parameters['epath'] = str(self.model_dir / Path(self.config.steering_parameters.epath))
 
-        # save updated config to yaml files
-        cfg_filename = parent_dir / f'{self._model_identifier}.yaml'
-        cfg.to_yaml(cfg_filename)
-        cfg_filename_step = parent_dir / f'{self._model_identifier}_{self.step_count}.yaml'
-        cfg.to_yaml(cfg_filename_step)
-        logger.warning(f'The model parameters are saved to {cfg_filename} and {cfg_filename_step}.')
+        # Save updated config to yaml file.
+        self.save_model_parameters(overwrite)
 
-    def initialize_model(self):
+    def initialize_model(self, restart = False):
         """
-        convenience fucntion to create network and initiliize agent properties in correct order, thereby initializing a model
+        Create network and initialize agent properties in correct order, thereby initializing a model.
+
+        Params:
+            restart: boolean or a pair of ints, optional.
+            If True, the model is initialized from the last checkpoint,
+            if a pair of ints, the model is initialized at that step from that milestone,
+                e.g (2,0) would be the first milestone at step 2
+                and (2,1) would be the second milestone at step 2.
+            Default False.
         """
-        torch.manual_seed(self.seed)
+
+        self.inputs = None
+        if isinstance(restart, bool):
+            if restart:
+                logger.info(f'Loading model state from checkpoint: {self.model_dir}')
+                self.inputs = _load_model(self.model_dir)
+        elif isinstance(restart, tuple):
+            milestone_dir = None
+            if restart[1] == 0:
+                milestone_dir = f'{self.model_dir}/milestone_{restart[0]}'
+            else:
+                milestone_dir = f'{self.model_dir}/milestone_{restart[0]}_{restart[1]}'
+            logger.info(f'Loading model state from milestone: {milestone_dir}')
+            self.inputs = _load_model(milestone_dir)
+
+        if self.inputs:
+            self.graph = copy.deepcopy(self.inputs["graph"])
+            self.generator_state = self.inputs["generator_state"]
+            generator.set_state(self.generator_state)
+            self.step_count = self.inputs["step_count"]
+        else:
+            torch.manual_seed(self.config.seed)
+
         self.create_network()
         self.initialize_agent_properties()
-        self.model_graph = self.model_graph.to(self.device)
+        self.graph = self.graph.to(self.config.device)
         self.initialize_model_properties()
-        self.steering_parameters['modelTheta'] = self.steering_parameters['modelTheta'].to(self.device)
+        self.steering_parameters['modelTheta'] = self.steering_parameters['modelTheta'].to(self.config.device)
 
-        weight_update(self.model_graph, self.device, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
-        #data_collection(self.model_graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
+        weight_update(self.graph, self.config.device, self.steering_parameters['homophily_parameter'], self.steering_parameters['characteristic_distance'], self.steering_parameters['truncation_weight'])
+        #data_collection(self.graph, timestep = 0, npath = self.steering_parameters['npath'], epath = self.steering_parameters['epath'], ndata = self.steering_parameters['ndata'],
                     #edata = self.steering_parameters['edata'], format = self.steering_parameters['format'], mode = self.steering_parameters['mode'])
 
         # store random generator state
         self.generator_state = generator.get_state()
 
         # number of edges(links) in the network
-        self.number_of_edges = self.model_graph.number_of_edges()
-        self.average_degree = average_degree(self.model_graph)
+        self.number_of_edges = self.graph.number_of_edges()
+        self.average_degree = average_degree(self.graph)
 
     def create_network(self):
         """
         Create intial network connecting agents. Makes use of intial graph type specified as model parameter
         """
 
-        agent_graph = network_creation(self.number_agents, self.initial_graph_type, **self.initial_graph_args)
-        self.model_graph = agent_graph
-
+        agent_graph = network_creation(self.config.number_agents, self.config.initial_graph_type, **self.config.initial_graph_args.__dict__)
+        self.graph = agent_graph
 
     def initialize_model_properties(self):
         """
@@ -269,11 +260,11 @@ class PovertyTrapModel(Model):
         #self.steering_parameters['attachProb'] = attachProb
 
     def _initialize_model_theta(self):
-        modelTheta = sample_distribution_tensor(self.steering_parameters['m_theta_dist']['type'],self.steering_parameters['m_theta_dist']['parameters'],self.step_target,round=self.steering_parameters['m_theta_dist']['round'],decimals=self.steering_parameters['m_theta_dist']['decimals'])
+        modelTheta = sample_distribution(self.steering_parameters['m_theta_dist'].__dict__, self.config.step_target)
         return modelTheta
 
     def _initialize_attach_prob(self):
-        attachProb = sample_distribution_tensor(self.steering_parameters['m_attach_dist']['type'],self.steering_parameters['m_attach_dist']['parameters'],self.step_target,round=self.steering_parameters['m_attach_dist']['round'],decimals=self.steering_parameters['m_attach_dist']['decimals'])
+        attachProb = sample_distribution(self.steering_parameters['m_attach_dist'].__dict__, self.config.step_target)
         return attachProb
 
     def initialize_agent_properties(self):
@@ -292,23 +283,23 @@ class PovertyTrapModel(Model):
         agentsTecLevel, agentsGamma, agentsCost = self._initialize_agents_tec()
 
         # TODO: add comment explaining what each variable is (here? where?).
-        if isinstance(self.model_graph,dgl.DGLGraph):
+        if isinstance(self.graph,dgl.DGLGraph):
           #send to device!!
-            self.model_graph.ndata['wealth'] = agentsCapital
-            self.model_graph.ndata['alpha'] = agentsAlpha
-            self.model_graph.ndata['theta'] = agentsTheta
-            self.model_graph.ndata['sensitivity'] = agentsSensitivity
-            self.model_graph.ndata['lambda'] = agentsLam
-            self.model_graph.ndata['sigma'] = agentsSigma
-            self.model_graph.ndata['tec'] = agentsTecLevel
-            self.model_graph.ndata['gamma'] = agentsGamma
-            self.model_graph.ndata['cost'] = agentsCost
-            self.model_graph.ndata['a_table'] = agentsAdaptTable
-            self.model_graph.ndata['wealth_consumption'] = torch.zeros(self.model_graph.num_nodes())
-            self.model_graph.ndata['i_a'] = torch.zeros(self.model_graph.num_nodes())
-            self.model_graph.ndata['m'] = torch.zeros(self.model_graph.num_nodes())
-            self.model_graph.ndata['zeros'] = torch.zeros(self.model_graph.num_nodes())
-            self.model_graph.ndata['ones'] = torch.ones(self.model_graph.num_nodes())
+            self.graph.ndata['wealth'] = agentsCapital
+            self.graph.ndata['alpha'] = agentsAlpha
+            self.graph.ndata['theta'] = agentsTheta
+            self.graph.ndata['sensitivity'] = agentsSensitivity
+            self.graph.ndata['lambda'] = agentsLam
+            self.graph.ndata['sigma'] = agentsSigma
+            self.graph.ndata['tec'] = agentsTecLevel
+            self.graph.ndata['gamma'] = agentsGamma
+            self.graph.ndata['cost'] = agentsCost
+            self.graph.ndata['a_table'] = agentsAdaptTable
+            self.graph.ndata['wealth_consumption'] = torch.zeros(self.graph.num_nodes())
+            self.graph.ndata['i_a'] = torch.zeros(self.graph.num_nodes())
+            self.graph.ndata['m'] = torch.zeros(self.graph.num_nodes())
+            self.graph.ndata['zeros'] = torch.zeros(self.graph.num_nodes())
+            self.graph.ndata['ones'] = torch.ones(self.graph.num_nodes())
         else:
             raise RuntimeError('model graph must be a defined as DGLgraph object. Consider running `create_network` before initializing agent properties')
 
@@ -317,50 +308,49 @@ class PovertyTrapModel(Model):
         """
         Initialize agent adaptation measure knowledge, currently uniform.
         """
-        agentsAdaptTable =torch.stack([self.steering_parameters['adapt_m'],self.steering_parameters['adapt_cost']]).repeat(self.number_agents,1,1)
+        agentsAdaptTable =torch.stack([self.steering_parameters['adapt_m'],self.steering_parameters['adapt_cost']]).repeat(self.config.number_agents,1,1)
         return agentsAdaptTable
 
     def _initialize_agents_theta(self):
         """
         Initialize agent theta as a 1d tensor sampled from the specified initial theta distribution
         """
-        agentsTheta = sample_distribution_tensor(self.a_theta_dist['type'],self.a_theta_dist['parameters'],self.number_agents,round=self.a_theta_dist['round'],decimals=self.a_theta_dist['decimals'])
+        agentsTheta = sample_distribution(self.config.a_theta_dist.__dict__, self.config.number_agents)
         return agentsTheta
 
     def _initialize_agents_sensitivity(self):
         """
         Initialize agent sensitivity as a 1d tensor sampled from the specified initial sensitivity distribution
         """
-        agentsSensitivity = sample_distribution_tensor(self.sensitivity_dist['type'],self.sensitivity_dist['parameters'],self.number_agents,round=self.sensitivity_dist['round'],decimals=self.sensitivity_dist['decimals'])
+        agentsSensitivity = sample_distribution(self.config.sensitivity_dist.__dict__, self.config.number_agents)
         return agentsSensitivity
 
     def _initialize_agents_capital(self):
         """
         Initialize agent captial as a 1d tensor sampled from the specified initial capital distribution
         """
-        agentsCapital = sample_distribution_tensor(self.capital_dist['type'],self.capital_dist['parameters'],self.number_agents,round=self.capital_dist['round'],decimals=self.capital_dist['decimals'])
+        agentsCapital = sample_distribution(self.config.capital_dist.__dict__, self.config.number_agents)
         return agentsCapital
 
     def _initialize_agents_alpha(self):
         """
         Initialize agent alpha as a 1d tensor sampled from the specified initial alpha distribution
         """
-        agentsAlpha = sample_distribution_tensor(self.alpha_dist['type'],self.alpha_dist['parameters'],self.number_agents,round=self.alpha_dist['round'],decimals=self.alpha_dist['decimals'])
+        agentsAlpha = sample_distribution(self.config.alpha_dist.__dict__, self.config.number_agents)
         return agentsAlpha
 
     def _initialize_agents_lam(self):
         """
         Initialize agent lambda as a 1d tensor sampled from the specified initial lambda distribution
         """
-        agentsLam = sample_distribution_tensor(self.lambda_dist['type'],self.lambda_dist['parameters'],self.number_agents,round=self.lambda_dist['round'],decimals=self.lambda_dist['decimals'])
+        agentsLam = sample_distribution(self.config.lambda_dist.__dict__, self.config.number_agents)
         return agentsLam
 
     def _initialize_agents_sigma(self):
         """
         Initialize agent sigma as a 1d tensor
-
         """
-        agentsSigma = sample_distribution_tensor(self.sigma_dist['type'],self.sigma_dist['parameters'],self.number_agents,round=self.sigma_dist['round'],decimals=self.sigma_dist['decimals'])
+        agentsSigma = sample_distribution(self.config.sigma_dist.__dict__, self.config.number_agents)
         return agentsSigma
 
     def _initialize_agents_tec(self):
@@ -369,117 +359,124 @@ class PovertyTrapModel(Model):
         Initialize agents gamma and cost distributions according to their technology level and the speci fied initial gamma and cost
         values associated with that tech level
         """
-        agentsTecLevel = sample_distribution_tensor(self.technology_dist['type'],self.technology_dist['parameters'],self.number_agents,round=self.technology_dist['round'],decimals=self.technology_dist['decimals'])
-        agentsGamma = torch.zeros(self.number_agents)
-        agentsCost = torch.zeros(self.number_agents)
-        for i in range(len(self.technology_levels)):
+        agentsTecLevel = sample_distribution(self.config.technology_dist.__dict__, self.config.number_agents)
+        agentsGamma = torch.zeros(self.config.number_agents)
+        agentsCost = torch.zeros(self.config.number_agents)
+        for i in range(len(self.config.technology_levels)):
             technology_mask = agentsTecLevel == i
-            agentsGamma[technology_mask] = self.gamma_vals[i]
-            agentsCost[technology_mask] = self.cost_vals[i]
+            agentsGamma[technology_mask] = self.config.gamma_vals[i]
+            agentsCost[technology_mask] = self.config.cost_vals[i]
         return agentsTecLevel, agentsGamma, agentsCost
 
     def step(self):
+        """
+        Perform a single step of the model.
+
+        After the step, the current state (graph, generator, step, and version) may be saved:
+
+        The state can be saved with a fixed period (config.checkpoint_period) to keep a restore point in case of a crash.
+        Only the newest checkpoint is retained.
+
+        The state can also be saved at specific steps (config.milestones) to store specific (important) states.
+        For example, specific states can be stored to start multiple runs from the same state with different parameters going forward.
+        All milstones are retained. The first milestone at each time step X is stored in the subdirectory `./milestone_X`;
+        any subsequent milestones at the same time step X are stored in the subdirectory `./milestone_X_i` (where i is the instance).
+        """
         try:
-            print(f'performing step {self.step_count} of {self.step_target}')
-            ptm_step(self.model_graph, self.device, self.step_count, self.steering_parameters)
-            self.step_count +=1
+            print(f'performing step {self.step_count} of {self.config.step_target}')
+            ptm_step(self.graph, self.config.device, self.step_count, self.steering_parameters)
 
             # number of edges(links) in the network
-            self.number_of_edges = self.model_graph.number_of_edges()
-            self.average_degree = average_degree(self.model_graph)
+            self.number_of_edges = self.graph.number_of_edges()
+            self.average_degree = average_degree(self.graph)
 
         except:
             #TODO add model dump here. Also check against previous save to avoid overwriting
             raise RuntimeError(f'execution of step failed for step {self.step_count}')
 
-    def run(self, restart=False):
-        """
-        run the model for each step until the step_target is reached.
+        # save the model state every step reported by checkpoint_period and at specific milestones.
+        # checkpoint saves overwrite the previous checkpoint; milestone get unique folders.
+        # Note that milestones are not created at the first step of a run;
+        # this prevents duplicate saves when running from a milestone.
+        first_step = self.step_count == self.step_first
+        save_checkpoint = 0 < self.config.checkpoint_period and self.step_count % self.config.checkpoint_period == 0
+        save_milestone = self.config.milestones and self.step_count in self.config.milestones and not first_step
+        if save_checkpoint or save_milestone:
+            self.inputs = {
+                'graph': copy.deepcopy(self.graph),
+                'generator_state': generator.get_state(),
+                'step_count': self.step_count,
+                'process_version': self.version
+            }
 
-        param: restart: boolean or int or a pair of ints, optional.
-        If True, the model is run from last checkpoint,
-        if an int, the model is run from the first milestone at that step,
-        if a pair of ints, the model is run from that milestone at that step.
-        Default False.
-        """
+            # Note that a sinlge step could be both a checkpoint and a milestone.
+            # The checkpoint could be necessary to restore a crashed process while
+            # the milestone is required output.
+            if save_checkpoint:
+                _save_model(self.model_dir, self.inputs)
+            if save_milestone:
+                milestone_path = _make_path_unique(f'{self.model_dir}/milestone_{self.step_count}')
+                _save_model(milestone_path, self.inputs)
 
-        self.inputs = None
-        if isinstance(restart, bool):
-            if restart:
-                self.inputs = _load_model(f'./{self._model_identifier}')
-        elif isinstance(restart, int):
-            self.inputs = _load_model(f'./{self._model_identifier}/milestone_{restart}')
-        elif isinstance(restart, tuple):
-            self.inputs = _load_model(f'./{self._model_identifier}/milestone_{restart[0]}_{restart[1]}')
+        self.step_count +=1
 
-        if self.inputs:
-            self.model_graph = copy.deepcopy(self.inputs["model_graph"])
-            #self.model_data = self.inputs["model_data"]
-            self.generator_state = self.inputs["generator_state"]
-            self.step_count = self.inputs["step_count"]
+    def run(self):
+        """run the model for each step until the step_target is reached."""
+        # Save config to yaml file.
+        self.save_model_parameters()
 
-        generator.set_state(self.generator_state)
-
-        while self.step_count < self.step_target:
+        self.step_first = self.step_count
+        while self.step_count < self.config.step_target:
             self.step()
 
-            # save the model state every step reported by checkpoint_period and at specific milestones.
-            # checkpoint saves overwrite the previous checkpoint; milestone get unique folders.
-            save_checkpoint = 0 < self.checkpoint_period and self.step_count % self.checkpoint_period == 0
-            save_milestone = self.milestones and self.step_count in self.milestones
-            if save_checkpoint or save_milestone:
-                self.inputs = {
-                    'model_graph': copy.deepcopy(self.model_graph),
-                    #'model_data': copy.deepcopy(self.model_data),
-                    'generator_state': generator.get_state(),
-                    'step_count': self.step_count,
-                    'code_version': self.version
-                }
+def _make_path_unique(path, extension = ''):
+    """
+    Check whether a path already exists and make it unique if it does.
 
-                # Note that a sinlge step could be both a checkpoint and a milestone.
-                # The checkpoint could be necessary to restore a crashed process while
-                # the milestone is required output.
-                if save_checkpoint:
-                    _save_model(f'./{self._model_identifier}', self.inputs)
-                if save_milestone:
-                    milestone_path = _make_path_unique(f'./{self._model_identifier}/milestone_{self.step_count}')
-                    _save_model(milestone_path, self.inputs)
+    Paths are made unique by adding "_x" to the path,
+    where x is the lowest positive integer for which the path does not exist.
 
-def _make_path_unique(path):
-    if Path(path).exists():
-        incr = 1
-        def add_incr(path, incr): return f'{path}_{incr}'
-        while Path(add_incr(path, incr)).exists(): incr += 1
-        path = add_incr(path, incr)
+    Params:
+        path: the path to make unique
+        extension: str, optional, this extension is added to the path
+          after any integer added to make the path unique.
+          Note that for true extensions, this should start with a dot, e.g ".yaml"
+    Returns:
+        the modified path, which does not currently exist.
+    """
+    if Path(f'{path}{extension}').exists():
+        instance = 1
+        def add_instance(path, instance, extension): return f'{path}_{instance}{extension}'
+        while Path(add_instance(path, instance, extension)).exists(): instance += 1
+        path = add_instance(path, instance, extension)
+    else:
+        path = path + extension
     return path
 
 def _save_model(path, inputs):
-    """ save the model_graph, generator_state and code_version in files."""
+    """ save the graph, generator_state and process_version in files."""
+    Path(path).mkdir(parents=True, exist_ok=True)
 
-    # save the model_graph with a label
+    # save the graph with a label
     graph_labels = {'step_count': torch.tensor([inputs["step_count"]])}
-    save_graphs(str(Path(path) / "model_graph.bin"), inputs["model_graph"], graph_labels)
+    save_graphs(str(Path(path) / "graph.bin"), inputs["graph"], graph_labels)
 
     # save the generator_state
     with open(Path(path) / "generator_state.bin", 'wb') as file:
         pickle.dump([inputs["generator_state"], inputs["step_count"]], file)
 
-    # save model_data
-    #with open(Path(path) / "model_data.bin", 'wb') as file:
-    #    pickle.dump([inputs["model_data"], inputs["step_count"]], file)
-
-    # save the code version
-    with open(Path(path) / "version.md", 'w') as file:
-        file.writelines([inputs["code_version"] + '\n', f'step={inputs["step_count"]}\n'])
+    # save the process version
+    with open(Path(path) / "process_version.md", 'w') as file:
+        file.writelines([inputs["process_version"] + '\n', f'step={inputs["step_count"]}\n'])
 
 
 def _load_model(path):
     # Load model graph
-    path_model_graph = Path(path) / "model_graph.bin"
-    if not path_model_graph.is_file():
-        raise ValueError(f'The path {path_model_graph} is not a file.')
+    path_graph = Path(path) / "graph.bin"
+    if not path_graph.is_file():
+        raise ValueError(f'The path {path_graph} is not a file.')
 
-    graph, graph_labels = load_graphs(str(path_model_graph))
+    graph, graph_labels = load_graphs(str(path_graph))
     graph = graph[0]
     graph_step = graph_labels['step_count'].tolist()[0]
 
@@ -491,40 +488,32 @@ def _load_model(path):
     with open(path_generator_state, 'rb') as file:
         generator, generator_step = pickle.load(file)
 
-    # Load model_data
-    #path_model_data = Path(path) / "model_data.bin"
-    #if not path_model_data.is_file():
-    #    raise ValueError(f'The path {path_model_data} is not a file.')
+    # Load process version
+    path_process_version = Path(path) / "process_version.md"
+    if not path_process_version.is_file():
+        raise ValueError(f'The path {path_process_version} is not a file.')
 
-    #with open(path_model_data, 'rb') as file:
-    #    data, data_step = pickle.load(file)
-
-    # Load code version
-    path_code_version = Path(path) / "version.md"
-    if not path_code_version.is_file():
-        raise ValueError(f'The path {path_code_version} is not a file.')
-
-    with open(path_code_version, 'r') as file:
-        code_version = file.readlines()[0]
+    with open(path_process_version, 'r') as file:
+        process_version = file.readlines()[0]
 
     # Check if graph_step, generator_step and data_step are the same
-    if graph_step != generator_step: #or graph_step != data_step:
-        msg = 'The step count in the model_graph and generator_state are not the same.'# and model_data are not the same.'
+    if graph_step != generator_step:
+        msg = 'The step count in the graph and generator_state are not the same.'
         raise ValueError(msg)
 
-    # Check if the saved version and current code version are the same
-    version = Path('version.md').read_text().splitlines()[0]
-    if code_version != version:
-        logger.warning(f'Warning: loading model generated using earlier code version: {code_version}.')
+    # Check if the saved version and current process version are the same
+    version_path = Path(__file__).resolve().parents[2] / 'version.md'
+    current_version = version_path.read_text().splitlines()[0]
+    if process_version != current_version:
+        logger.warning(f'Warning: loading model generated using earlier process version: {process_version}.')
 
     # Show which step is loaded
     logger.warning(f'Loading model state from step {generator_step}.')
 
     inputs = {
-        'model_graph': graph,
-        #'model_data': data,
+        'graph': graph,
         'generator_state': generator,
         'step_count': generator_step,
-        'code_version': code_version
+        'process_version': process_version
     }
     return inputs

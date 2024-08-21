@@ -188,7 +188,7 @@ def  _nn_bellman_past_shock_consumption(model_graph,model_params, timestep, devi
     if model_params['nn_path']==None:
         print("No consumption model path provided!")
     
-    #load model  
+    # Load model  
     
     estimator,scale = load_consumption_model(model_params['nn_path'],device)  
 
@@ -197,21 +197,17 @@ def  _nn_bellman_past_shock_consumption(model_graph,model_params, timestep, devi
 
     input = torch.cat((model_graph.ndata['alpha'].unsqueeze(1), model_graph.ndata['wealth'].unsqueeze(1), model_graph.ndata['sigma'].unsqueeze(1), model_graph.ndata['theta'].unsqueeze(1)), dim=1) 
     
-    #forward pass to get predictions
+    # Forward pass to get predictions
     with torch.no_grad():
 
         pred=estimator(input)
-
-    #print(" went forward, writing values")
-
     
     model_graph.ndata['m'],model_graph.ndata['i_a']=model_graph.ndata['a_table'][torch.arange(model_graph.ndata['a_table'].size(0)),:,torch.argmin(torch.abs(pred[:, 0].unsqueeze(1) - model_graph.ndata['a_table'][:,1,:]), dim=1)].unbind(dim=1)
     
     #print("Cleaning output and checking for violations")
 
-    #Clean Consumption
+    # Clean Consumption
     model_graph.ndata['wealth_consumption']=(pred[:,1]*scale).clamp_(min=0)
-    #print(" violation check")
 
     # Check for violations
     # An equation violation occurs when personally shocked, depreciated k + income - consumption - i_a is less than or equal to 0
