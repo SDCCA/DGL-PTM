@@ -74,7 +74,7 @@ def _edge_property_collector(agent_graph, epath, edata, timestep, format, mode):
                 edge_data_instance = edge_data_instance.rename_vars(name_dict={'property':prop})
             edge_data_instance.to_zarr(Path(epath)/(str(timestep)+'.zarr'), mode = mode)
         else:
-            raise NotImplementedError("Only 'xarray' mode currrent available")
+            raise NotImplementedError("Only 'xarray' mode current available")
     else:
         raise NotImplementedError("Data collection currently only implemented for pytorch backend")
     

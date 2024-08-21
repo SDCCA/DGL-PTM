@@ -11,7 +11,7 @@ from dgl_ptm.network.network_creation import network_creation
 from dgl_ptm.model.step import ptm_step
 from dgl_ptm.agentInteraction.weight_update import weight_update
 from dgl_ptm.config import Config, CONFIG
-from dgl_ptm.util.network_metrics import average_degree
+from dgl_ptm.util.network_metrics import average_degree, average_weighted_degree
 
 # Set the seed of the random number generator
 # this is global and will affect all random number generators
@@ -205,7 +205,10 @@ class PovertyTrapModel(Model):
 
         # number of edges(links) in the network
         self.number_of_edges = self.model_graph.number_of_edges()
+        # Network Metrics
         self.average_degree = average_degree(self.model_graph)
+        self.average_weighted_degree = average_weighted_degree(self.model_graph)
+
 
     def create_network(self):
         """

@@ -23,6 +23,7 @@ DGL_testing/scaletest_optmization.ipynb
 DGL_testing/testing_optmization.ipynb
 DGL_testing/testwithnn/*
 PrelimScalingCodes/
+Sensitivity_Analysis/testwithnn/*
 *slurm-*
 
 *DS_Store
