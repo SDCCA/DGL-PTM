@@ -1,3 +1,4 @@
+"""Network creation functions."""
 #!/usr/bin/env python
 
 
@@ -5,17 +6,21 @@ import dgl
 import networkx as nx
 import torch
 
-# network_creation - Creates the network between the initialized nodes using edges from DGL
+# network_creation - Creates the network between the initialized nodes
+# using edges from DGL.
 
 def network_creation(num_agents, method, **kwargs):
-    """network_creation - Creates the graph network for the model using the barabasi albert model from networkx
+    """network_creation - Creates the graph network for the model.
 
     Args:
         num_agents: Number of agent nodes
         method: Current implemented methods include:
-            barabasi_albert model: This method takes the following possible keyword arguments,
-                seed: random seed for networkx barabasi_albert_graph function
-                new_node_edges: number of edges to create for each new node
+            barabasi_albert model: 
+                This method takes the following possible keyword arguments,
+                seed: random seed for networkx barabasi_albert_graph function.
+                new_node_edges: number of edges to create for each new node.
+        kwargs: keyword arguments to be supplied to the network creation method.
+
     Return:
         agent_graph: Created agent_graph as per the chosen method
     """
@@ -38,13 +43,16 @@ def network_creation(num_agents, method, **kwargs):
     return agent_graph
 
 def barabasi_albert_graph(num_agents, new_node_edges=1, seed=1):
-    """Creates a network graph for user-defined number of agents using the barabasi
-    albert model function from networkx.
+    """Create a barabasi-albert graph.
+    
+    This function creates a network graph for user-defined
+    number of agents using the barabasi albert model function 
+    from networkx.
 
     Args:
-        num_agents = Number of agent nodes
-        new_node_edges = Number of edges to create for each new node
-        seed = random seed for function
+        num_agents: Number of agent nodes
+        new_node_edges: Number of edges to create for each new node
+        seed: random seed for function
 
     Return:
         agent_graph: Created agent_graph as per the chosen method
