@@ -1,11 +1,17 @@
 import pytest
 import dgl_ptm
 import os
+import dgl
+from dgl import AddEdge, AddReverse
 
 from dgl_ptm.network.global_attachment import global_attachment
 from dgl_ptm.network.link_deletion import link_deletion
 from dgl_ptm.network.local_attachment import local_attachment
 from dgl_ptm.network.network_creation import network_creation
+
+from dgl_ptm.agentInteraction.trade_money import trade_money
+from dgl_ptm.network.local_attachment import local_attachment
+from dgl_ptm.network.link_deletion import link_deletion
 
 
 os.environ["DGLBACKEND"] = "pytorch"
@@ -28,6 +34,30 @@ class TestGlobalAttachment:
         assert updated_number_of_edges > 0
         assert updated_number_of_edges > ratio * current_number_of_edges
         assert updated_number_of_edges < (1 + ratio) * current_number_of_edges
+
+    def test_global_attachment_to_simple(self, model):
+        agent_graph = model.model_graph
+        params = model.steering_parameters
+
+        # step operations on agent_graph
+        trade_money(agent_graph, 'cpu', method = params['wealth_method'])
+        local_attachment(agent_graph, n_FoF_links = 1, edge_prop='weight', p_attach=1. )
+        link_deletion(agent_graph, method=params['del_method'], threshold=params['del_threshold'])
+
+        # global attachment operations on agent_graph
+        agent_graph = AddEdge(ratio=params['noise_ratio'])(agent_graph)
+        agent_graph = AddReverse()(agent_graph)
+
+        # edata are not copied by default
+        simple_agent_graph = dgl.to_simple(agent_graph, return_counts='cnt')
+        assert 'weight' not in simple_agent_graph.edata
+        assert 'wealth_diff' not in simple_agent_graph.edata
+        assert 'theta' in simple_agent_graph.ndata  # check ndata
+
+        # copy edata explicitly
+        simple_agent_graph = dgl.to_simple(agent_graph, return_counts='cnt', copy_edata=True)
+        assert 'weight' in simple_agent_graph.edata
+        assert 'wealth_diff' in simple_agent_graph.edata
 
 
 class TestLinkDeletion:
