@@ -31,5 +31,5 @@ venv
 venv3
 
 # Testing
-my_model/
-test_model/
+test_models/
+
