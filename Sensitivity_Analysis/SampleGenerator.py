@@ -16,18 +16,21 @@ n=1024
 # event_alpha 4.13+/-50%
 # event_beta  0.07+/-50%
 
-problem={   "names": ["homophily","local_ratio","noise_ratio","event_alpha","event_beta"], 
+problem={   "names": ["homophily","local_ratio","noise_ratio","shock_alpha","shock_beta"], 
             "num_vars":5,
             "bounds":[[0,10],[0.2,0.3],[0.04,0.06],[4.13*0.5,4.13*1.5],[0.07*0.5,0.07*1.5]],
             "dists":["unif","unif","unif","unif","unif"]}
 
 S_sample=sobol.sample(problem,n)
 
-S_sampledf=pd.DataFrame(S_sample, columns=["homophily","local_ratio","noise_ratio","event_alpha","event_beta"])
+S_sampledf=pd.DataFrame(S_sample, columns=["homophily","local_ratio","noise_ratio","shock_alpha","shock_beta"])
 
-S_sampledf.index.name="RunID"
 # drop duplicates 
 S_sampledf=S_sampledf.drop_duplicates()
+
+# reindex
+S_sampledf.index = pd.RangeIndex(start=1, stop=len(S_sampledf) + 1, step=1)
+S_sampledf.index.name="RunID"
 
 S_sampledf.to_csv("SaltelliSampleParams-n1024.csv")
 

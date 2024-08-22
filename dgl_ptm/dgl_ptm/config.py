@@ -18,16 +18,19 @@ logger = logging.getLogger(__name__)
 class MThetaDist(BaseModel):
     """Base class for m_theta distribution."""
     type: str = "multinomial"
-    parameters: List[List[float]] = [[0.02, 0.03, 0.05, 0.9], [0.7, 0.8, 0.9, 1]]
+    parameters: List[Union[int,float,List[Union[int,float]]]] = [[0.02, 0.03, 0.05, 0.9], [0.7, 0.8, 0.9, 1]]
     round: bool = False
     decimals: Optional[int] = None
 
     @field_validator("parameters")
-    def _convert_parameters(cls, v):
-        for i in v:
-            if not isinstance(i, list):
-                raise TypeError("parameters must be a list of lists")
-        return [torch.tensor(i) for i in v]
+    def _convert_parameters(cls, v, values):
+        if values.data["type"] == "multinomial":
+            for i in v:
+                if not isinstance(i, list):
+                    raise TypeError("multinomial parameters must be a list of lists")
+            return [torch.tensor(i) for i in v]
+        else:
+            return torch.tensor(v)
 
     # Make sure pydantic validates the default values
     model_config = ConfigDict(validate_default = True)

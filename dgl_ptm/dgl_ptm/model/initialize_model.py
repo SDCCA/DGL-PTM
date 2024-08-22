@@ -73,7 +73,9 @@ def sample_distribution_tensor(type, dist_parameters, n_samples, round=False, de
         sample_ppf = torch.sqrt(torch.tensor(2.0)) * inverse_transform
 
         dist = dist_parameters[0] + dist_parameters[1] * sample_ppf
-
+    elif type == 'beta':
+        dist = torch.distributions.beta.Beta(dist_parameters[0], dist_parameters[1]
+            ).sample([n_samples])
     else:
         raise NotImplementedError(
             'Currently only uniform, normal, multinomial, and '
@@ -124,7 +126,7 @@ class Model:
 
     def create_network(self):
         """Create network connecting agents."""
-        raise NotImplementedError('network creaion is not implemented for this class.')
+        raise NotImplementedError('network creation is not implemented for this class.')
 
     def step(self):
         """Perform a single step of the model."""
@@ -291,10 +293,10 @@ class PovertyTrapModel(Model):
         self.generator_state = generator.get_state()
 
         # number of edges(links) in the network
-        self.number_of_edges = self.model_graph.number_of_edges()
+        self.number_of_edges = self.graph.number_of_edges()
         # Network Metrics
-        self.average_degree = average_degree(self.model_graph)
-        self.average_weighted_degree = average_weighted_degree(self.model_graph)
+        self.average_degree = average_degree(self.graph)
+        self.average_weighted_degree = average_weighted_degree(self.graph)
 
     def create_network(self):
         """Create intial network connecting agents.
