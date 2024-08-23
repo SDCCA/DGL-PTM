@@ -4,10 +4,11 @@
 #SBATCH --gpus=1
 
 #              d-hh:mm:ss
-#SBATCH --time=05:30:00
+#SBATCH --time=00:05:00
 
 
 module load 2023
+pwd
 conda activate dgl_ptm_gpu
 
 
