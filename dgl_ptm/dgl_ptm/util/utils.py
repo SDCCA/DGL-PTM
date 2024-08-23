@@ -2,12 +2,13 @@ import torch
 import dgl_ptm.util.nn_arch.nn_arch as nn_arch
 
 
+import os
 
 
 def load_consumption_model(nn_path,device):
     '''Load a model from a particular .pth file and assemble using structure contained in nn_arch.py'''
     #print("entered load_consumption_model")
-
+    nn_path=f'{os.getcwd()}{nn_path}'
     modelinfo = torch.load(nn_path, map_location=torch.device(device))
 
 

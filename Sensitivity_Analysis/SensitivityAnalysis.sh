@@ -8,10 +8,7 @@
 
 
 module load 2023
-pwd
 conda activate dgl_ptm_gpu
-
-
 
 # Sensitivity Analysis
 
