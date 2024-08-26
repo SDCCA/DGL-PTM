@@ -1,5 +1,5 @@
 import sys
-sys.path.append('/Users/victoria/Documents/Scripts/Python/DGL-PTM/dgl_ptm')
+sys.path.append('../dgl_ptm')
 import dgl_ptm
 import os
 import torch
@@ -19,22 +19,20 @@ parser.add_argument('-b', '--shock_b', default=None, type=float, help='Shock bet
 
 args =parser.parse_args()
 
-model = dgl_ptm.PovertyTrapModel(model_identifier=f'batchtest_{args.run_id}',)
+model = dgl_ptm.PovertyTrapModel(model_identifier=f'batchtest_{args.run_id}_seed_{args.seed}',)
 
-model.set_model_parameters(**{'number_agents': 100 , 
+model.set_model_parameters(**{'number_agents': 10000 , 
     'seed':args.seed,
-    'gamma_vals':torch.tensor([0.3,0.45]) , #for pseudo income
     'sigma_dist': {'type':'uniform','parameters':[0.05,1.94],'round':True,'decimals':1},
-    'cost_vals': torch.tensor([0.,0.45]), #for pseudo income
-    'a_theta_dist': {'type':'uniform','parameters':[0.1,1],'round':False,'decimals':None},
+    'a_theta_dist': {'type':'uniform','parameters':[0.5,1],'round':False,'decimals':None},
     'sensitivity_dist':{'type':'uniform','parameters':[0.0,1],'round':False,'decimals':None},
     'capital_dist': {'type':'uniform','parameters':[0.1,10.],'round':False,'decimals':None}, 
     'alpha_dist': {'type':'normal','parameters':[1.08,0.074],'round':False,'decimals':None},
     'lambda_dist': {'type':'uniform','parameters':[0.05,0.94],'round':True,'decimals':1},
     'initial_graph_type': 'barabasi-albert',
-    'initial_graph_args': {'seed': 1, 'new_node_edges':1},
-    'device': 'cpu',
-    'step_target':20,
+    'initial_graph_args': {'seed': args.seed, 'new_node_edges':5},
+    'device': 'cuda',
+    'step_target':100,
     'steering_parameters':{'npath':'./agent_data.zarr',
                             'epath':'./edge_data', 
                             'ndata':['all_except',['a_table']],
@@ -48,7 +46,7 @@ model.set_model_parameters(**{'number_agents': 100 ,
                             'nn_path': "/nn_data/both_PudgeSixLayer_1024/0723_110813/model_best.pth",
                             'adapt_m':torch.tensor([0,0.5,0.9]),
                             'adapt_cost':torch.tensor([0,0.25,0.45]),
-                            'depreciation': 0.6,
+                            'depreciation': 0.08,
                             'discount': 0.95,
                             'm_theta_dist': {'type':'beta','parameters':[args.shock_a,args.shock_b],'round':False,'decimals':None},
                             'del_method':'size',

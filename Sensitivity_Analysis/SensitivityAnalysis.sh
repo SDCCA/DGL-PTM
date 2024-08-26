@@ -7,16 +7,19 @@
 #SBATCH --time=00:05:00
 
 
-module load 2023
+module load 2023 CUDA/12.1.1 cuDNN/8.9.2.26-CUDA-12.1.1
+
+source /sw/arch/Centos8/EB_production/2021/software/Anaconda3/2021.05/etc/profile.d/conda.sh
+
 conda activate dgl_ptm_gpu
+#echo "Current Conda environment: $CONDA_DEFAULT_ENV"
 
 # Sensitivity Analysis
-
 
 seed=1
 counter=0
 start=1
-earlystop=3
+earlystop=1
 sample_csv="SaltelliSampleParams-n1024.csv"
 
 while IFS=, read -r RunID homophily local_ratio noise_ratio shock_alpha shock_beta; do    
@@ -35,7 +38,7 @@ while IFS=, read -r RunID homophily local_ratio noise_ratio shock_alpha shock_be
 
 done < "$sample_csv"
 wait
-echo " $(date) - Runs $start through $earlystop are complete for seed $seed."
+echo " $(date) - Runs $start through $earlystop are attempted for seed $seed."
 
 
    
