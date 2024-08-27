@@ -18,13 +18,12 @@ logger = logging.getLogger(__name__)
 class MThetaDist(BaseModel):
     """Base class for m_theta distribution."""
     type: str = "multinomial"
-    parameters: list[int | float | list[int | float]] = [[0.02, 0.03, 0.05, 0.9], 
-                                                         [0.7, 0.8, 0.9, 1]]
+    parameters: list[int | float | list[int | float]] = [[0.02, 0.03, 0.05, 0.9], [0.7, 0.8, 0.9, 1]]
     round: bool = False
     decimals: int | None = None
 
     @field_validator("parameters")
-    def _convert_parameters(self, v, values):
+    def _convert_parameters(cls, v, values):
         if values.data["type"] == "multinomial":
             for i in v:
                 if not isinstance(i, list):
@@ -38,8 +37,7 @@ class MThetaDist(BaseModel):
 
 
 class SteeringParams(BaseModel):
-    """
-    Base class for steering parameters.
+    """Base class for steering parameters.
     These are the parameters used within each step of the model.
     """
     edata: list[str] = ["all"]
@@ -72,19 +70,19 @@ class SteeringParams(BaseModel):
     data_collection_list: list[int] | None = None
 
     @field_validator("adapt_m")
-    def _convert_adapt_m(self, v):
+    def _convert_adapt_m(cls, v):
         return torch.tensor(v)
 
     @field_validator("adapt_cost")
-    def _convert_adapt_cost(self, v):
+    def _convert_adapt_cost(cls, v):
         return torch.tensor(v)
 
     @field_validator("tech_gamma")
-    def _convert_tech_gamma(self, v):
+    def _convert_tech_gamma(cls, v):
         return torch.tensor(v)
 
     @field_validator("tech_cost")
-    def _convert_tech_cost(self, v):
+    def _convert_tech_cost(cls, v):
         return torch.tensor(v)
 
     # Make sure pydantic validates the default values
@@ -106,7 +104,7 @@ class AlphaDist(BaseModel):
     decimals: int | None = None
 
     @field_validator("parameters")
-    def _convert_parameters(self, v):
+    def _convert_parameters(cls, v):
         return torch.tensor(v)
 
     # Make sure pydantic validates the default values
@@ -121,7 +119,7 @@ class CapitalDist(BaseModel):
     decimals: int | None = None
 
     @field_validator("parameters")
-    def _convert_parameters(self, v):
+    def _convert_parameters(cls, v):
         return torch.tensor(v)
 
     # Make sure pydantic validates the default values
@@ -136,7 +134,7 @@ class LambdaDist(BaseModel):
     decimals: int | None = 1
 
     @field_validator("parameters")
-    def _convert_parameters(self, v):
+    def _convert_parameters(cls, v):
         return torch.tensor(v)
 
     # Make sure pydantic validates the default values
@@ -151,7 +149,7 @@ class SigmaDist(BaseModel):
     decimals: int | None = 1
 
     @field_validator("parameters")
-    def _convert_parameters(self, v):
+    def _convert_parameters(cls, v):
         return torch.tensor(v)
 
     # Make sure pydantic validates the default values
@@ -166,7 +164,7 @@ class TechnologyDist(BaseModel):
     decimals: int | None = None
 
     @field_validator("parameters")
-    def _convert_parameters(self, v):
+    def _convert_parameters(cls, v):
         return v if None in v else torch.tensor(v)
 
     # Make sure pydantic validates the default values
@@ -181,7 +179,7 @@ class AThetaDist(BaseModel):
     decimals: int | None = None
 
     @field_validator("parameters")
-    def _convert_parameters(self, v):
+    def _convert_parameters(cls, v):
         return torch.tensor(v)
 
     # Make sure pydantic validates the default values
@@ -196,7 +194,7 @@ class SensitivityDist(BaseModel):
     decimals: int | None = None
 
     @field_validator("parameters")
-    def _convert_parameters(self, v):
+    def _convert_parameters(cls, v):
         return torch.tensor(v)
 
     # Make sure pydantic validates the default values
@@ -204,15 +202,11 @@ class SensitivityDist(BaseModel):
 
 
 class Config(BaseModel):
-    """
-    Base class for configuration parameters.
+    """Base class for configuration parameters.
     These are the parameters used by the overarching process.
-    """ 
-    # because pydantic does not like underscores:
-    model_identifier: str = Field("test", alias='_model_identifier')
-    # Never used to influence processing. This value is meant purely to add a 
-    # description to identify a parameter setting:
-    description: str = "" 
+    """
+    model_identifier: str = Field("test", alias='_model_identifier') # because pydantic does not like underscores
+    description: str = "" # Never used to influence processing. This value is meant purely to add a description to identify a parameter setting.
     device: str = "cpu"
     seed: int = 42
     number_agents: PositiveInt = 100
@@ -244,8 +238,8 @@ class Config(BaseModel):
 
     @classmethod
     def from_yaml(cls, config_file):
-        """
-        Read configs from a config.yaml file.
+        """Read configs from a config.yaml file.
+
         If key is not found in config.yaml, the default value is used.
         """
         if not Path(config_file).exists():
