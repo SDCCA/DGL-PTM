@@ -278,6 +278,7 @@ class PovertyTrapModel(Model):
         self.create_network()
         self.initialize_agent_properties()
         self.graph = self.graph.to(self.config.device)
+        print(f'{self.graph.number_of_nodes()} agents initialized on {self.graph.device} device')
         self.initialize_model_properties()
         self.steering_parameters['modelTheta'] = self.steering_parameters['modelTheta'].to(self.config.device)  # noqa: E501
 

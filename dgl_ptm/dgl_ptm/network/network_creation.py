@@ -27,7 +27,6 @@ def network_creation(num_agents, method, **kwargs):
     if (method == 'barabasi-albert'):
         if 'seed' in kwargs.keys():
             seed  = kwargs['seed']
-            print(f"using seed {seed} for network creation.")
         else:
             seed = torch.initial_seed() 
         
@@ -35,7 +34,7 @@ def network_creation(num_agents, method, **kwargs):
             new_node_edges = kwargs['new_node_edges']
         else:
             new_node_edges = 1 
-
+        print(f"Using seed {seed} for network creation with {new_node_edges} edges requested.")
         agent_graph = barabasi_albert_graph(num_agents, new_node_edges, seed)
     else:
         raise NotImplementedError('Currently only barabasi-albert model implemented!')
@@ -60,7 +59,6 @@ def barabasi_albert_graph(num_agents, new_node_edges=1, seed=1):
     #Create graph using networkx function for barabasi albert graph 
     networkx_graph = nx.barabasi_albert_graph(n=num_agents, m=new_node_edges, seed=seed)
     barabasi_albert_coo = nx.to_scipy_sparse_array(networkx_graph,format='coo')
-    print(new_node_edges, seed)
     
     #Return DGL graph from networkx graph
     return dgl.from_scipy(barabasi_albert_coo)
