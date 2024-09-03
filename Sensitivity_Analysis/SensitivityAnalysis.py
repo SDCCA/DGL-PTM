@@ -19,7 +19,7 @@ parser.add_argument('-b', '--shock_b', default=None, type=float, help='Shock bet
 
 args =parser.parse_args()
 
-model = dgl_ptm.PovertyTrapModel(model_identifier=f'batchtest_{args.run_id}_seed_{args.seed}',)
+model = dgl_ptm.PovertyTrapModel(model_identifier=f'SA_{args.run_id}_seed_{args.seed}',)
 
 model.set_model_parameters(**{'number_agents': 10000 , 
     'seed':args.seed,
@@ -36,8 +36,9 @@ model.set_model_parameters(**{'number_agents': 10000 ,
     'steering_parameters':{'npath':'./agent_data.zarr',
                             'epath':'./edge_data', 
                             'ndata':['all_except',['a_table']],
-                            'edata':['all'],
+                            'edata':None,
                             'mode':'w',
+                            'capital_method':'past_shock',
                             'wealth_method':'weighted_transfer',
                             'income_method':'income_generation',
                             'tech_gamma': torch.tensor([0.3,0.35,0.45]),
@@ -50,12 +51,13 @@ model.set_model_parameters(**{'number_agents': 10000 ,
                             'discount': 0.95,
                             'm_theta_dist': {'type':'beta','parameters':[args.shock_a,args.shock_b],'round':False,'decimals':None},
                             'del_method':'size',
+                            'del_threshold':'balance',
                             'noise_ratio': args.noise,
                             'local_ratio': args.local,
                             'homophily_parameter': args.homophily,
                             'characteristic_distance':3.33, 
                             'truncation_weight':1.0e-10,
-                            'step_type':'custom'}})
+                            'step_type':'ptm'}})
 
 print(model.config.steering_parameters)                        
 

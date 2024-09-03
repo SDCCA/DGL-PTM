@@ -21,7 +21,7 @@ problem={   "names": ["homophily","local_ratio","noise_ratio","shock_alpha","sho
             "bounds":[[0,10],[0.2,0.3],[0.04,0.06],[4.13*0.5,4.13*1.5],[0.07*0.5,0.07*1.5]],
             "dists":["unif","unif","unif","unif","unif"]}
 
-S_sample=sobol.sample(problem,n)
+S_sample=sobol.sample(problem,n,calc_second_order=False)
 
 S_sampledf=pd.DataFrame(S_sample, columns=["homophily","local_ratio","noise_ratio","shock_alpha","shock_beta"])
 

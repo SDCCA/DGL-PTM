@@ -11,7 +11,7 @@ from pathlib import Path
 
 import torch
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt, field_validator
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, field_validator, typing
 
 logger = logging.getLogger(__name__)
 
@@ -40,12 +40,13 @@ class SteeringParams(BaseModel):
     """Base class for steering parameters.
     These are the parameters used within each step of the model.
     """
-    edata: list[str] = ["all"]
+    edata: list[str] | None = ["all"]
     epath: str = "./edge_data"
     format: str = "xarray"
     mode: str = "w"
-    ndata: list[str | list[str]] = ["all_except", ["a_table"]]
+    ndata: list[str | list[str]] | None = ["all_except", ["a_table"]]
     npath: str = "./agent_data.zarr"
+    capital_method: str = "present_shock"
     wealth_method: str = "singular_transfer"
     income_method: str = "income_generation"
     consume_method: str = "fitted_consumption"
@@ -61,7 +62,7 @@ class SteeringParams(BaseModel):
     tech_gamma: list[float] = [0.3, 0.35, 0.45]
     tech_cost: list[float] = [0.0, 0.15, 0.65]
     del_method: str = "probability"
-    del_threshold: int | float | None = 0.05
+    del_threshold: int | float | None | typing.Literal["balance"] = 0.05
     noise_ratio: float = 0.05
     local_ratio: float = 0.25
     truncation_weight: float = 1.0e-10

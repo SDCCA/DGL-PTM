@@ -29,15 +29,23 @@ def data_collection(agent_graph,
             ['xarray'] saves the properties in zarr format with xarray dataset
         mode: zarr write mode.
     """
-    if ndata is None or ndata == ['all']:
+    if ndata == ['all']:
         ndata = list(agent_graph.node_attr_schemes().keys())
     if ndata[0] == 'all_except':
         ndata = list(agent_graph.node_attr_schemes().keys() - ndata[1])
-    if edata is None or edata == ['all']:
+    if edata == ['all']:
         edata = list(agent_graph.edge_attr_schemes().keys())
-
-    _node_property_collector(agent_graph, npath, ndata, timestep, format, mode)
-    _edge_property_collector(agent_graph, epath, edata, timestep, format, mode)
+    
+    if ndata == None:
+        if timestep == 0:
+            print("ATTENTION: No node data collection requested for this simulation!")
+    else:
+        _node_property_collector(agent_graph, npath, ndata, timestep, format, mode)
+    if edata == None:
+        if timestep == 0:
+            print("ATTENTION: No edge data collection requested for this simulation!")
+    else:
+        _edge_property_collector(agent_graph, epath, edata, timestep, format, mode)
 
 
 def _node_property_collector(agent_graph, npath, ndata, timestep, format, mode):

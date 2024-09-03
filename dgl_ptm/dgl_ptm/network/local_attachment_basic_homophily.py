@@ -15,6 +15,9 @@ def local_attachment_homophily(graph,device,n_FoF_links, homophily_parameter = N
 
     #preselect based on adjacency matrix for 2 or more neighbors
     candidates=graph.adj().sum(dim=1)>1
+    if torch.sum(candidates)==0:
+        print("There are no agents with two or more neighbors. No local attachment can occur.")
+        return
 
     # Select bridge/connecting nodes randomly from candidates (with replacement)
     connecting_nodes=torch.nonzero(candidates, as_tuple=True)[0][torch.randint(0,torch.sum(candidates),(n_FoF_links,))]
@@ -43,6 +46,7 @@ def local_attachment_homophily(graph,device,n_FoF_links, homophily_parameter = N
     # Add new edges to the original graph
     graph.add_edges(even_indices_tensor[successful_links], odd_indices_tensor[successful_links], data={'weight': potential_weights[successful_links]})
     graph.add_edges(odd_indices_tensor[successful_links], even_indices_tensor[successful_links], data={'weight': potential_weights[successful_links]})
+
 
 
 

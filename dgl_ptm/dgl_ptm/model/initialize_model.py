@@ -13,7 +13,7 @@ from dgl_ptm.agentInteraction.weight_update import weight_update
 from dgl_ptm.config import CONFIG, Config
 from dgl_ptm.model.step import ptm_step
 from dgl_ptm.network.network_creation import network_creation
-from dgl_ptm.util.network_metrics import average_degree, average_weighted_degree
+from dgl_ptm.util.network_metrics import average_degree, average_weighted_degree, node_degree, node_weighted_degree
 
 # Set the seed of the random number generator
 # this is global and will affect all random number generators
@@ -274,6 +274,7 @@ class PovertyTrapModel(Model):
             self.step_count = self.inputs["step_count"]
         else:
             torch.manual_seed(self.config.seed)
+            print (f"Model torch seed set to {self.config.seed}")
 
         self.create_network()
         self.initialize_agent_properties()
@@ -298,6 +299,8 @@ class PovertyTrapModel(Model):
         # Network Metrics
         self.average_degree = average_degree(self.graph)
         self.average_weighted_degree = average_weighted_degree(self.graph)
+        self.graph.ndata['degree'] = node_degree(self.graph)
+        self.graph.ndata['weighted_degree'] = node_weighted_degree(self.graph)
 
     def create_network(self):
         """Create intial network connecting agents.
@@ -366,6 +369,8 @@ class PovertyTrapModel(Model):
             self.graph.ndata['wealth_consumption'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['i_a'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['m'] = torch.zeros(self.graph.num_nodes())
+            self.graph.ndata['degree'] = torch.zeros(self.graph.num_nodes())
+            self.graph.ndata['weighted_degree'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['zeros'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['ones'] = torch.ones(self.graph.num_nodes())
         else:
