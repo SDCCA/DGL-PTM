@@ -2,7 +2,6 @@ from dgl_ptm.agent.income_generation import income_generation
 from dgl_ptm.agent.wealth_consumption import wealth_consumption
 from dgl_ptm.agent.capital_update import capital_update
 from dgl_ptm.util.network_metrics import node_degree, node_weighted_degree
-import torch
 
 
 def agent_update(model_graph, model_params=None, device=None, timestep=None, method='pseudo'):

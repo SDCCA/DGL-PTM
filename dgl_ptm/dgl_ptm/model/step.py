@@ -11,8 +11,6 @@ from dgl_ptm.network.link_deletion import link_deletion
 from dgl_ptm.network.local_attachment import local_attachment
 from dgl_ptm.network.local_attachment_basic_homophily import local_attachment_homophily
 from dgl_ptm.network.random_edge_noise import random_edge_noise
-from dgl_ptm.util.network_metrics import average_degree, average_weighted_degree
-
 
 def ptm_step(agent_graph, device, timestep, params):
     """Step - time-stepping module for the poverty-trap model.
