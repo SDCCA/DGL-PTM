@@ -132,6 +132,10 @@ def ptm_step(agent_graph, device, timestep, params):
         link_deletion(
             agent_graph, method = params['del_method'], threshold = threshold
             )
+        #Update agent degree and weighted degree
+        agent_update(agent_graph, method='degree')
+        agent_update(agent_graph, method='weighted_degree')
+
         #Wealth transfer
         trade_money(agent_graph, device, method = params['wealth_method'])
 
@@ -145,10 +149,7 @@ def ptm_step(agent_graph, device, timestep, params):
         agent_update(
             agent_graph, params, device=device, timestep=timestep, method ='consumption'
             )
-        #Update agent degree and weighted degree
 
-        agent_update(agent_graph, method='degree')
-        agent_update(agent_graph, method='weighted_degree')
 
     # Data can be collected periodically (every X steps) and/or at specified time steps.
     do_periodical_data_collection = (

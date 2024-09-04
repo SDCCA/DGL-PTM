@@ -369,6 +369,7 @@ class PovertyTrapModel(Model):
             self.graph.ndata['wealth_consumption'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['i_a'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['m'] = torch.zeros(self.graph.num_nodes())
+            self.graph.ndata['net_trade'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['degree'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['weighted_degree'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['zeros'] = torch.zeros(self.graph.num_nodes())

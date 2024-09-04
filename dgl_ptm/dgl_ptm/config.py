@@ -44,7 +44,7 @@ class SteeringParams(BaseModel):
     epath: str = "./edge_data"
     format: str = "xarray"
     mode: str = "w"
-    ndata: list[str | list[str]] | None = ["all_except", ["a_table"]]
+    ndata: list[str | list[str | list[str]]] | None = ["all_except", ["a_table"]]
     npath: str = "./agent_data.zarr"
     capital_method: str = "present_shock"
     wealth_method: str = "singular_transfer"
