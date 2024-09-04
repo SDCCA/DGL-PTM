@@ -88,7 +88,6 @@ def ptm_step(agent_graph, device, timestep, params):
                 epath = params['epath'],
                 ndata = params['ndata'],
                 edata = params['edata'],
-                initial_only = params['initial_only'],
                 mode = params['mode']
                 )
             return
@@ -170,6 +169,5 @@ def ptm_step(agent_graph, device, timestep, params):
             epath = params['epath'],
             ndata = params['ndata'],
             edata = params['edata'],
-            initial_only = params['initial_only'],
             mode = params['mode']
             )

@@ -13,7 +13,6 @@ def data_collection(agent_graph,
                     ndata=None,
                     edata=None,
                     format = 'xarray',
-                    initial_only = None,
                     mode = 'w-'):
     """data_collection - collects data from agents and edges.
 
@@ -42,7 +41,7 @@ def data_collection(agent_graph,
         ndata = list(agent_graph.node_attr_schemes().keys() - ndata[1])
     elif sum(1 for item in ndata if isinstance(item, list)) > 1:
         ndata_list = ndata
-        #initial_only=[]
+        initial_only=[]
         for specification in ndata_list:
             if specification == ['all']:
                 raise ValueError('Use of "all" is not compatible with multiple data collection specification lists.')
