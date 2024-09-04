@@ -63,7 +63,7 @@ def data_collection(agent_graph,
         if timestep == 0:
             print("ATTENTION: No node data collection requested for this simulation!")
     else:
-        if timestep == 0 and initial_only != []:
+        if timestep == 0 and locals().get('initial_only', []) != []:
             initialpath = npath.split('.')[0] + '_initial.zarr'
             _node_property_collector(agent_graph, initialpath, initial_only, timestep, format, mode)
         _node_property_collector(agent_graph, npath, ndata, timestep, format, mode)
