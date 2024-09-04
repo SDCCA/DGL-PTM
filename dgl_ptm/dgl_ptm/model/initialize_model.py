@@ -322,6 +322,7 @@ class PovertyTrapModel(Model):
         """
         model_theta = self._initialize_model_theta()
         self.steering_parameters['modelTheta'] = model_theta
+        self.initial_only = []
         #attachProb = self._initialize_attach_prob()
         #self.steering_parameters['attachProb'] = attachProb
 
