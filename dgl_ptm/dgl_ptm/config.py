@@ -16,7 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field, PositiveInt, field_validator,
 logger = logging.getLogger(__name__)
 
 class MThetaDist(BaseModel):
-    """Base class for m_theta distribution."""
+    """Base class for model_theta distribution."""
     type: str = "multinomial"
     parameters: list[int | float | list[int | float]] = [[0.02, 0.03, 0.05, 0.9], [0.7, 0.8, 0.9, 1]]
     round: bool = False
@@ -58,7 +58,8 @@ class SteeringParams(BaseModel):
     adapt_cost: list[float] = [0.0, 0.25, 0.45]
     depreciation: float = 0.6
     discount: float = 0.95
-    m_theta_dist: MThetaDist = MThetaDist()
+    model_theta: list[float] | None = None 
+    model_theta_dist: MThetaDist | None = MThetaDist()
     tech_gamma: list[float] = [0.3, 0.35, 0.45]
     tech_cost: list[float] = [0.0, 0.15, 0.65]
     del_method: str = "probability"

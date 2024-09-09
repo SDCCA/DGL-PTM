@@ -227,6 +227,13 @@ class PovertyTrapModel(Model):
         for key, value in cfg_dict.items():
             setattr(self.config, key, value)
         self.steering_parameters = self.config.steering_parameters.__dict__
+        print (self.steering_parameters)
+        print("")
+        print (self.config.steering_parameters)
+
+        # Set model theta
+        self.config.steering_parameters.model_theta = self._set_model_theta()
+        self.steering_parameters['model_theta'] = self.config.steering_parameters.model_theta
 
         # Correct the paths
         self.model_dir = self.root_path / Path(self._model_identifier)
@@ -238,6 +245,17 @@ class PovertyTrapModel(Model):
 
         # Save updated config to yaml file.
         self.save_model_parameters(overwrite)
+
+    def _set_model_theta(self):
+        assert not(self.steering_parameters['model_theta'] is not None and self.steering_parameters['model_theta_dist'] is not None), 'Conflict: model_theta and model_theta_dist are both specified. Please specify only one.'             
+        if self.steering_parameters['model_theta'] is not None:
+            assert len(self.steering_parameters['model_theta']) == self.config.step_target, 'When supplying a list of shocks, the length of model_theta must be equal to the step target.'
+            return torch.tensor(self.steering_parameters['model_theta'])
+        else:
+            return sample_distribution(
+                self.steering_parameters['model_theta_dist'].__dict__,
+                self.config.step_target
+            )
 
     def initialize_model(self, restart = False):
         """Initialize a model.
@@ -280,8 +298,7 @@ class PovertyTrapModel(Model):
         self.initialize_agent_properties()
         self.graph = self.graph.to(self.config.device)
         print(f'{self.graph.number_of_nodes()} agents initialized on {self.graph.device} device')
-        self.initialize_model_properties()
-        self.steering_parameters['modelTheta'] = self.steering_parameters['modelTheta'].to(self.config.device)  # noqa: E501
+        self.steering_parameters['model_theta'] = self.steering_parameters['model_theta'].to(self.config.device)  # noqa: E501
 
         weight_update(
             self.graph,
@@ -313,29 +330,6 @@ class PovertyTrapModel(Model):
             **self.config.initial_graph_args.__dict__
             )
         self.graph = agent_graph
-
-    def initialize_model_properties(self):
-        """Initialize model properties.
-
-        Values are initialized as tensors of length corresponding to number of
-        time steps.
-        """
-        model_theta = self._initialize_model_theta()
-        self.steering_parameters['modelTheta'] = model_theta
-        #attachProb = self._initialize_attach_prob()
-        #self.steering_parameters['attachProb'] = attachProb
-
-    def _initialize_model_theta(self):
-        return sample_distribution(
-            self.steering_parameters['m_theta_dist'].__dict__,
-            self.config.step_target
-            )
-
-    def _initialize_attach_prob(self):
-        return sample_distribution(
-            self.steering_parameters['m_attach_dist'].__dict__,
-            self.config.step_target
-            )
 
     def initialize_agent_properties(self):
         """Initialize and assign agent properties.

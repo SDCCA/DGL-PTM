@@ -91,7 +91,7 @@ def _node_property_collector(agent_graph, npath, ndata, timestep, format, mode):
             else:
                 agent_data_instance.to_zarr(npath, append_dim='n_time')
         else:
-            raise NotImplementedError("Only 'xarray' format currrent available")
+            raise NotImplementedError("Only 'xarray' format currently available")
     else:
         raise NotImplementedError(
             "Data collection currently only implemented for pytorch backend"

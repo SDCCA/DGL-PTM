@@ -18,6 +18,8 @@ def wealth_consumption(model_graph, model_params, timestep=None, device=None, me
         _nn_bellman_wealth_consumption(model_graph,model_params,device)
     elif method == 'past_shock_bellman_consumption':
         _nn_bellman_past_shock_consumption(model_graph,model_params, timestep, device)
+    elif method == 'past_shock_bellman_consumption_no_adapt':
+        _nn_bellman_past_shock_consumption_no_adapt(model_graph,model_params, timestep, device)
     else:
         raise NotImplementedError("Incorrect consumption method received.")
 
@@ -213,7 +215,7 @@ def  _nn_bellman_past_shock_consumption(model_graph,model_params, timestep, devi
     # An equation violation occurs when personally shocked, depreciated k + income - consumption - i_a is less than or equal to 0
     equation_violation = (model_graph.ndata['theta'] + model_graph.ndata['m'] * (1-model_graph.ndata['theta']))*(1-model_params['depreciation'])*model_graph.ndata['wealth']+ model_graph.ndata['income'] - model_graph.ndata['wealth_consumption'] - model_graph.ndata['i_a']<=0
     # A violation occurs when actually shocked, depreciated k + income - consumption - i_a is less than or equal to 0
-    global_θ = model_params['modelTheta'][timestep]
+    global_θ = model_params['model_theta'][timestep]
     violation = (global_θ + model_graph.ndata['m'] * (1-global_θ))*(1-model_params['depreciation'])*model_graph.ndata['wealth']  + model_graph.ndata['income'] - model_graph.ndata['wealth_consumption'] - model_graph.ndata['i_a']<=0
 
 
@@ -245,6 +247,72 @@ def  _nn_bellman_past_shock_consumption(model_graph,model_params, timestep, devi
     if torch.sum(violation)!=0:
 
         print(f"Something has gone terribly wrong! Still {torch.sum(violation)} violations.")
+
+
+def  _nn_bellman_past_shock_consumption_no_adapt(model_graph,model_params, timestep, device):
+    '''
+    For use with the experiment with no adaptation. 
+    Estimation of consumption and i_a using a pytorch neural network trained equation output for the Bellman 
+    equation where k_t+1= model_graph.ndata['income'] + (global_θ) + (1-𝛿) * k - c .
+    Currently only works with a single model for all agents under the four input one output configuration. 
+    The entire surrogate model must be saved at nn_path and the architecture of the model specified in nn_arch.py.''' 
+
+    if model_params['nn_path']==None:
+        print("No consumption model path provided!")
+    
+    # Load model  
+    
+    estimator,scale = load_consumption_model(model_params['nn_path'],device)  
+
+    estimator.to(device)
+    estimator.eval()
+
+    input = torch.cat((model_graph.ndata['alpha'].unsqueeze(1), model_graph.ndata['wealth'].unsqueeze(1), model_graph.ndata['sigma'].unsqueeze(1), model_graph.ndata['theta'].unsqueeze(1)), dim=1) 
+    
+    # Forward pass to get predictions
+    with torch.no_grad():
+
+        pred=estimator(input)
+    
+    #model_graph.ndata['m'],model_graph.ndata['i_a'] are initialized as zeros
+    # print("Cleaning output and checking for violations")
+
+    # Clean Consumption
+    model_graph.ndata['wealth_consumption']=(pred[:,0]*scale).clamp_(min=0)
+
+    # Check for violations
+    # An equation violation occurs when personally shocked, depreciated k + income - consumption - i_a is less than or equal to 0
+    equation_violation = (model_graph.ndata['theta'])*(1-model_params['depreciation'])*model_graph.ndata['wealth']+ model_graph.ndata['income'] - model_graph.ndata['wealth_consumption'] <=0
+    # A violation occurs when actually shocked, depreciated k + income - consumption - i_a is less than or equal to 0
+    global_θ = model_params['model_theta'][timestep]
+    violation = (global_θ)*(1-model_params['depreciation'])*model_graph.ndata['wealth']  + model_graph.ndata['income'] - model_graph.ndata['wealth_consumption'] <=0
+
+
+
+    if torch.sum(violation)!=0:
+        # Violation type 1: i_a exceeds depreciated k + income
+        violation_i_a = (global_θ)*(1-model_params['depreciation']) * model_graph.ndata['wealth'] + model_graph.ndata['income'] <=0
+
+        # Violation type 2: consumption exceeds k
+        #violation_consumption = model_graph.ndata['wealth']-model_graph.ndata['wealth_consumption']<=0
+
+        print(f"Agents in equation violation: {torch.sum(equation_violation)}")
+        print(f"Agents in personal/actual violation: {torch.sum(violation)}")
+        print(f"...because of i_a: {torch.sum(violation_i_a)}")
+
+        # redetermine violations with updated i_a
+        violation = (global_θ )*(1-model_params['depreciation'])*model_graph.ndata['wealth']  + model_graph.ndata['income'] - model_graph.ndata['wealth_consumption'] <=0
+        violation_i_a = (global_θ )*(1-model_params['depreciation']) * model_graph.ndata['wealth'] + model_graph.ndata['income'] <=0
+
+        model_graph.ndata['wealth_consumption'][torch.nonzero(violation, as_tuple=False)]=(global_θ *(1-model_params['depreciation']) * model_graph.ndata['wealth'][torch.nonzero(violation, as_tuple=False)] + model_graph.ndata['income'][torch.nonzero(violation, as_tuple=False)])*0.99
+
+
+    violation = (global_θ )*(1-model_params['depreciation'])*model_graph.ndata['wealth']  + model_graph.ndata['income'] - model_graph.ndata['wealth_consumption'] <=0
+
+    if torch.sum(violation)!=0:
+
+        print(f"Something has gone terribly wrong! Still {torch.sum(violation)} violations.")
+
 
 
 
