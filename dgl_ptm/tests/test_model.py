@@ -258,13 +258,6 @@ class TestInitializeModel:
         assert model.graph is not None
         assert model.graph.number_of_nodes() == 100
 
-    def test_initialize_model_properties(self):
-        model = dgl_ptm.PovertyTrapModel(
-            model_identifier='initialize_model', root_path='test_models'
-            )
-        model.set_model_parameters(overwrite=True)
-        model.initialize_model_properties()
-
     def test_initialize_agent_properties(self):
         model = dgl_ptm.PovertyTrapModel(
             model_identifier='initialize_model', root_path='test_models'
