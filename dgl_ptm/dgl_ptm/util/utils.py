@@ -23,9 +23,13 @@ def load_consumption_model(nn_path,device):
     #print("loaded state dict")
 
 
-    if config['data_loader']['args']['cons_scale']==True:
-        scale=config['data_loader']['args']['scale']
+    if "cons_scale" in config["data_loader"]["args"]:
+        cons_scale=config['data_loader']['args']['i_a_scale']
     else:
-        scale=1
+        cons_scale=1    
+    if "i_a_scale" in config["data_loader"]["args"]:
+        i_a_scale=config['data_loader']['args']['i_a_scale']
+    else:
+        i_a_scale=1
 
-    return model, scale
+    return model, cons_scale, i_a_scale

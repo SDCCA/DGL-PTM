@@ -26,7 +26,7 @@ def ptm_step(agent_graph, device, timestep, params):
     """
     if params['step_type']=='default':
         #Wealth transfer
-        trade_money(agent_graph, device, method = params['wealth_method'])
+        trade_money(agent_graph, device, method = params['trade_method'])
 
         #Edge manipulation
         local_attachment(
@@ -137,7 +137,7 @@ def ptm_step(agent_graph, device, timestep, params):
         agent_update(agent_graph, method='weighted_degree')
 
         #Wealth transfer
-        trade_money(agent_graph, device, method = params['wealth_method'])
+        trade_money(agent_graph, device, method = params['trade_method'])
 
         #Update agent theta
         agent_update(

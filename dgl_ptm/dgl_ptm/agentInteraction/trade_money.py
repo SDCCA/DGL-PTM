@@ -16,8 +16,9 @@ def trade_money(agent_graph, device, method: str):
             method: String with method choice of 'weighted_transfer' or 'singular_transfer'
 
         Output:
-            agent_graph.ndata['delta_inc']: Adds node attribute 'delta_inc' with amount of
-                wealth transfered from neighbouring agent nodes to self in this time-step.
+            agent_graph.ndata['net_trade']: Adds node attribute 'net_trade' with sum of
+                capital transfered from connected agent nodes to self minus the outflow
+                of capital to connected agent nodes in this time-step.
 
     NOTE: Assumes that the following properties are available already:
         k, lambda, w (for 'weighted_transfer'), zeros, ones, total neighbour count
@@ -26,6 +27,7 @@ def trade_money(agent_graph, device, method: str):
     TODO: Rename variables as per Thijs' updates on notebook
     """
     # Calculating disposable wealth
+    print(f"k before:{agent_graph.ndata['wealth'][0:5]}")
     agent_graph.ndata['disposable_wealth'] = agent_graph.ndata['lambda']*agent_graph.ndata['wealth'] # TODO: declare what lambda is
     
     # Transfer of wealth
@@ -33,6 +35,8 @@ def trade_money(agent_graph, device, method: str):
         _weighted_transfer(agent_graph, device)
     elif method == 'singular_transfer':
         _singular_transfer(agent_graph, device)
+    elif method == 'no_transfer':
+        pass
     else:
         raise NotImplementedError("Incorrect method received. \
                          Method needs to be either 'weighted_transfer' or 'singular_transfer'")
@@ -53,8 +57,18 @@ def _weighted_transfer(agent_graph, device):
     # Wealth transfer amount on each edge
     agent_graph.apply_edges(fn.e_mul_u('percent_weight','disposable_wealth','trfr_wealth'))  # TODO: check what trfr_wealth actually is
 
-    # Sum total income from wealth exchange
+    # Sum total incoming wealth
     agent_graph.update_all(fn.v_add_e('zeros','trfr_wealth','net_trade_msg'), fn.sum('net_trade_msg', 'net_trade'))
+    print(f"Total In:{agent_graph.ndata['net_trade'][0:5]}")
+
+    # Subtract outgoing wealth
+    agent_graph.ndata['net_trade'] = agent_graph.ndata['net_trade'] - agent_graph.ndata['disposable_wealth']
+    print(f"Disposable Wealth:{agent_graph.ndata['disposable_wealth'][0:5]}")  
+    print(f"Net Trade:{agent_graph.ndata['net_trade'][0:5]}")
+
+    # Conduct exchange
+    agent_graph.ndata['wealth'] = agent_graph.ndata['wealth'] + agent_graph.ndata['net_trade']
+    print(f"k after:{agent_graph.ndata['wealth'][0:5]}")
 
 def _singular_transfer(agent_graph, device):
     """
@@ -71,3 +85,7 @@ def _singular_transfer(agent_graph, device):
 
     # Update wealth delta in agent graph
     agent_graph.ndata['net_trade'] = graph_subset.ndata['net_trade']
+    agent_graph.ndata['net_trade'] = agent_graph.ndata['net_trade'] - agent_graph.ndata['disposable_wealth']
+
+    # Conduct exchange
+    agent_graph.ndata['wealth'] = agent_graph.ndata['wealth'] + agent_graph.ndata['net_trade']

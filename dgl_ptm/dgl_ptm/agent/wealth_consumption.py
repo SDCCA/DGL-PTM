@@ -28,10 +28,9 @@ def _pseudo_wealth_consumption(model_graph):
     model_graph.ndata['wealth_consumption'] = model_graph.ndata['wealth']*1./3.
     
 def _fitted_wealth_consumption(model_graph):
+    # Outdated method, requires update or deletion
 # Estimation based on curve fitted to Bellman equation output
     model_graph.ndata['wealth_consumption'] = 0.64036047*torch.log(model_graph.ndata['wealth'])
-
-
 
 # Miscellenious information needed for _bellman_wealth_consumption, a very slow method comparatively speaking
 def income_function(k,α,tech): 
@@ -83,9 +82,8 @@ class BellmanEquation:
 
 
 
-
-
 def _bellman_wealth_consumption(model_graph, model_params):
+    # Outdated method, requires update or deletion
     
     def maximize(g, a, b, args):
         """
@@ -104,6 +102,119 @@ def _bellman_wealth_consumption(model_graph, model_params):
         result = minimize_scalar(objective, bounds=(a, b), method='bounded')
         maximizer, maximum = result.x, -result.fun
         return maximizer, maximum
+
+    def utility(c, σ, type="isoelastic"):
+        if type == "isoelastic":
+            if σ ==1:
+                return np.log(c)
+            else:
+                return (c**(1-σ)-1)/(1-σ)
+
+        else:
+            print("Unspecified utility function!!!")
+
+
+    def update_bellman(v, bell):
+        """
+        From: https://python.quantecon.org/optgrowth.html (similar example
+        https://macroeconomics.github.io/Dynamic%20Programming.html#.ZC13-exBy3I)
+        
+        The Bellman operator.  Updates the guess of the value function
+        and also computes a v-greedy policy.
+
+        * bell is an instance of Bellman equation
+        * v is an array representing a guess of the value function
+
+        """
+        v_new = np.empty_like(v)
+        v_greedy = np.empty_like(v)
+        
+        for i in range(len(bell.grid)):
+            y = bell.grid[i]
+            # Maximize RHS of Bellman equation at state y
+            
+            c_star, v_max = maximize(bell.value, min([1e-8,y*0.00001]), 
+                                    y-bell.i_a, (y, v))
+            #VMG HELP! can anyone check that (1) subtracting i_a and 
+            # (2) omitting any grid values less than i_a 
+            # will not be problematic? The only thing I can come up with
+            # is if i_a is greater than k*0.99999
+            # which_bellman() now accounts for that case. Whole thing 
+            # could use refinement.
+        
+            v_new[i] = v_max
+            v_greedy[i] = c_star
+
+        return v_greedy, v_new
+
+
+    def which_bellman(agentinfo):
+        """
+        Solves bellman for each affordable adaptation option.
+        """
+        feasible=[]
+
+        for option in torch.transpose(agentinfo['adapt'],0,1):
+            if option[1]>=((income_function(agentinfo['k'],agentinfo['α'],tech={'gamma':model_params['tech_gamma'],'cost':model_params['tech_cost']})+(1 - model_params['depreciation'])*agentinfo['k'])*.99998):
+                # ensures that the gridpoint
+                # just below k, k*0.99999, is included
+                pass
+            else:
+                #  print(f'working theta = {agentinfo.θ + option[0] *\
+                #  (1-agentinfo.θ)}, i_a= {option[1]}, k= {agentinfo.k}')
+                c,v=solve_bellman(BellmanEquation(u=utility, 
+                                f=income_function, k=agentinfo['k'], 
+                                θ=agentinfo['θ'], σ=agentinfo['σ'], 
+                                α=agentinfo['α'], i_a=option[1].numpy(),m=option[0],
+                                β=model_params['discount'], 𝛿=model_params['depreciation'],
+                                tech={'gamma':model_params['tech_gamma'],'cost':model_params['tech_cost']}))
+                feasible.append([v,c,option[1],option[0]])
+
+        best=min(feasible)
+
+        return best[1],best[2],best[3]
+
+    def solve_bellman(bell,
+                    tol=1,
+                    min_iter=10,
+                    max_iter=1000,
+                    verbose=False):
+        """
+        From: https://python.quantecon.org/optgrowth.html (similar example
+        https://macroeconomics.github.io/Dynamic%20Programming.html#.ZC13-exBy3I)
+        
+        Solve model by iterating with the Bellman operator.
+
+        """
+
+        # Set up loop
+
+        v = bell.u(bell.grid,bell.σ)  # Initial condition
+        i = 0
+        error = tol + 1
+
+        while (i < max_iter and error > tol) or (i < min_iter):
+            v_greedy, v_new = update_bellman(v, bell)
+            error = np.abs(v[bell.index] - v_new)[bell.index]
+            i += 1
+            # if verbose and i % print_skip == 0:
+            #     print(f"Error at iteration {i} is {error}.")
+            v = v_new
+
+        if error > tol:
+            print(f"{bell.name} failed to converge for k={bell.k}, α = {bell.α},σ ={bell.σ}, i_a={bell.i_a}, and modified θ = {bell.θ + bell.m * (1-bell.θ)}!")
+        elif verbose:
+            print(f"Converged in {i} iterations.")
+            print(f"Effective k and new c {np.around(bell.grid[bell.index],3),v_greedy[bell.index]}")
+            
+
+        return v_greedy[bell.index],v[bell.index]
+    
+
+    for i in range(model_graph.num_nodes()):
+        agentinfo = {'u':utility, 'f':income_function, 'β':model_params['discount'], 'θ':model_graph.ndata['theta'][i], '𝛿':model_params['depreciation'], 'σ':model_graph.ndata['sigma'][i].numpy(), 'α': model_graph.ndata['alpha'][i],'k':model_graph.ndata['wealth'][i],'adapt': model_graph.ndata['a_table'][i]}
+        model_graph.ndata['wealth_consumption'][i], model_graph.ndata['i_a'][i], model_graph.ndata['m'][i] = which_bellman(agentinfo)
+
 
 
 def _fitted_agent_wealth_consumption(model_graph):
@@ -125,7 +236,7 @@ def  _nn_bellman_wealth_consumption(model_graph,model_params, device):
     
     #load model  
     
-    estimator,scale = load_consumption_model(model_params['nn_path'],device)  
+    estimator,cons_scale,i_a_scale = load_consumption_model(model_params['nn_path'],device)  
 
     estimator.to(device)
     estimator.eval()
@@ -140,12 +251,12 @@ def  _nn_bellman_wealth_consumption(model_graph,model_params, device):
     #print(" went forward, writing values")
 
     
-    model_graph.ndata['m'],model_graph.ndata['i_a']=model_graph.ndata['a_table'][torch.arange(model_graph.ndata['a_table'].size(0)),:,torch.argmin(torch.abs(pred[:, 0].unsqueeze(1) - model_graph.ndata['a_table'][:,1,:]), dim=1)].unbind(dim=1)
+    model_graph.ndata['m'],model_graph.ndata['i_a']=model_graph.ndata['a_table'][torch.arange(model_graph.ndata['a_table'].size(0)),:,torch.argmin(torch.abs(pred[:, 0].unsqueeze(1)*i_a_scale - model_graph.ndata['a_table'][:,1,:]), dim=1)].unbind(dim=1)
     
     #print("Cleaning output and checking for violations")
 
     #Clean Consumption
-    model_graph.ndata['wealth_consumption']=(pred[:,1]*scale).clamp_(min=0)
+    model_graph.ndata['wealth_consumption']=(pred[:,1]*cons_scale).clamp_(min=0)
     #print(" violation check")
 
     # Check for violations
@@ -192,7 +303,7 @@ def  _nn_bellman_past_shock_consumption(model_graph,model_params, timestep, devi
     
     # Load model  
     
-    estimator,scale = load_consumption_model(model_params['nn_path'],device)  
+    estimator,cons_scale, i_a_scale = load_consumption_model(model_params['nn_path'],device)  
 
     estimator.to(device)
     estimator.eval()
@@ -204,28 +315,33 @@ def  _nn_bellman_past_shock_consumption(model_graph,model_params, timestep, devi
 
         pred=estimator(input)
     
-    model_graph.ndata['m'],model_graph.ndata['i_a']=model_graph.ndata['a_table'][torch.arange(model_graph.ndata['a_table'].size(0)),:,torch.argmin(torch.abs(pred[:, 0].unsqueeze(1) - model_graph.ndata['a_table'][:,1,:]), dim=1)].unbind(dim=1)
+    model_graph.ndata['m'],model_graph.ndata['i_a']=model_graph.ndata['a_table'][torch.arange(model_graph.ndata['a_table'].size(0)),:,torch.argmin(torch.abs(pred[:, 0].unsqueeze(1)*i_a_scale - model_graph.ndata['a_table'][:,1,:]), dim=1)].unbind(dim=1)
     
     #print("Cleaning output and checking for violations")
 
     # Clean Consumption
-    model_graph.ndata['wealth_consumption']=(pred[:,1]*scale).clamp_(min=0)
+    model_graph.ndata['wealth_consumption']=(pred[:,1]*cons_scale).clamp_(min=0)
+    print( f"Based on alpha: {model_graph.ndata['alpha'][0:5]}")
+    print(f'Based on k: {model_graph.ndata["wealth"][0:5]}')
+    print(f'Based on sigma: {model_graph.ndata["sigma"][0:5]}')
+    print(f'Based on theta: {model_graph.ndata["theta"][0:5]}')
+    print(f"Prediction {pred[0:5].tolist()}")
+    print(f"Planned consumption { model_graph.ndata['wealth_consumption'][0:5]}")
+    print(f"Planned consumption percentage { model_graph.ndata['wealth_consumption'][0:5]/model_graph.ndata['wealth'][0:5]*100}")
+    print(f"Planned i_a { model_graph.ndata['i_a'][0:5]}")
 
     # Check for violations
     # An equation violation occurs when personally shocked, depreciated k + income - consumption - i_a is less than or equal to 0
     equation_violation = (model_graph.ndata['theta'] + model_graph.ndata['m'] * (1-model_graph.ndata['theta']))*(1-model_params['depreciation'])*model_graph.ndata['wealth']+ model_graph.ndata['income'] - model_graph.ndata['wealth_consumption'] - model_graph.ndata['i_a']<=0
     # A violation occurs when actually shocked, depreciated k + income - consumption - i_a is less than or equal to 0
-    global_θ = model_params['model_theta'][timestep]
+    global_θ = model_params['global_theta'][timestep]
     violation = (global_θ + model_graph.ndata['m'] * (1-global_θ))*(1-model_params['depreciation'])*model_graph.ndata['wealth']  + model_graph.ndata['income'] - model_graph.ndata['wealth_consumption'] - model_graph.ndata['i_a']<=0
 
-
+    print(f"Agents in violation: {torch.sum(violation)}")
 
     if torch.sum(violation)!=0:
         # Violation type 1: i_a exceeds depreciated k + income
         violation_i_a = (global_θ + model_graph.ndata['m'] * (1-global_θ))*(1-model_params['depreciation']) * model_graph.ndata['wealth'] + model_graph.ndata['income'] - model_graph.ndata['i_a']<=0
-
-        # Violation type 2: consumption exceeds k
-        #violation_consumption = model_graph.ndata['wealth']-model_graph.ndata['wealth_consumption']<=0
 
         print(f"Agents in equation violation: {torch.sum(equation_violation)}")
         print(f"Agents in personal/actual violation: {torch.sum(violation)}")
@@ -262,7 +378,7 @@ def  _nn_bellman_past_shock_consumption_no_adapt(model_graph,model_params, times
     
     # Load model  
     
-    estimator,scale = load_consumption_model(model_params['nn_path'],device)  
+    estimator,cons_scale,i_a_scale = load_consumption_model(model_params['nn_path'],device)  
 
     estimator.to(device)
     estimator.eval()
@@ -278,13 +394,13 @@ def  _nn_bellman_past_shock_consumption_no_adapt(model_graph,model_params, times
     # print("Cleaning output and checking for violations")
 
     # Clean Consumption
-    model_graph.ndata['wealth_consumption']=(pred[:,0]*scale).clamp_(min=0)
+    model_graph.ndata['wealth_consumption']=(pred[:,0]*cons_scale).clamp_(min=0)
 
     # Check for violations
     # An equation violation occurs when personally shocked, depreciated k + income - consumption - i_a is less than or equal to 0
     equation_violation = (model_graph.ndata['theta'])*(1-model_params['depreciation'])*model_graph.ndata['wealth']+ model_graph.ndata['income'] - model_graph.ndata['wealth_consumption'] <=0
     # A violation occurs when actually shocked, depreciated k + income - consumption - i_a is less than or equal to 0
-    global_θ = model_params['model_theta'][timestep]
+    global_θ = model_params['global_theta'][timestep]
     violation = (global_θ)*(1-model_params['depreciation'])*model_graph.ndata['wealth']  + model_graph.ndata['income'] - model_graph.ndata['wealth_consumption'] <=0
 
 

@@ -232,8 +232,8 @@ class PovertyTrapModel(Model):
         print (self.config.steering_parameters)
 
         # Set model theta
-        self.config.steering_parameters.model_theta = self._set_model_theta()
-        self.steering_parameters['model_theta'] = self.config.steering_parameters.model_theta
+        self.config.steering_parameters.global_theta = self._set_global_theta()
+        self.steering_parameters['global_theta'] = self.config.steering_parameters.global_theta
 
         # Correct the paths
         self.model_dir = self.root_path / Path(self._model_identifier)
@@ -246,14 +246,14 @@ class PovertyTrapModel(Model):
         # Save updated config to yaml file.
         self.save_model_parameters(overwrite)
 
-    def _set_model_theta(self):
-        assert not(self.steering_parameters['model_theta'] is not None and self.steering_parameters['model_theta_dist'] is not None), 'Conflict: model_theta and model_theta_dist are both specified. Please specify only one.'             
-        if self.steering_parameters['model_theta'] is not None:
-            assert len(self.steering_parameters['model_theta']) == self.config.step_target, 'When supplying a list of shocks, the length of model_theta must be equal to the step target.'
-            return torch.tensor(self.steering_parameters['model_theta'])
+    def _set_global_theta(self):
+        assert not(self.steering_parameters['global_theta'] is not None and self.steering_parameters['global_theta_dist'] is not None), 'Conflict: global_theta and global_theta_dist are both specified. Please specify only one.'             
+        if self.steering_parameters['global_theta'] is not None:
+            assert len(self.steering_parameters['global_theta']) == self.config.step_target, 'When supplying a list of shocks, the length of global_theta must be equal to the step target.'
+            return torch.tensor(self.steering_parameters['global_theta'])
         else:
             return sample_distribution(
-                self.steering_parameters['model_theta_dist'].__dict__,
+                self.steering_parameters['global_theta_dist'].__dict__,
                 self.config.step_target
             )
 
@@ -298,7 +298,7 @@ class PovertyTrapModel(Model):
         self.initialize_agent_properties()
         self.graph = self.graph.to(self.config.device)
         print(f'{self.graph.number_of_nodes()} agents initialized on {self.graph.device} device')
-        self.steering_parameters['model_theta'] = self.steering_parameters['model_theta'].to(self.config.device)  # noqa: E501
+        self.steering_parameters['global_theta'] = self.steering_parameters['global_theta'].to(self.config.device)  # noqa: E501
 
         weight_update(
             self.graph,

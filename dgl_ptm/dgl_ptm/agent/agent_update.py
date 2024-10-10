@@ -48,7 +48,7 @@ def _agent_capital_update(model_graph,model_params,timestep):
     
 def _agent_theta_update(model_graph,model_params,timestep):
     '''Updates agent perception of theta based on observation and sensitivity'''
-    global_θ =model_params['model_theta'][timestep]
+    global_θ =model_params['global_theta'][timestep]
     model_graph.ndata['theta'] = model_graph.ndata['theta'] * (1-model_graph.ndata['sensitivity']) + global_θ * model_graph.ndata['sensitivity']
 
 def _agent_consumption_update(model_graph, model_params, timestep, device):
