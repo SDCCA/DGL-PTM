@@ -22,22 +22,56 @@ def data_collection(agent_graph,
         npath: path to store node data.
         epath: path to store edge data with one file for each timestep.
         ndata: node data properties to be stored.
-            ['all'] implies all node properties will be saved
+            [list] specifies node properties to be stored at every time step
+            ['all'] implies all node properties will be saved at every time step
+            ['all_except', [list]] specifies that all but the listed properties will be saved
+            ['initial_only', [list]] specifies properties saved at timestep 0 only
+            [list] and ['all_except', [list]] can be used with [initial_only, [list]]
+            formatted as [[specification list],[specification list]]
+            ['all'] should not be used together with any other specification
         edata: edge data properties to be stored.
             ['all'] implies all edge properties will be saved
         format: storage format
             ['xarray'] saves the properties in zarr format with xarray dataset
         mode: zarr write mode.
     """
-    if ndata is None or ndata == ['all']:
+    if ndata == ['all']:
         ndata = list(agent_graph.node_attr_schemes().keys())
-    if ndata[0] == 'all_except':
+    elif ndata[0] == 'all_except':
         ndata = list(agent_graph.node_attr_schemes().keys() - ndata[1])
-    if edata is None or edata == ['all']:
+    elif sum(1 for item in ndata if isinstance(item, list)) > 1:
+        ndata_list = ndata
+        initial_only=[]
+        for specification in ndata_list:
+            if specification == ['all']:
+                raise ValueError('Use of "all" is not compatible with multiple data collection specification lists.')
+            elif specification[0] == 'all_except':
+                ndata = list(agent_graph.node_attr_schemes().keys() - specification[1])
+            elif specification[0] == 'initial_only':
+                if timestep == 0:
+                    initial_only = specification[1]
+            else:
+                ndata = specification
+        
+    else:
+        raise ValueError('Invalid node data collection specification.')
+    
+    if edata == ['all']:
         edata = list(agent_graph.edge_attr_schemes().keys())
-
-    _node_property_collector(agent_graph, npath, ndata, timestep, format, mode)
-    _edge_property_collector(agent_graph, epath, edata, timestep, format, mode)
+    
+    if ndata == None:
+        if timestep == 0:
+            print("ATTENTION: No node data collection requested for this simulation!")
+    else:
+        if timestep == 0 and locals().get('initial_only', []) != []:
+            initialpath = npath.split('.')[0] + '_initial.zarr'
+            _node_property_collector(agent_graph, initialpath, initial_only, timestep, format, mode)
+        _node_property_collector(agent_graph, npath, ndata, timestep, format, mode)
+    if edata == None:
+        if timestep == 0:
+            print("ATTENTION: No edge data collection requested for this simulation!")
+    else:
+        _edge_property_collector(agent_graph, epath, edata, timestep, format, mode)
 
 
 def _node_property_collector(agent_graph, npath, ndata, timestep, format, mode):
@@ -57,7 +91,7 @@ def _node_property_collector(agent_graph, npath, ndata, timestep, format, mode):
             else:
                 agent_data_instance.to_zarr(npath, append_dim='n_time')
         else:
-            raise NotImplementedError("Only 'xarray' format currrent available")
+            raise NotImplementedError("Only 'xarray' format currently available")
     else:
         raise NotImplementedError(
             "Data collection currently only implemented for pytorch backend"
@@ -84,7 +118,7 @@ def _edge_property_collector(agent_graph, epath, edata, timestep, format, mode):
                     )
             edge_data_instance.to_zarr(Path(epath)/(str(timestep)+'.zarr'), mode = mode)
         else:
-            raise NotImplementedError("Only 'xarray' mode currrent available")
+            raise NotImplementedError("Only 'xarray' mode current available")
     else:
         raise NotImplementedError(
             "Data collection currently only implemented for pytorch backend"

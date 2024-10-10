@@ -17,9 +17,10 @@ def model():
 
 class TestTradeMoney:
     def test_trade_money_weighted_transfer(self, model):
+        expected_disposable_wealth = model.graph.ndata['lambda'] * model.graph.ndata['wealth']
+
         trade_money(model.graph, 'cpu', 'weighted_transfer')
 
-        expected_disposable_wealth = model.graph.ndata['lambda'] * model.graph.ndata['wealth']
         assert (model.graph.ndata['disposable_wealth'] == expected_disposable_wealth).all()
 
         # assert keys are present in graph
@@ -28,9 +29,10 @@ class TestTradeMoney:
         assert 'disposable_wealth' in model.graph.ndata
 
     def test_trade_money_singular_transfer(self, model):
+        expected_disposable_wealth = model.graph.ndata['lambda'] * model.graph.ndata['wealth']
+
         trade_money(model.graph, 'cpu', 'singular_transfer')
 
-        expected_disposable_wealth = model.graph.ndata['lambda'] * model.graph.ndata['wealth']
         assert (model.graph.ndata['disposable_wealth'] == expected_disposable_wealth).all()
 
         # assert keys are present in graph

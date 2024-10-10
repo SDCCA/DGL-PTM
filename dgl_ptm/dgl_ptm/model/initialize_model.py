@@ -13,7 +13,7 @@ from dgl_ptm.agentInteraction.weight_update import weight_update
 from dgl_ptm.config import CONFIG, Config
 from dgl_ptm.model.step import ptm_step
 from dgl_ptm.network.network_creation import network_creation
-from dgl_ptm.util.network_metrics import average_degree
+from dgl_ptm.util.network_metrics import average_degree, average_weighted_degree, node_degree, node_weighted_degree
 
 # Set the seed of the random number generator
 # this is global and will affect all random number generators
@@ -73,7 +73,9 @@ def sample_distribution_tensor(type, dist_parameters, n_samples, round=False, de
         sample_ppf = torch.sqrt(torch.tensor(2.0)) * inverse_transform
 
         dist = dist_parameters[0] + dist_parameters[1] * sample_ppf
-
+    elif type == 'beta':
+        dist = torch.distributions.beta.Beta(dist_parameters[0], dist_parameters[1]
+            ).sample([n_samples])
     else:
         raise NotImplementedError(
             'Currently only uniform, normal, multinomial, and '
@@ -124,7 +126,7 @@ class Model:
 
     def create_network(self):
         """Create network connecting agents."""
-        raise NotImplementedError('network creaion is not implemented for this class.')
+        raise NotImplementedError('network creation is not implemented for this class.')
 
     def step(self):
         """Perform a single step of the model."""
@@ -225,6 +227,13 @@ class PovertyTrapModel(Model):
         for key, value in cfg_dict.items():
             setattr(self.config, key, value)
         self.steering_parameters = self.config.steering_parameters.__dict__
+        print (self.steering_parameters)
+        print("")
+        print (self.config.steering_parameters)
+
+        # Set model theta
+        self.config.steering_parameters.global_theta = self._set_global_theta()
+        self.steering_parameters['global_theta'] = self.config.steering_parameters.global_theta
 
         # Correct the paths
         self.model_dir = self.root_path / Path(self._model_identifier)
@@ -236,6 +245,17 @@ class PovertyTrapModel(Model):
 
         # Save updated config to yaml file.
         self.save_model_parameters(overwrite)
+
+    def _set_global_theta(self):
+        assert not(self.steering_parameters['global_theta'] is not None and self.steering_parameters['global_theta_dist'] is not None), 'Conflict: global_theta and global_theta_dist are both specified. Please specify only one.'             
+        if self.steering_parameters['global_theta'] is not None:
+            assert len(self.steering_parameters['global_theta']) == self.config.step_target, 'When supplying a list of shocks, the length of global_theta must be equal to the step target.'
+            return torch.tensor(self.steering_parameters['global_theta'])
+        else:
+            return sample_distribution(
+                self.steering_parameters['global_theta_dist'].__dict__,
+                self.config.step_target
+            )
 
     def initialize_model(self, restart = False):
         """Initialize a model.
@@ -272,12 +292,13 @@ class PovertyTrapModel(Model):
             self.step_count = self.inputs["step_count"]
         else:
             torch.manual_seed(self.config.seed)
+            print (f"Model torch seed set to {self.config.seed}")
 
         self.create_network()
         self.initialize_agent_properties()
         self.graph = self.graph.to(self.config.device)
-        self.initialize_model_properties()
-        self.steering_parameters['modelTheta'] = self.steering_parameters['modelTheta'].to(self.config.device)  # noqa: E501
+        print(f'{self.graph.number_of_nodes()} agents initialized on {self.graph.device} device')
+        self.steering_parameters['global_theta'] = self.steering_parameters['global_theta'].to(self.config.device)  # noqa: E501
 
         weight_update(
             self.graph,
@@ -292,7 +313,11 @@ class PovertyTrapModel(Model):
 
         # number of edges(links) in the network
         self.number_of_edges = self.graph.number_of_edges()
+        # Network Metrics
         self.average_degree = average_degree(self.graph)
+        self.average_weighted_degree = average_weighted_degree(self.graph)
+        self.graph.ndata['degree'] = node_degree(self.graph)
+        self.graph.ndata['weighted_degree'] = node_weighted_degree(self.graph)
 
     def create_network(self):
         """Create intial network connecting agents.
@@ -305,29 +330,6 @@ class PovertyTrapModel(Model):
             **self.config.initial_graph_args.__dict__
             )
         self.graph = agent_graph
-
-    def initialize_model_properties(self):
-        """Initialize model properties.
-
-        Values are initialized as tensors of length corresponding to number of
-        time steps.
-        """
-        model_theta = self._initialize_model_theta()
-        self.steering_parameters['modelTheta'] = model_theta
-        #attachProb = self._initialize_attach_prob()
-        #self.steering_parameters['attachProb'] = attachProb
-
-    def _initialize_model_theta(self):
-        return sample_distribution(
-            self.steering_parameters['m_theta_dist'].__dict__,
-            self.config.step_target
-            )
-
-    def _initialize_attach_prob(self):
-        return sample_distribution(
-            self.steering_parameters['m_attach_dist'].__dict__,
-            self.config.step_target
-            )
 
     def initialize_agent_properties(self):
         """Initialize and assign agent properties.
@@ -361,6 +363,9 @@ class PovertyTrapModel(Model):
             self.graph.ndata['wealth_consumption'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['i_a'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['m'] = torch.zeros(self.graph.num_nodes())
+            self.graph.ndata['net_trade'] = torch.zeros(self.graph.num_nodes())
+            self.graph.ndata['degree'] = torch.zeros(self.graph.num_nodes())
+            self.graph.ndata['weighted_degree'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['zeros'] = torch.zeros(self.graph.num_nodes())
             self.graph.ndata['ones'] = torch.ones(self.graph.num_nodes())
         else:

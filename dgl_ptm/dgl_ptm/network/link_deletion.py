@@ -63,7 +63,10 @@ def _select_edges(agent_graph, method: str, threshold: float):
     elif method == "weighted":
         mask_edges = ((1.-agent_graph.edata['weight']) * torch.rand(upper_triangular.val.size()[0])) < threshold
     elif method == "size":
-        mask_edges = torch.randperm(upper_triangular.val.size()[0]) < threshold
+        mask_edges = torch.zeros(upper_triangular.val.size()[0]).bool()
+        random_order = torch.rand(upper_triangular.val.size()[0])
+        _, random_edges = torch.sort(random_order)
+        mask_edges[random_edges[0:threshold]] = True
     elif method == "multinomial":
         mask_edges = torch.zeros(upper_triangular.val.size()[0])
         eid = (1.-agent_graph.edata['weight']).multinomial(threshold, replacement=False)

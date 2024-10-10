@@ -6,66 +6,70 @@ providing a yaml file or a dictionary. The keys and values are validated by
 pydantic which is a data validation library.
 """
 
-from pydantic import BaseModel, Field, field_validator, ConfigDict, PositiveInt
-from typing import List, Optional, Union
-import torch
-from pathlib import Path
-import yaml
 import logging
+from pathlib import Path
+
+import torch
+import yaml
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, field_validator, typing
 
 logger = logging.getLogger(__name__)
 
 class MThetaDist(BaseModel):
-    """Base class for m_theta distribution."""
+    """Base class for global_theta distribution."""
     type: str = "multinomial"
-    parameters: List[List[float]] = [[0.02, 0.03, 0.05, 0.9], [0.7, 0.8, 0.9, 1]]
+    parameters: list[int | float | list[int | float]] = [[0.02, 0.03, 0.05, 0.9], [0.7, 0.8, 0.9, 1]]
     round: bool = False
-    decimals: Optional[int] = None
+    decimals: int | None = None
 
     @field_validator("parameters")
-    def _convert_parameters(cls, v):
-        for i in v:
-            if not isinstance(i, list):
-                raise TypeError("parameters must be a list of lists")
-        return [torch.tensor(i) for i in v]
+    def _convert_parameters(cls, v, values):
+        if values.data["type"] == "multinomial":
+            for i in v:
+                if not isinstance(i, list):
+                    raise TypeError("multinomial parameters must be a list of lists")
+            return [torch.tensor(i) for i in v]
+        else:
+            return torch.tensor(v)
 
     # Make sure pydantic validates the default values
     model_config = ConfigDict(validate_default = True)
 
 
 class SteeringParams(BaseModel):
-    """
-    Base class for steering parameters.
+    """Base class for steering parameters.
     These are the parameters used within each step of the model.
     """
-    edata: List[str] = ["all"]
+    edata: list[str] | None = ["all"]
     epath: str = "./edge_data"
     format: str = "xarray"
     mode: str = "w"
-    ndata: List[Union[str, List[str]]] = ["all_except", ["a_table"]]
+    ndata: list[str | list[str | list[str]]] | None = ["all_except", ["a_table"]]
     npath: str = "./agent_data.zarr"
-    wealth_method: str = "singular_transfer"
+    capital_method: str = "present_shock"
+    trade_method: str = "singular_transfer"
     income_method: str = "income_generation"
     consume_method: str = "fitted_consumption"
-    nn_path: Optional[str] = "default"
+    nn_path: str | None = "default"
     capital_update_method: str = "default"
-    characteristic_distance: Union[int,float] = 35
-    homophily_parameter: Union[int,float] = 0.69
-    adapt_m: List[float] = [0.0, 0.5, 0.9]
-    adapt_cost: List[float] = [0.0, 0.25, 0.45]
+    characteristic_distance: int | float = 35
+    homophily_parameter: int | float = 0.69
+    adapt_m: list[float] = [0.0, 0.5, 0.9]
+    adapt_cost: list[float] = [0.0, 0.25, 0.45]
     depreciation: float = 0.6
     discount: float = 0.95
-    m_theta_dist: MThetaDist = MThetaDist()
-    tech_gamma: List[float] = [0.3, 0.35, 0.45]
-    tech_cost: List[float] = [0.0, 0.15, 0.65]
+    global_theta: list[float] | None = None 
+    global_theta_dist: MThetaDist | None = MThetaDist()
+    tech_gamma: list[float] = [0.3, 0.35, 0.45]
+    tech_cost: list[float] = [0.0, 0.15, 0.65]
     del_method: str = "probability"
-    del_threshold: Optional[Union[int, float]] = 0.05
+    del_threshold: int | float | None | typing.Literal["balance"] = 0.05
     noise_ratio: float = 0.05
     local_ratio: float = 0.25
     truncation_weight: float = 1.0e-10
     step_type: str = "default"
     data_collection_period: int = 1
-    data_collection_list: Optional[List[int]] = None
+    data_collection_list: list[int] | None = None
 
     @field_validator("adapt_m")
     def _convert_adapt_m(cls, v):
@@ -97,9 +101,9 @@ class InitialGraphArgs(BaseModel):
 class AlphaDist(BaseModel):
     """Base class for alpha distribution."""
     type: str = "normal"
-    parameters: List[float] = [1.08, 0.074]
+    parameters: list[float] = [1.08, 0.074]
     round: bool = False
-    decimals: Optional[int] = None
+    decimals: int | None = None
 
     @field_validator("parameters")
     def _convert_parameters(cls, v):
@@ -112,9 +116,9 @@ class AlphaDist(BaseModel):
 class CapitalDist(BaseModel):
     """Base class for capital distribution."""
     type: str = "uniform"
-    parameters: List[float] = [0., 1.0]
+    parameters: list[float] = [0., 1.0]
     round: bool = False
-    decimals: Optional[int] = None
+    decimals: int | None = None
 
     @field_validator("parameters")
     def _convert_parameters(cls, v):
@@ -127,9 +131,9 @@ class CapitalDist(BaseModel):
 class LambdaDist(BaseModel):
     """Base class for lambda distribution."""
     type: str = "uniform"
-    parameters: List[float] = [0.1, 0.9]
+    parameters: list[float] = [0.1, 0.9]
     round: bool = True
-    decimals: Optional[int] = 1
+    decimals: int | None = 1
 
     @field_validator("parameters")
     def _convert_parameters(cls, v):
@@ -142,9 +146,9 @@ class LambdaDist(BaseModel):
 class SigmaDist(BaseModel):
     """Base class for sigma distribution."""
     type: str = "uniform"
-    parameters: List[float] = [0.1, 1.9]
+    parameters: list[float] = [0.1, 1.9]
     round: bool = True
-    decimals: Optional[int] = 1
+    decimals: int | None = 1
 
     @field_validator("parameters")
     def _convert_parameters(cls, v):
@@ -157,9 +161,9 @@ class SigmaDist(BaseModel):
 class TechnologyDist(BaseModel):
     """Base class for technology distribution."""
     type: str = "bernoulli"
-    parameters: List[Union[float, None]] = [0.5, None]
+    parameters: list[float | None] = [0.5, None]
     round: bool = False
-    decimals: Optional[int] = None
+    decimals: int | None = None
 
     @field_validator("parameters")
     def _convert_parameters(cls, v):
@@ -172,9 +176,9 @@ class TechnologyDist(BaseModel):
 class AThetaDist(BaseModel):
     """Base class for a_theta distribution."""
     type: str = "uniform"
-    parameters: List[float] = [0.1, 1.0]
+    parameters: list[float] = [0.1, 1.0]
     round: bool = False
-    decimals: Optional[int] = None
+    decimals: int | None = None
 
     @field_validator("parameters")
     def _convert_parameters(cls, v):
@@ -187,9 +191,9 @@ class AThetaDist(BaseModel):
 class SensitivityDist(BaseModel):
     """Base class for sensitivity distribution."""
     type: str = "uniform"
-    parameters: List[float] = [0.0, 1.0]
+    parameters: list[float] = [0.0, 1.0]
     round: bool = False
-    decimals: Optional[int] = None
+    decimals: int | None = None
 
     @field_validator("parameters")
     def _convert_parameters(cls, v):
@@ -200,8 +204,7 @@ class SensitivityDist(BaseModel):
 
 
 class Config(BaseModel):
-    """
-    Base class for configuration parameters.
+    """Base class for configuration parameters.
     These are the parameters used by the overarching process.
     """
     model_identifier: str = Field("test", alias='_model_identifier') # because pydantic does not like underscores
@@ -213,7 +216,7 @@ class Config(BaseModel):
     initial_graph_args: InitialGraphArgs = InitialGraphArgs()
     step_target: PositiveInt = 5
     checkpoint_period: int = 10
-    milestones: Optional[List[PositiveInt]] = None
+    milestones: list[PositiveInt] | None = None
     steering_parameters: SteeringParams = SteeringParams()
     alpha_dist: AlphaDist = AlphaDist()
     capital_dist: CapitalDist = CapitalDist()
@@ -244,7 +247,7 @@ class Config(BaseModel):
         if not Path(config_file).exists():
             raise FileNotFoundError(f"Config file {config_file} not found.")
 
-        with open(config_file, "r") as f:
+        with open(config_file) as f:
             try:
                 cfg = yaml.safe_load(f)
             except yaml.YAMLError as exc:
@@ -270,7 +273,7 @@ class Config(BaseModel):
             for key, value in nested_dict.items():
                 if isinstance(value, torch.Tensor):
                     nested_dict[key] = value.tolist()
-                elif isinstance(value, List):
+                elif isinstance(value, list):
                     nested_dict[key] = [
                         i.tolist() if isinstance(i, torch.Tensor) else i for i in value
                         ]
