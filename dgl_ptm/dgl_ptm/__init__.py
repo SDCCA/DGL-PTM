@@ -9,9 +9,9 @@ import logging
 from dgl_ptm import config
 
 #from dgl_ptm.model import initialize_model, step
-from dgl_ptm.model.initialize_model import PovertyTrapModel
+from dgl_ptm.model.initialize_model import PovertyTrapModel, SEIRModel
 
-__all__ = ['config', 'PovertyTrapModel']
+__all__ = ['config', 'PovertyTrapModel', 'SEIRModel']
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 

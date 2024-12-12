@@ -17,7 +17,7 @@ This repository is set up with Python versions:
 - 3.9
 
 Add or remove Python versions based on project requirements. See [the
-guide](https://guide.esciencecenter.nl/#/best_practices/language_guides/python) for more information about Python
+guide](https://guide.esciencecenter.nl/#/language_guides/python) for more information about Python
 versions.
 
 ## Package management and dependencies
@@ -25,7 +25,7 @@ versions.
 You can use either pip or conda for installing dependencies and package management. This repository does not force you
 to use one or the other, as project requirements differ. For advice on what to use, please check [the relevant section
 of the
-guide](https://guide.esciencecenter.nl/#/best_practices/language_guides/python?id=dependencies-and-package-management).
+guide](https://guide.esciencecenter.nl/#/language_guides/python?id=dependencies-and-package-management).
 
 - Runtime dependencies should be added to `setup.cfg` in the `install_requires` list under `[options]`.
 - Development dependencies should be added to `setup.cfg` in one of the lists under `[options.extras_require]`.
@@ -33,7 +33,7 @@ guide](https://guide.esciencecenter.nl/#/best_practices/language_guides/python?i
 ## Packaging/One command install
 
 You can distribute your code using PyPI.
-[The guide](https://guide.esciencecenter.nl/#/best_practices/language_guides/python?id=building-and-packaging-code) can
+[The guide](https://guide.esciencecenter.nl/#/language_guides/python?id=building-and-packaging-code) can
 help you decide which tool to use for packaging.
 
 ## Testing and code coverage
@@ -63,7 +63,7 @@ help you decide which tool to use for packaging.
 
 ## Coding style conventions and code quality
 
-- [Relevant section in the NLeSC guide](https://guide.esciencecenter.nl/#/best_practices/language_guides/python?id=coding-style-conventions) and [README.dev.md](README.dev.md).
+- [Relevant section in the NLeSC guide](https://guide.esciencecenter.nl/#/language_guides/python?id=coding-style-conventions) and [README.dev.md](README.dev.md).
 
 ## Continuous code quality
 
@@ -82,7 +82,7 @@ help you decide which tool to use for packaging.
 
 - We recommend using the logging module for getting useful information from your module (instead of using print).
 - The project is set up with a logging example.
-- [Relevant section in the guide](https://guide.esciencecenter.nl/#/best_practices/language_guides/python?id=logging)
+- [Relevant section in the guide](https://guide.esciencecenter.nl/#/language_guides/python?id=logging)
 
 ## CHANGELOG.md
 
@@ -93,7 +93,7 @@ help you decide which tool to use for packaging.
 
 - To allow others to cite your software, add a `CITATION.cff` file
 - It only makes sense to do this once there is something to cite (e.g., a software release with a DOI).
-- Follow the [making software citable](https://guide.esciencecenter.nl/#/citable_software/making_software_citable) section in the guide.
+- Follow the [making software citable](https://guide.esciencecenter.nl/#/best_practices/documentation?id=software-citation) section in the guide.
 
 ## CODE_OF_CONDUCT.md
 
@@ -108,7 +108,7 @@ help you decide which tool to use for packaging.
 ## MANIFEST.in
 
 - List non-Python files that should be included in a source distribution
-- [Relevant section in the guide](https://guide.esciencecenter.nl/#/best_practices/language_guides/python?id=building-and-packaging-code)
+- [Relevant section in the guide](https://guide.esciencecenter.nl/#/language_guides/python?id=building-and-packaging-code)
 
 ## NOTICE
 

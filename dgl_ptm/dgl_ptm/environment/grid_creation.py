@@ -84,7 +84,7 @@ def grid_creation(**kwargs):
     elif kwargs['method'] == 'custom_import':
         path = kwargs['path']
         properties = kwargs['properties']
-        if path.endswith('.np'):
+        if path.endswith('.np') or path.endswith('.npy'):
             grid = torch.from_numpy(np.load(path))
         elif path.endswith('.pt'):
             grid = torch.load(path)

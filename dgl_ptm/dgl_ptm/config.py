@@ -11,7 +11,7 @@ from pathlib import Path
 
 import torch
 import yaml
-from pydantic import BaseModel, ConfigDict, Field, PositiveInt, field_validator, typing, RootModel,validator
+from pydantic import BaseModel, ConfigDict, Field, PositiveInt, field_validator, typing, RootModel, validator
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +47,19 @@ class HomophilyDict(RootModel[dict[str, HomophilyDictEntry]]):
     # Ensure default values are validated
     model_config = ConfigDict(validate_default=True)
 
+class SteeringParamsSEIR(BaseModel):
+    npath: str = "./agent_data.zarr"
+    epath: str = "./edge_data"
+    ndata: list[str | list[str | list[str]]] | None = ["all_except", ["a_table"]]
+    edata: list[str] | None = ["all"]
+    mode: str = "w"
+    infection_probability: float = 0.2,
+    incubation_period: int = 5,
+    infections_period: int = 3,
+    initial_infected_proportion: float = 0.03,
+    step_type: str = "default"
+    data_collection_period: int = 1
+    data_collection_list: list[int] | None = None    
 
 class SteeringParams(BaseModel):
     """Base class for steering parameters.
@@ -251,6 +264,60 @@ class SensitivityDist(BaseModel):
     # Make sure pydantic validates the default values
     model_config = ConfigDict(validate_default = True)
 
+class SEIRConfig(BaseModel):
+    """Base class for SEIR model parameters."""
+    model_identifier: str = Field("test", alias='_model_identifier') # because pydantic does not like underscores
+    description: str = "" # Never used to influence processing. This value is meant purely to add a description to identify a parameter setting.
+    device: str = "cpu"
+    seed: int = 42
+    number_agents: PositiveInt = 100
+    spatial: bool = False
+    spatial_creation_args: GridCreationParams = GridCreationParams()
+    spatial_assignment_args: GridAssignmentParams = GridAssignmentParams()
+    initial_graph_type: str = "barabasi-albert"
+    initial_graph_args: InitialGraphArgs = InitialGraphArgs()
+    step_target: PositiveInt = 5
+    steering_parameters: SteeringParamsSEIR = SteeringParamsSEIR()
+    checkpoint_period: int = 10
+    milestones: list[PositiveInt] | None = None
+    model_config = ConfigDict(
+        validate_default = True,
+        protected_namespaces = (), # because _model is a protected namespace
+        populate_by_name = True,
+        validate_assignment = True,
+        extra = "forbid",
+    )
+
+    @classmethod
+    def from_dict(cls, cfg):
+        """Read configs from a dict."""
+        if not isinstance(cfg, dict):
+            raise TypeError("Input must be a dictionary.")
+        return cls(**cfg)
+    
+    def to_yaml(self, config_file):
+        """Write configs to a yaml config_file."""
+        if Path(config_file).exists():
+            logger.warning(f"Overwriting config file {config_file}.")
+
+        cfg = self.model_dump(by_alias=True, warnings=False)
+
+        # if there are tensors, convert them to lists before saving
+        def _convert_value(nested_dict):
+            for key, value in nested_dict.items():
+                if isinstance(value, torch.Tensor):
+                    nested_dict[key] = value.tolist()
+                elif isinstance(value, list):
+                    nested_dict[key] = [
+                        i.tolist() if isinstance(i, torch.Tensor) else i for i in value
+                        ]
+                elif isinstance(value, dict):
+                    nested_dict[key] = _convert_value(value)
+            return nested_dict
+
+        cfg = _convert_value(cfg)
+        with open(config_file, "w") as f:
+            yaml.dump(cfg, f, sort_keys=False)
 
 class Config(BaseModel):
     """Base class for configuration parameters.
@@ -338,3 +405,4 @@ class Config(BaseModel):
             yaml.dump(cfg, f, sort_keys=False)
 
 CONFIG = Config()
+SEIRCONFIG = SEIRConfig()

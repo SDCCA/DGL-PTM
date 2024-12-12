@@ -10,7 +10,7 @@ import torch
 from dgl.data.utils import load_graphs, save_graphs
 
 from dgl_ptm.agentInteraction.weight_update import weight_update
-from dgl_ptm.config import CONFIG, Config
+from dgl_ptm.config import CONFIG, Config, SEIRCONFIG, SEIRConfig
 from dgl_ptm.model.step import ptm_step
 from dgl_ptm.network.network_creation import network_creation
 from dgl_ptm.util.network_metrics import average_degree, average_weighted_degree, node_degree, node_weighted_degree
@@ -56,6 +56,16 @@ class Model:
         # (whether restoring a run after a crash or continuing from a milestone).
         self.step_count = 0
 
+    def save_model_parameters(self, overwrite = False):
+        """Save model parameters to a yaml file."""
+        cfg_filename = f'{self.model_dir}/{self._model_identifier}_{self.step_count}'
+        if overwrite:
+            cfg_filename = f'{cfg_filename}.yaml'
+        else:
+            cfg_filename = _make_path_unique(cfg_filename, '.yaml')
+        self.config.to_yaml(cfg_filename)
+        logger.warning(f'The model parameters are saved to {cfg_filename}.')
+
     def create_network(self):
         """Create network connecting agents."""
         raise NotImplementedError('network creation is not implemented for this class.')
@@ -92,16 +102,6 @@ class PovertyTrapModel(Model):
         # Process version.
         version_path = Path(__file__).resolve().parents[2] / 'version.md'
         self.version = version_path.read_text().splitlines()[0]
-
-    def save_model_parameters(self, overwrite = False):
-        """Save model parameters to a yaml file."""
-        cfg_filename = f'{self.model_dir}/{self._model_identifier}_{self.step_count}'
-        if overwrite:
-            cfg_filename = f'{cfg_filename}.yaml'
-        else:
-            cfg_filename = _make_path_unique(cfg_filename, '.yaml')
-        self.config.to_yaml(cfg_filename)
-        logger.warning(f'The model parameters are saved to {cfg_filename}.')
 
     def set_model_parameters(self, *, parameter_file_path=None, overwrite = False, **kwargs):  # noqa: E501
         """Load or set model parameters.
@@ -498,6 +498,232 @@ class PovertyTrapModel(Model):
         self.step_first = self.step_count
         while self.step_count < self.config.step_target:
             self.step()
+
+class SEIRModel(Model):
+
+    def __init__(self, *, model_identifier, root_path = '.'):
+        """Create a new PVT model instance.
+
+        Checks whether a model identifier has been specified.
+
+        param: model_identifier: str, required. Identifier for the model. Used
+        to save and load model states.
+        param: root_path: str, optional. Root path where to store the model data
+        and states.
+        """
+        super().__init__(model_identifier = model_identifier, root_path = root_path)
+
+        # Attach config.
+        self.config = copy.deepcopy(SEIRCONFIG)
+        self.steering_parameters = self.config.steering_parameters.__dict__
+        self.graph = None
+        self.step_first = -1
+
+        # Process version.
+        version_path = Path(__file__).resolve().parents[2] / 'version.md'
+        self.version = version_path.read_text().splitlines()[0]
+
+    def set_model_parameters(self, *, parameter_file_path=None, overwrite = False, **kwargs):  # noqa: E501
+        """Load or set model parameters.
+
+        :param parameterFlePath: optional, path to parameter file. If not,
+            default values are used.
+        :param **kwargs: flexible passing of mode parameters. Only those
+                         supported by the model are accepted. If parameters are
+                         passed, non-specifed parameters will be set with
+                         defaults.
+
+        """
+        cfg = SEIRCONFIG # default values
+
+        if parameter_file_path:
+            cfg = Config.from_yaml(parameter_file_path)
+            if kwargs:
+                # if both parameter_file_path and kwargs are set, combine them
+                # into one. if fields are duplicated, kwargs will overwrite
+                # parameter_file_path
+                for key, value in kwargs.items():
+                    if isinstance(value, dict):
+                        # Special recursive case for steering_parameters: this
+                        # makes sure to append to, not overwrite, the steering
+                        # parameters.
+                        for subkey, subvalue in value.items():
+                            setattr(cfg.__dict__[key], subkey, subvalue)
+                    else:
+                        setattr(cfg, key, value)
+                logger.warning(
+                    'model parameters have been provided via '
+                    'parameter_file_path and **kwargs. '
+                    '**kwargs will overwrite parameter_file_path'
+                    )
+        elif kwargs:
+            cfg = SEIRConfig.from_dict(kwargs)
+
+        if parameter_file_path is None and not kwargs:
+            logger.warning(
+                'no model parameters have been provided, Default values are used'
+                )
+
+        if cfg.model_identifier != self._model_identifier:
+            logger.warning(
+                f'A model identifier has been set as "{self._model_identifier}". '
+                f'But the identifier "{cfg.model_identifier}" is provided by default. '
+                f'The identifier "{self._model_identifier}" will be used.'
+                )
+
+        # see config.py for why cfg.model_identifier
+        cfg.model_identifier = self._model_identifier
+        self.config.model_identifier = self._model_identifier
+
+        # update model parameters/ attributes
+        cfg_dict = cfg.model_dump(by_alias=True, warnings=False)
+        for key, value in cfg_dict.items():
+            setattr(self.config, key, value)
+        self.steering_parameters = self.config.steering_parameters.__dict__
+        print (self.steering_parameters)
+        print("")
+        print (self.config.steering_parameters)
+
+        # Correct the paths
+        self.model_dir = self.root_path / Path(self._model_identifier)
+        self.model_dir.mkdir(parents=True, exist_ok=True)
+        npath = Path(self.config.steering_parameters.npath)
+        self.steering_parameters['npath'] = str(self.model_dir / npath)
+        epath = Path(self.config.steering_parameters.epath)
+        self.steering_parameters['epath'] = str(self.model_dir / epath)
+
+        # Save updated config to yaml file.
+        self.save_model_parameters(overwrite=True)
+
+    def initialize_model(self, restart = False):
+        """Initialize a model.
+
+        It creates network and initialize agent properties in correct order.
+
+        Params:
+            restart: boolean or a pair of ints, optional.
+            If True, the model is initialized from the last checkpoint,
+            if a pair of ints, the model is initialized at that step from that
+            milestone,
+            e.g (2,0) would be the first milestone at step 2
+            and (2,1) would be the second milestone at step 2.
+            Default False.
+        """
+        self.inputs = None
+        if isinstance(restart, bool):
+            if restart:
+                logger.info(f'Loading model state from checkpoint: {self.model_dir}')
+                self.inputs = _load_model(self.model_dir)
+        elif isinstance(restart, tuple):
+            milestone_dir = None
+            if restart[1] == 0:
+                milestone_dir = f'{self.model_dir}/milestone_{restart[0]}'
+            else:
+                milestone_dir = f'{self.model_dir}/milestone_{restart[0]}_{restart[1]}'
+            logger.info(f'Loading model state from milestone: {milestone_dir}')
+            self.inputs = _load_model(milestone_dir)
+
+        if self.inputs:
+            self.graph = copy.deepcopy(self.inputs["graph"])
+            self.generator_state = self.inputs["generator_state"]
+            generator.set_state(self.generator_state)
+            self.step_count = self.inputs["step_count"]
+        else:
+            torch.manual_seed(self.config.seed)
+            print (f"Model torch seed set to {self.config.seed}")
+
+        self.create_network()
+        if self.config.spatial:
+            self.create_grid()
+            self.place_agents()
+        print(self.graph.ndata['x'])
+        print(self.graph.ndata['y'])
+
+        self.initialize_global_properties()
+        self.initialize_agent_properties()
+        self.graph = self.graph.to(self.config.device)
+
+        print(f'{self.graph.number_of_nodes()} agents initialized on {self.graph.device} device')
+
+        # TODO: RESUME DEBUGGING HERE!
+        weight_update(
+            self.graph,
+            self.config.device,
+            self.steering_parameters['homophily_parameter'],
+            self.steering_parameters['characteristic_distance'],
+            self.steering_parameters['truncation_weight']
+            )
+
+        # store random generator state
+        self.generator_state = generator.get_state()
+
+        # number of edges(links) in the network
+        self.number_of_edges = self.graph.number_of_edges()
+        # Network Metrics
+        self.average_degree = average_degree(self.graph)
+        self.average_weighted_degree = average_weighted_degree(self.graph)
+        self.graph.ndata['degree'] = node_degree(self.graph)
+        self.graph.ndata['weighted_degree'] = node_weighted_degree(self.graph)
+
+    def create_network(self):
+        """Create intial network connecting agents.
+
+        Makes use of intial graph type specified as model parameter.
+        """
+        agent_graph = network_creation(
+            self.config.number_agents,
+            self.config.initial_graph_type,
+            **self.config.initial_graph_args.__dict__
+            )
+        self.graph = agent_graph
+
+    def create_grid(self):
+        grid_environment = grid_creation(
+            **self.config.spatial_creation_args.__dict__
+        )
+        self.grid_environment = grid_environment
+
+    def place_agents(self):
+        self.graph.ndata['x'] = torch.zeros(self.graph.num_nodes()).float()
+        self.graph.ndata['y'] = torch.zeros(self.graph.num_nodes()).float()
+        grid_assignment(self.graph, self.grid_environment, **self.config.spatial_assignment_args.__dict__)
+
+    def initialize_global_properties(self):
+        """Initialize global properties/values of the model.
+
+        Note: Global properties are initialized as tensors of length 
+        corresponding to number of steps; global_theta is recorded in 
+        the config file.
+        """
+        # Record params in config yaml file.
+        self.save_model_parameters(overwrite=True)
+
+    def initialize_agent_properties(self):
+        """Initialize and assign agent properties.
+
+        Note: agents are represented as nodes of the model graph.
+        Values are initialized as tensors of length corresponding to number of
+        agents, with values subsequently being assigned to the nodes.
+        """
+        agents_compartment = self._initialize_agents_compartment()
+        if isinstance(self.graph, dgl.DGLGraph):
+            self.graph.ndata["compartment"] = agents_compartment
+        else:
+            raise RuntimeError(
+                'model graph must be a defined as DGLgraph object. '
+                'Consider running `create_network` before initializing '
+                'agent properties.'
+                )
+        
+    def _initialize_agents_compartment(self):
+        proportion = self.steering_parameters["initial_infected_proportion"]
+        if not 0 < proportion < 1.0: 
+            raise ValueError("Initial infected proportion must be between 0 and 1.")
+        num_infected = round(self.graph.num_nodes() * proportion)
+        tensor = torch.zeros(self.graph.num_nodes(), dtype=torch.int)
+        indices = torch.randperm(self.graph.num_nodes())[:num_infected]
+        tensor[indices] = 2
+        return tensor
 
 def _make_path_unique(path, extension = ''):
     """Check whether a path already exists and make it unique if it does.
