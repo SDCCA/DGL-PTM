@@ -165,3 +165,17 @@ def ptm_step(agent_graph, device, timestep, params):
             edata = params['edata'],
             mode = params['mode']
             )
+
+def sveir_step(agent_graph, device, timestep, params):
+    """Step - time-stepping module for the SVEIR model.
+
+    Args:
+        agent_graph: DGLGraph with agent nodes and edges connecting agents
+        device: Device to run the model on, e.g. 'cpu' or 'cuda'
+        timestep: Current time step
+        params: List of user-defined parameters
+
+    Output:
+        agent_graph: Updated agent_graph after one step of functional manipulation
+    """
+    pass

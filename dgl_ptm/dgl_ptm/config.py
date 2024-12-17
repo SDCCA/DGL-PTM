@@ -47,16 +47,18 @@ class HomophilyDict(RootModel[dict[str, HomophilyDictEntry]]):
     # Ensure default values are validated
     model_config = ConfigDict(validate_default=True)
 
-class SteeringParamsSEIR(BaseModel):
+class SteeringParamsSVEIR(BaseModel):
     npath: str = "./agent_data.zarr"
     epath: str = "./edge_data"
     ndata: list[str | list[str | list[str]]] | None = ["all_except", ["a_table"]]
     edata: list[str] | None = ["all"]
     mode: str = "w"
-    infection_probability: float = 0.2,
-    incubation_period: int = 5,
-    infections_period: int = 3,
-    initial_infected_proportion: float = 0.03,
+    infection_probability: float = 0.2
+    incubation_period: int = 5
+    infections_period: int = 3
+    initial_infected_proportion: float = 0.03
+    truncation_weight: float = 1.0e-10
+    proximity_decay_rate: float = 0.5
     step_type: str = "default"
     data_collection_period: int = 1
     data_collection_list: list[int] | None = None    
@@ -264,8 +266,8 @@ class SensitivityDist(BaseModel):
     # Make sure pydantic validates the default values
     model_config = ConfigDict(validate_default = True)
 
-class SEIRConfig(BaseModel):
-    """Base class for SEIR model parameters."""
+class SVEIRConfig(BaseModel):
+    """Base class for SVEIR model parameters."""
     model_identifier: str = Field("test", alias='_model_identifier') # because pydantic does not like underscores
     description: str = "" # Never used to influence processing. This value is meant purely to add a description to identify a parameter setting.
     device: str = "cpu"
@@ -277,7 +279,7 @@ class SEIRConfig(BaseModel):
     initial_graph_type: str = "barabasi-albert"
     initial_graph_args: InitialGraphArgs = InitialGraphArgs()
     step_target: PositiveInt = 5
-    steering_parameters: SteeringParamsSEIR = SteeringParamsSEIR()
+    steering_parameters: SteeringParamsSVEIR = SteeringParamsSVEIR()
     checkpoint_period: int = 10
     milestones: list[PositiveInt] | None = None
     model_config = ConfigDict(
@@ -405,4 +407,4 @@ class Config(BaseModel):
             yaml.dump(cfg, f, sort_keys=False)
 
 CONFIG = Config()
-SEIRCONFIG = SEIRConfig()
+SVEIRCONFIG = SVEIRConfig()

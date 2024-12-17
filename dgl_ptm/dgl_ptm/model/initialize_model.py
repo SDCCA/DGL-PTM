@@ -9,9 +9,9 @@ import dgl
 import torch
 from dgl.data.utils import load_graphs, save_graphs
 
-from dgl_ptm.agentInteraction.weight_update import weight_update
-from dgl_ptm.config import CONFIG, Config, SEIRCONFIG, SEIRConfig
-from dgl_ptm.model.step import ptm_step
+from dgl_ptm.agentInteraction.weight_update import weight_update, weight_update_sveir
+from dgl_ptm.config import CONFIG, Config, SVEIRCONFIG, SVEIRConfig
+from dgl_ptm.model.step import ptm_step, sveir_step
 from dgl_ptm.network.network_creation import network_creation
 from dgl_ptm.util.network_metrics import average_degree, average_weighted_degree, node_degree, node_weighted_degree
 from dgl_ptm.environment.grid_creation import grid_creation
@@ -499,7 +499,7 @@ class PovertyTrapModel(Model):
         while self.step_count < self.config.step_target:
             self.step()
 
-class SEIRModel(Model):
+class SVEIRModel(Model):
 
     def __init__(self, *, model_identifier, root_path = '.'):
         """Create a new PVT model instance.
@@ -514,7 +514,7 @@ class SEIRModel(Model):
         super().__init__(model_identifier = model_identifier, root_path = root_path)
 
         # Attach config.
-        self.config = copy.deepcopy(SEIRCONFIG)
+        self.config = copy.deepcopy(SVEIRCONFIG)
         self.steering_parameters = self.config.steering_parameters.__dict__
         self.graph = None
         self.step_first = -1
@@ -534,7 +534,7 @@ class SEIRModel(Model):
                          defaults.
 
         """
-        cfg = SEIRCONFIG # default values
+        cfg = SVEIRCONFIG # default values
 
         if parameter_file_path:
             cfg = Config.from_yaml(parameter_file_path)
@@ -557,7 +557,7 @@ class SEIRModel(Model):
                     '**kwargs will overwrite parameter_file_path'
                     )
         elif kwargs:
-            cfg = SEIRConfig.from_dict(kwargs)
+            cfg = SVEIRConfig.from_dict(kwargs)
 
         if parameter_file_path is None and not kwargs:
             logger.warning(
@@ -580,9 +580,6 @@ class SEIRModel(Model):
         for key, value in cfg_dict.items():
             setattr(self.config, key, value)
         self.steering_parameters = self.config.steering_parameters.__dict__
-        print (self.steering_parameters)
-        print("")
-        print (self.config.steering_parameters)
 
         # Correct the paths
         self.model_dir = self.root_path / Path(self._model_identifier)
@@ -636,8 +633,6 @@ class SEIRModel(Model):
         if self.config.spatial:
             self.create_grid()
             self.place_agents()
-        print(self.graph.ndata['x'])
-        print(self.graph.ndata['y'])
 
         self.initialize_global_properties()
         self.initialize_agent_properties()
@@ -645,25 +640,98 @@ class SEIRModel(Model):
 
         print(f'{self.graph.number_of_nodes()} agents initialized on {self.graph.device} device')
 
-        # TODO: RESUME DEBUGGING HERE!
-        weight_update(
+        weight_update_sveir(
             self.graph,
             self.config.device,
-            self.steering_parameters['homophily_parameter'],
-            self.steering_parameters['characteristic_distance'],
+            self.steering_parameters['proximity_decay_rate'],
             self.steering_parameters['truncation_weight']
-            )
+        )
 
         # store random generator state
         self.generator_state = generator.get_state()
 
         # number of edges(links) in the network
         self.number_of_edges = self.graph.number_of_edges()
+
         # Network Metrics
         self.average_degree = average_degree(self.graph)
-        self.average_weighted_degree = average_weighted_degree(self.graph)
         self.graph.ndata['degree'] = node_degree(self.graph)
-        self.graph.ndata['weighted_degree'] = node_weighted_degree(self.graph)
+
+    def run(self):
+        """Run the model for each step until the step_target is reached."""
+        # Save config to yaml file.
+        self.save_model_parameters()
+
+        self.step_first = self.step_count
+        while self.step_count < self.config.step_target:
+            self.step()
+
+    def step(self):
+        """Perform a single step of the model.
+
+        After the step, the current state (graph, generator, step, and version)
+        may be saved:
+
+        The state can be saved with a fixed period (config.checkpoint_period) to
+        keep a restore point in case of a crash. Only the newest checkpoint is
+        retained.
+
+        The state can also be saved at specific steps (config.milestones) to
+        store specific (important) states. For example, specific states can be
+        stored to start multiple runs from the same state with different
+        parameters going forward. All milstones are retained. The first
+        milestone at each time step X is stored in the subdirectory
+        `./milestone_X`; any subsequent milestones at the same time step X are
+        stored in the subdirectory `./milestone_X_i` (where i is the instance).
+        """
+        try:
+            print(f'performing step {self.step_count} of {self.config.step_target}')
+            sveir_step(
+                self.graph,
+                self.config.device,
+                self.step_count,
+                self.steering_parameters
+                )
+        except Exception as e:
+            # TODO: Add model dump here.
+            # Also check against previous save to avoid overwriting
+            msg = f'Execution of step failed for step {self.step_count}'
+            raise RuntimeError(msg) from e
+
+        # save the model state every step reported by checkpoint_period and at
+        # specific milestones.
+        # checkpoint saves overwrite the previous checkpoint; milestone get
+        # unique folders.
+        # Note that milestones are not created at the first step of a run;
+        # this prevents duplicate saves when running from a milestone.
+        first_step = self.step_count == self.step_first
+        save_checkpoint = (
+            self.config.checkpoint_period > 0
+            and self.step_count % self.config.checkpoint_period == 0
+            )
+        save_milestone = (
+            self.config.milestones
+            and self.step_count in self.config.milestones and not first_step
+            )
+        if save_checkpoint or save_milestone:
+            self.inputs = {
+                'graph': copy.deepcopy(self.graph),
+                'generator_state': generator.get_state(),
+                'step_count': self.step_count,
+                'process_version': self.version
+            }
+
+            # Note that a sinlge step could be both a checkpoint and a milestone.
+            # The checkpoint could be necessary to restore a crashed process while
+            # the milestone is required output.
+            if save_checkpoint:
+                _save_model(self.model_dir, self.inputs)
+            if save_milestone:
+                path = f'{self.model_dir}/milestone_{self.step_count}'
+                milestone_path = _make_path_unique(path)
+                _save_model(milestone_path, self.inputs)
+
+        self.step_count +=1
 
     def create_network(self):
         """Create intial network connecting agents.
