@@ -4,7 +4,6 @@
 
 from dgl_ptm.agent.agent_update import agent_update
 from dgl_ptm.agentInteraction.trade_money import trade_money
-from dgl_ptm.agentInteraction.weight_update import weight_update
 from dgl_ptm.agentInteraction.weight_update import multi_property_weight_update
 from dgl_ptm.model.data_collection import data_collection
 from dgl_ptm.network.global_attachment import global_attachment
@@ -12,6 +11,7 @@ from dgl_ptm.network.link_deletion import link_deletion
 from dgl_ptm.network.local_attachment import local_attachment
 from dgl_ptm.network.local_attachment_basic_homophily import local_attachment_homophily
 from dgl_ptm.network.random_edge_noise import random_edge_noise
+from dgl_ptm.util.utils import sample_distribution_tensor
 
 def ptm_step(agent_graph, device, timestep, params):
     """Step - time-stepping module for the poverty-trap model.
@@ -178,4 +178,72 @@ def sveir_step(agent_graph, device, timestep, params):
     Output:
         agent_graph: Updated agent_graph after one step of functional manipulation
     """
-    pass
+    # map from compartment to index
+    m = {
+        "S":0,
+        "V":1,
+        "E":2,
+        "I":3,
+        "R":4
+    }
+
+    # random tensors
+    bounds = [0.0, 1.0]
+    num_nodes = agent_graph.num_nodes()
+    i_r_rng = sample_distribution_tensor('uniform', bounds, num_nodes)
+    s_r_rng = sample_distribution_tensor('uniform', bounds, num_nodes)
+    s_e_rng = sample_distribution_tensor('uniform', bounds, num_nodes)
+    v_e_rng = sample_distribution_tensor('uniform', bounds, num_nodes)
+
+    # increment exposure time
+    agent_graph.ndata["exposure_time"][agent_graph.ndata["compartments"]==m["E"]] += 1
+
+    # transition from Exposed to Infectious
+    exposed_to_infections = (agent_graph.ndata["compartments"]==m["E"]) & (agent_graph.ndata["exposure_time"] >= params["exposure_period"])
+    agent_graph.ndata["compartments"][exposed_to_infections] = m["I"]
+
+    # transition from Infectious to Recovered
+    infectious_to_recovered = (agent_graph.ndata["compartments"]==m["I"]) & (i_r_rng < params["recovery_rate"])
+    agent_graph.ndata["compartments"][infectious_to_recovered] = m["R"]
+
+    # transition from Susceptible to Vaccinated
+    susceptible_to_vaccinated = (agent_graph.ndata["compartments"]==m["S"]) & (s_r_rng < params["vaccination_rate"])
+    agent_graph.ndata["compartments"][susceptible_to_vaccinated] = m["V"]
+
+    # Transition from Susceptible to Exposed
+    susceptible_nodes = (agent_graph.ndata["compartments"] == m["S"]).nonzero(as_tuple=True)[0]
+    for node in susceptible_nodes:
+        neighbors = agent_graph.successors(node)
+        infected_neighbors = neighbors[agent_graph.ndata["compartments"][neighbors] == m["I"]]
+        if infected_neighbors.numel() > 0 and s_e_rng[node] < params["infection_probability"]:
+            agent_graph.ndata["compartments"][node] = m["E"]
+            agent_graph.ndata["exposure_time"][node] = 0
+
+    # Transition from Vaccinated to Exposed
+    vaccinated_nodes = (agent_graph.ndata["compartments"] == m["V"]).nonzero(as_tuple=True)[0]
+    for node in vaccinated_nodes:
+        neighbors = agent_graph.successors(node)
+        infected_neighbors = neighbors[agent_graph.ndata["compartments"][neighbors] == m["I"]]
+        if infected_neighbors.numel() > 0 and v_e_rng[node] < params["infection_probability"] * (1 - params["vaccine_efficacy"]):
+            agent_graph.ndata["compartments"][node] = m["E"]
+            agent_graph.ndata["exposure_time"][node] = 0
+
+    # Data can be collected periodically (every X steps) and/or at specified time steps.
+    do_periodical_data_collection = (
+        params['data_collection_period'] > 0
+        and timestep % params['data_collection_period'] == 0
+        )
+    do_specific_data_collection = (
+        params['data_collection_list']
+        and timestep in params['data_collection_list']
+        )
+    if do_periodical_data_collection or do_specific_data_collection:
+        data_collection(
+            agent_graph,
+            timestep = timestep,
+            npath = params['npath'],
+            epath = params['epath'],
+            ndata = params['ndata'],
+            edata = params['edata'],
+            mode = params['mode']
+        )

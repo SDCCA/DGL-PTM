@@ -774,15 +774,17 @@ class SVEIRModel(Model):
         agents, with values subsequently being assigned to the nodes.
         """
         agents_compartment = self._initialize_agents_compartment()
+        agents_exposure_time = self._initialize_agents_exposure_time()
         if isinstance(self.graph, dgl.DGLGraph):
-            self.graph.ndata["compartment"] = agents_compartment
+            self.graph.ndata["compartments"] = agents_compartment
+            self.graph.ndata["exposure_time"] = agents_exposure_time
         else:
             raise RuntimeError(
                 'model graph must be a defined as DGLgraph object. '
                 'Consider running `create_network` before initializing '
                 'agent properties.'
-                )
-        
+            )
+
     def _initialize_agents_compartment(self):
         proportion = self.steering_parameters["initial_infected_proportion"]
         if not 0 < proportion < 1.0: 
@@ -790,7 +792,11 @@ class SVEIRModel(Model):
         num_infected = round(self.graph.num_nodes() * proportion)
         tensor = torch.zeros(self.graph.num_nodes(), dtype=torch.int)
         indices = torch.randperm(self.graph.num_nodes())[:num_infected]
-        tensor[indices] = 2
+        tensor[indices] = 3
+        return tensor
+    
+    def _initialize_agents_exposure_time(self):
+        tensor = torch.zeros(self.graph.num_nodes(), dtype=torch.int)
         return tensor
 
 def _make_path_unique(path, extension = ''):

@@ -53,9 +53,11 @@ class SteeringParamsSVEIR(BaseModel):
     ndata: list[str | list[str | list[str]]] | None = ["all_except", ["a_table"]]
     edata: list[str] | None = ["all"]
     mode: str = "w"
-    infection_probability: float = 0.2
-    incubation_period: int = 5
-    infections_period: int = 3
+    infection_probability: float = 0.05
+    recovery_rate: float = 0.1
+    vaccination_rate : float = 0.01
+    vaccine_efficacy: float = 0.9
+    exposure_period: int = 5
     initial_infected_proportion: float = 0.03
     truncation_weight: float = 1.0e-10
     proximity_decay_rate: float = 0.5
