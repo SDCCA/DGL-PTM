@@ -71,7 +71,7 @@ def ptm_step(agent_graph, device, timestep, params):
                 device=device,
                 timestep=timestep,
                 method ='consumption'
-                )
+            )
             #Collect specified data
             data_collection(
                 agent_graph,
@@ -190,10 +190,13 @@ def sveir_step(agent_graph, device, timestep, params):
     # random tensors
     bounds = [0.0, 1.0]
     num_nodes = agent_graph.num_nodes()
+    num_edges = agent_graph.num_edges()
     i_r_rng = sample_distribution_tensor('uniform', bounds, num_nodes)
     s_r_rng = sample_distribution_tensor('uniform', bounds, num_nodes)
-    s_e_rng = sample_distribution_tensor('uniform', bounds, num_nodes)
+    s_e_rng = sample_distribution_tensor('uniform', bounds, 2*num_edges)
     v_e_rng = sample_distribution_tensor('uniform', bounds, num_nodes)
+    edge_rng = sample_distribution_tensor('uniform', bounds, 2*num_edges)
+    edge_idx = 0
 
     # increment exposure time
     agent_graph.ndata["exposure_time"][agent_graph.ndata["compartments"]==m["E"]] += 1
@@ -215,18 +218,30 @@ def sveir_step(agent_graph, device, timestep, params):
     for node in susceptible_nodes:
         neighbors = agent_graph.successors(node)
         infected_neighbors = neighbors[agent_graph.ndata["compartments"][neighbors] == m["I"]]
-        if infected_neighbors.numel() > 0 and s_e_rng[node] < params["infection_probability"]:
-            agent_graph.ndata["compartments"][node] = m["E"]
-            agent_graph.ndata["exposure_time"][node] = 0
+        for neighbor in infected_neighbors:
+            edge_id = agent_graph.edge_ids(node, neighbor)
+            edge_weight = agent_graph.edata["weight"][edge_id]
+            # nodes come into contact with each other
+            if edge_rng[edge_idx] < edge_weight:
+                if s_e_rng[edge_idx] < params["infection_probability"]:
+                    agent_graph.ndata["compartments"][node] = m["E"]
+                    agent_graph.ndata["exposure_time"][node] = 0
+            edge_idx += 1
 
     # Transition from Vaccinated to Exposed
     vaccinated_nodes = (agent_graph.ndata["compartments"] == m["V"]).nonzero(as_tuple=True)[0]
     for node in vaccinated_nodes:
         neighbors = agent_graph.successors(node)
         infected_neighbors = neighbors[agent_graph.ndata["compartments"][neighbors] == m["I"]]
-        if infected_neighbors.numel() > 0 and v_e_rng[node] < params["infection_probability"] * (1 - params["vaccine_efficacy"]):
-            agent_graph.ndata["compartments"][node] = m["E"]
-            agent_graph.ndata["exposure_time"][node] = 0
+        for neighbor in infected_neighbors:
+            edge_id = agent_graph.edge_ids(node, neighbor)
+            edge_weight = agent_graph.edata["weight"][edge_id]
+            # nodes come into contact with each other
+            if edge_rng[edge_idx] < edge_weight:
+                if v_e_rng[node] < (1-params["vaccine_efficacy"])*params["infection_probability"]:
+                    agent_graph.ndata["compartments"][node] = m["E"]
+                    agent_graph.ndata["exposure_time"][node] = 0
+            edge_idx += 1
 
     # Data can be collected periodically (every X steps) and/or at specified time steps.
     do_periodical_data_collection = (

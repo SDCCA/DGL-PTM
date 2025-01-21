@@ -9,7 +9,7 @@ import torch
 # network_creation - Creates the network between the initialized nodes
 # using edges from DGL.
 
-def network_creation(num_agents, method, **kwargs):
+def network_creation(num_agents, method, verbose, **kwargs):
     """network_creation - Creates the graph network for the model.
 
     Args:
@@ -34,7 +34,8 @@ def network_creation(num_agents, method, **kwargs):
             new_node_edges = kwargs['new_node_edges']
         else:
             new_node_edges = 1 
-        print(f"Using seed {seed} for network creation with {new_node_edges} edges requested.")
+        if verbose:
+            print(f"Using seed {seed} for network creation with {new_node_edges} edges requested.")
         agent_graph = barabasi_albert_graph(num_agents, new_node_edges, seed)
     else:
         raise NotImplementedError('Currently only barabasi-albert model implemented!')

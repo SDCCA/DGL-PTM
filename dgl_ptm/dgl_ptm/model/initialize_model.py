@@ -592,7 +592,7 @@ class SVEIRModel(Model):
         # Save updated config to yaml file.
         self.save_model_parameters(overwrite=True)
 
-    def initialize_model(self, restart = False):
+    def initialize_model(self, restart = False, verbose = False):
         """Initialize a model.
 
         It creates network and initialize agent properties in correct order.
@@ -627,9 +627,10 @@ class SVEIRModel(Model):
             self.step_count = self.inputs["step_count"]
         else:
             torch.manual_seed(self.config.seed)
-            print (f"Model torch seed set to {self.config.seed}")
+            if verbose:
+                print (f"Model torch seed set to {self.config.seed}")
 
-        self.create_network()
+        self.create_network(verbose)
         if self.config.spatial:
             self.create_grid()
             self.place_agents()
@@ -638,7 +639,8 @@ class SVEIRModel(Model):
         self.initialize_agent_properties()
         self.graph = self.graph.to(self.config.device)
 
-        print(f'{self.graph.number_of_nodes()} agents initialized on {self.graph.device} device')
+        if verbose:
+            print(f'{self.graph.number_of_nodes()} agents initialized on {self.graph.device} device')
 
         weight_update_sveir(
             self.graph,
@@ -657,16 +659,16 @@ class SVEIRModel(Model):
         self.average_degree = average_degree(self.graph)
         self.graph.ndata['degree'] = node_degree(self.graph)
 
-    def run(self):
+    def run(self, verbose = False):
         """Run the model for each step until the step_target is reached."""
         # Save config to yaml file.
         self.save_model_parameters()
 
         self.step_first = self.step_count
         while self.step_count < self.config.step_target:
-            self.step()
+            self.step(verbose)
 
-    def step(self):
+    def step(self, verbose):
         """Perform a single step of the model.
 
         After the step, the current state (graph, generator, step, and version)
@@ -685,13 +687,14 @@ class SVEIRModel(Model):
         stored in the subdirectory `./milestone_X_i` (where i is the instance).
         """
         try:
-            print(f'performing step {self.step_count} of {self.config.step_target}')
+            if verbose:
+                print(f'performing step {self.step_count} of {self.config.step_target}')
             sveir_step(
                 self.graph,
                 self.config.device,
                 self.step_count,
                 self.steering_parameters
-                )
+            )
         except Exception as e:
             # TODO: Add model dump here.
             # Also check against previous save to avoid overwriting
@@ -733,7 +736,7 @@ class SVEIRModel(Model):
 
         self.step_count +=1
 
-    def create_network(self):
+    def create_network(self, verbose):
         """Create intial network connecting agents.
 
         Makes use of intial graph type specified as model parameter.
@@ -741,6 +744,7 @@ class SVEIRModel(Model):
         agent_graph = network_creation(
             self.config.number_agents,
             self.config.initial_graph_type,
+            verbose,
             **self.config.initial_graph_args.__dict__
             )
         self.graph = agent_graph

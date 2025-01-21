@@ -13,7 +13,8 @@ def data_collection(agent_graph,
                     ndata=None,
                     edata=None,
                     format = 'xarray',
-                    mode = 'w-'):
+                    mode = 'w-',
+                    verbose = False):
     """data_collection - collects data from agents and edges.
 
     Args:
@@ -60,7 +61,7 @@ def data_collection(agent_graph,
         edata = list(agent_graph.edge_attr_schemes().keys())
     
     if ndata == None:
-        if timestep == 0:
+        if timestep == 0 and verbose:
             print("ATTENTION: No node data collection requested for this simulation!")
     else:
         if timestep == 0 and locals().get('initial_only', []) != []:
@@ -68,7 +69,7 @@ def data_collection(agent_graph,
             _node_property_collector(agent_graph, initialpath, initial_only, timestep, format, mode)
         _node_property_collector(agent_graph, npath, ndata, timestep, format, mode)
     if edata == None:
-        if timestep == 0:
+        if timestep == 0 and verbose:
             print("ATTENTION: No edge data collection requested for this simulation!")
     else:
         _edge_property_collector(agent_graph, epath, edata, timestep, format, mode)
