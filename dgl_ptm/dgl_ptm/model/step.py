@@ -12,6 +12,7 @@ from dgl_ptm.network.local_attachment import local_attachment
 from dgl_ptm.network.local_attachment_basic_homophily import local_attachment_homophily
 from dgl_ptm.network.random_edge_noise import random_edge_noise
 from dgl_ptm.util.utils import sample_distribution_tensor
+import torch
 
 def ptm_step(agent_graph, device, timestep, params):
     """Step - time-stepping module for the poverty-trap model.
@@ -193,10 +194,6 @@ def sveir_step(agent_graph, device, timestep, params):
     num_edges = agent_graph.num_edges()
     i_r_rng = sample_distribution_tensor('uniform', bounds, num_nodes)
     s_r_rng = sample_distribution_tensor('uniform', bounds, num_nodes)
-    s_e_rng = sample_distribution_tensor('uniform', bounds, 2*num_edges)
-    v_e_rng = sample_distribution_tensor('uniform', bounds, num_nodes)
-    edge_rng = sample_distribution_tensor('uniform', bounds, 2*num_edges)
-    edge_idx = 0
 
     # increment exposure time
     agent_graph.ndata["exposure_time"][agent_graph.ndata["compartments"]==m["E"]] += 1
@@ -213,35 +210,42 @@ def sveir_step(agent_graph, device, timestep, params):
     susceptible_to_vaccinated = (agent_graph.ndata["compartments"]==m["S"]) & (s_r_rng < params["vaccination_rate"])
     agent_graph.ndata["compartments"][susceptible_to_vaccinated] = m["V"]
 
-    # Transition from Susceptible to Exposed
-    susceptible_nodes = (agent_graph.ndata["compartments"] == m["S"]).nonzero(as_tuple=True)[0]
-    for node in susceptible_nodes:
-        neighbors = agent_graph.successors(node)
-        infected_neighbors = neighbors[agent_graph.ndata["compartments"][neighbors] == m["I"]]
-        for neighbor in infected_neighbors:
-            edge_id = agent_graph.edge_ids(node, neighbor)
-            edge_weight = agent_graph.edata["weight"][edge_id]
-            # nodes come into contact with each other
-            if edge_rng[edge_idx] < edge_weight:
-                if s_e_rng[edge_idx] < params["infection_probability"]:
-                    agent_graph.ndata["compartments"][node] = m["E"]
-                    agent_graph.ndata["exposure_time"][node] = 0
-            edge_idx += 1
+    # transition from Susceptible to Exposed
+    src, dst = agent_graph.edges()
+    edge_weights = torch.zeros((num_nodes, num_nodes))
+    edge_weights[src, dst] = agent_graph.edata["weight"]
+    susceptible_nodes = (agent_graph.ndata["compartments"] == 0).nonzero(as_tuple=True)[0]
+    infected_weights = torch.where(agent_graph.ndata["compartments"].repeat(num_nodes, 1) == 3, edge_weights, 0)[susceptible_nodes]
+    nonzero_weights = torch.where(infected_weights > 0)
 
-    # Transition from Vaccinated to Exposed
+    RNG = torch.rand((4, nonzero_weights[0].shape[0]))
+    RNG1 = torch.zeros_like(infected_weights)
+    RNG1[nonzero_weights] = RNG[0]
+    RNG2 = torch.zeros_like(infected_weights)
+    RNG2[nonzero_weights] = RNG[1]
+
+    infection = (infected_weights > 0).type(torch.float32) * (RNG1 < infected_weights) * (RNG2 < params["infection_probability"])
+    infected_nodes = susceptible_nodes[torch.where(infection.sum(axis=1) > 0)]
+
+    agent_graph.ndata["compartments"][infected_nodes] = m["E"]
+    agent_graph.ndata["exposure_time"][infected_nodes] = 0
+
+    # transition from Vaccinated to Exposed
     vaccinated_nodes = (agent_graph.ndata["compartments"] == m["V"]).nonzero(as_tuple=True)[0]
-    for node in vaccinated_nodes:
-        neighbors = agent_graph.successors(node)
-        infected_neighbors = neighbors[agent_graph.ndata["compartments"][neighbors] == m["I"]]
-        for neighbor in infected_neighbors:
-            edge_id = agent_graph.edge_ids(node, neighbor)
-            edge_weight = agent_graph.edata["weight"][edge_id]
-            # nodes come into contact with each other
-            if edge_rng[edge_idx] < edge_weight:
-                if v_e_rng[node] < (1-params["vaccine_efficacy"])*params["infection_probability"]:
-                    agent_graph.ndata["compartments"][node] = m["E"]
-                    agent_graph.ndata["exposure_time"][node] = 0
-            edge_idx += 1
+    infected_weights = torch.where(agent_graph.ndata["compartments"].repeat(num_nodes, 1) == 3, edge_weights, 0)[vaccinated_nodes]
+    nonzero_weights = torch.where(infected_weights > 0)
+
+    RNG = torch.rand((2, nonzero_weights[0].shape[0]))
+    RNG1 = torch.zeros_like(infected_weights)
+    RNG1[nonzero_weights] = RNG[0]
+    RNG2 = torch.zeros_like(infected_weights)
+    RNG2[nonzero_weights] = RNG[1]
+
+    infection = (infected_weights > 0).type(torch.float32) * (RNG1 < infected_weights) * (RNG2 < params["infection_probability"])
+    infected_nodes = vaccinated_nodes[torch.where(infection.sum(axis=1) > 0)]
+
+    agent_graph.ndata["compartments"][infected_nodes] = m["E"]
+    agent_graph.ndata["exposure_time"][infected_nodes] = 0
 
     # Data can be collected periodically (every X steps) and/or at specified time steps.
     do_periodical_data_collection = (
