@@ -2,6 +2,8 @@ from dgl_ptm.agent.income_generation import income_generation
 from dgl_ptm.agent.wealth_consumption import wealth_consumption
 from dgl_ptm.agent.capital_update import capital_update
 from dgl_ptm.util.network_metrics import node_degree, node_weighted_degree
+from dgl_ptm.util.utils import sample_distribution_tensor
+import torch
 #from dgl_ptm.agent.movement import move_agents
 
 
@@ -75,4 +77,70 @@ def _agent_position_update(model_graph,model_params,moving_agents):
     move_agents(model_graph,model_params,moving_agents)
 
 
+def sveir_agent_update(method, agent_graph, M, params=None, num_nodes=None, edge_weights=None):
+    if method == "exposure_increment":
+        _agent_increment_exposure_time(agent_graph, M)
+    elif method == "exposed_to_infectious":
+        _agent_exposed_to_infectious(agent_graph, M, params)
+    elif method == "infectious_to_recovered":
+        _agent_infectious_to_recovered(agent_graph, M, params, num_nodes)
+    elif method == "susceptible_to_vaccinated":
+        _agent_susceptible_to_vaccinated(agent_graph, M, params, num_nodes)
+    elif method == "susceptible_to_exposed":
+        _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, edge_weights)
+    elif method == "vaccinated_to_exposed":
+        _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, edge_weights)
 
+def _agent_increment_exposure_time(agent_graph, M):
+    agent_graph.ndata["exposure_time"][agent_graph.ndata["compartments"] == M["E"]] += 1
+
+def _agent_exposed_to_infectious(agent_graph, M, params):
+    exposed_to_infections = (agent_graph.ndata["compartments"]==M["E"]) & (agent_graph.ndata["exposure_time"] >= params["exposure_period"])
+    agent_graph.ndata["compartments"][exposed_to_infections] = M["I"]
+    agent_graph.ndata["num_infections"][exposed_to_infections] += 1
+
+def _agent_infectious_to_recovered(agent_graph, M, params, num_nodes):
+    i_r_rng = sample_distribution_tensor('uniform', [0.0, 1.0], num_nodes)
+    infectious_to_recovered = (agent_graph.ndata["compartments"]==M["I"]) & (i_r_rng < params["recovery_rate"])
+    agent_graph.ndata["compartments"][infectious_to_recovered] = M["R"]
+
+def _agent_susceptible_to_vaccinated(agent_graph, M, params, num_nodes):
+    s_r_rng = sample_distribution_tensor('uniform', [0.0, 1.0], num_nodes)
+    susceptible_to_vaccinated = (agent_graph.ndata["compartments"]==M["S"]) & (s_r_rng < params["vaccination_rate"])
+    agent_graph.ndata["compartments"][susceptible_to_vaccinated] = M["V"]
+
+def _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, edge_weights):
+    susceptible_nodes = (agent_graph.ndata["compartments"] == 0).nonzero(as_tuple=True)[0]
+    infected_weights = torch.where(agent_graph.ndata["compartments"].repeat(num_nodes, 1) == 3, edge_weights, 0)[susceptible_nodes]
+    nonzero_weights = torch.where(infected_weights > 0)
+
+    RNG = torch.rand((2, nonzero_weights[0].shape[0]))
+    RNG1 = torch.zeros_like(infected_weights)
+    RNG1[nonzero_weights] = RNG[0]
+    RNG2 = torch.zeros_like(infected_weights)
+    RNG2[nonzero_weights] = RNG[1]
+
+    prob_infection = params["infection_probability"] * torch.exp(-1.2 * agent_graph.ndata["num_infections"][susceptible_nodes])
+    infection = (infected_weights > 0).type(torch.float32) * (RNG1 < infected_weights) * (RNG2 < prob_infection[:, None])
+    infected_nodes = susceptible_nodes[torch.where(infection.sum(axis=1) > 0)]
+
+    agent_graph.ndata["compartments"][infected_nodes] = M["E"]
+    agent_graph.ndata["exposure_time"][infected_nodes] = 0
+
+def _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, edge_weights):
+    vaccinated_nodes = (agent_graph.ndata["compartments"] == M["V"]).nonzero(as_tuple=True)[0]
+    infected_weights = torch.where(agent_graph.ndata["compartments"].repeat(num_nodes, 1) == 3, edge_weights, 0)[vaccinated_nodes]
+    nonzero_weights = torch.where(infected_weights > 0)
+
+    RNG = torch.rand((2, nonzero_weights[0].shape[0]))
+    RNG1 = torch.zeros_like(infected_weights)
+    RNG1[nonzero_weights] = RNG[0]
+    RNG2 = torch.zeros_like(infected_weights)
+    RNG2[nonzero_weights] = RNG[1]
+
+    prob_infection = params["infection_probability"] * torch.exp(-1.2 * agent_graph.ndata["num_infections"][vaccinated_nodes])
+    infection = (infected_weights > 0).type(torch.float32) * (RNG1 < infected_weights) * (RNG2 < prob_infection[:, None])
+    infected_nodes = vaccinated_nodes[torch.where(infection.sum(axis=1) > 0)]
+
+    agent_graph.ndata["compartments"][infected_nodes] = M["E"]
+    agent_graph.ndata["exposure_time"][infected_nodes] = 0

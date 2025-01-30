@@ -777,9 +777,11 @@ class SVEIRModel(Model):
         Values are initialized as tensors of length corresponding to number of
         agents, with values subsequently being assigned to the nodes.
         """
+        agents_num_infections = self._initialize_agent_num_infections()
         agents_compartment = self._initialize_agents_compartment()
         agents_exposure_time = self._initialize_agents_exposure_time()
         if isinstance(self.graph, dgl.DGLGraph):
+            self.graph.ndata["num_infections"] = agents_num_infections
             self.graph.ndata["compartments"] = agents_compartment
             self.graph.ndata["exposure_time"] = agents_exposure_time
         else:
@@ -788,6 +790,10 @@ class SVEIRModel(Model):
                 'Consider running `create_network` before initializing '
                 'agent properties.'
             )
+        
+    def _initialize_agent_num_infections(self):
+        tensor = torch.zeros(self.graph.num_nodes(), dtype=torch.int)
+        return tensor
 
     def _initialize_agents_compartment(self):
         proportion = self.steering_parameters["initial_infected_proportion"]
