@@ -780,10 +780,14 @@ class SVEIRModel(Model):
         agents_num_infections = self._initialize_agent_num_infections()
         agents_compartment = self._initialize_agents_compartment()
         agents_exposure_time = self._initialize_agents_exposure_time()
+        agents_time_use = self._initialize_agents_time_use()
+        agents_home_location = self._initialize_agents_home_location()
         if isinstance(self.graph, dgl.DGLGraph):
             self.graph.ndata["num_infections"] = agents_num_infections
             self.graph.ndata["compartments"] = agents_compartment
             self.graph.ndata["exposure_time"] = agents_exposure_time
+            self.graph.ndata["time_use"] = agents_time_use
+            self.graph.ndata["home_location"] = agents_home_location
         else:
             raise RuntimeError(
                 'model graph must be a defined as DGLgraph object. '
@@ -807,6 +811,17 @@ class SVEIRModel(Model):
     
     def _initialize_agents_exposure_time(self):
         tensor = torch.zeros(self.graph.num_nodes(), dtype=torch.int)
+        return tensor
+
+    def _initialize_agents_time_use(self):
+        # categories: home, school, religious
+        tensor = torch.zeros((self.graph.num_nodes(), 3), dtype=torch.int)
+        return tensor
+    
+    def _initialize_agents_home_location(self):
+        tensor = torch.zeros((self.graph.num_nodes(), 2), dtype=torch.int)
+        tensor[:,0] = self.graph.ndata["x"]
+        tensor[:,1] = self.graph.ndata["y"]
         return tensor
 
 def _make_path_unique(path, extension = ''):
