@@ -181,9 +181,6 @@ def sveir_step(agent_graph, device, timestep, params, grid):
     """
     num_nodes = agent_graph.num_nodes()
 
-    # agents choose location to move to based on time use distribution
-    sveir_agent_update("move", agent_graph)    
-
     M = {
         "S":0,
         "V":1,
@@ -191,6 +188,13 @@ def sveir_step(agent_graph, device, timestep, params, grid):
         "I":3,
         "R":4
     }
+
+    src, dst = agent_graph.edges()
+    edge_weights = torch.zeros((num_nodes, num_nodes))
+    edge_weights[src, dst] = agent_graph.edata["weight"]
+
+    # agents choose activity based on time use distribution
+    sveir_agent_update("move", agent_graph, edge_weights=edge_weights)
 
     # increment exposure time
     sveir_agent_update("exposure_increment", agent_graph, M)
@@ -205,10 +209,6 @@ def sveir_step(agent_graph, device, timestep, params, grid):
     sveir_agent_update("susceptible_to_vaccinated", agent_graph, M, params, num_nodes)
 
     # Susceptible -> Exposed
-    src, dst = agent_graph.edges()
-    edge_weights = torch.zeros((num_nodes, num_nodes))
-    edge_weights[src, dst] = agent_graph.edata["weight"]
-
     coordinates = torch.stack([agent_graph.ndata['x'], agent_graph.ndata['y']]).T
     adjacency = (coordinates[:, None, :] == coordinates[None, :, :]).all(-1).float().fill_diagonal_(0)
 

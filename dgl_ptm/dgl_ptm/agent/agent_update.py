@@ -91,7 +91,7 @@ def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None,
     elif method == "vaccinated_to_exposed":
         _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, edge_weights, adjacency)
     elif method == "move":
-        _agent_move(agent_graph)
+        _agent_move(agent_graph, edge_weights)
 
 def _agent_increment_exposure_time(agent_graph, M):
     agent_graph.ndata["exposure_time"][agent_graph.ndata["compartments"] == M["E"]] += 1
@@ -147,7 +147,7 @@ def _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, edge_weights
     agent_graph.ndata["compartments"][infected_nodes] = M["E"]
     agent_graph.ndata["exposure_time"][infected_nodes] = 0
 
-def _agent_move(agent_graph):
+def _agent_move(agent_graph, edge_weights):
     random_activity = torch.multinomial(agent_graph.ndata["time_use"], num_samples=1).squeeze()
 
     # 0 -> home
@@ -164,3 +164,21 @@ def _agent_move(agent_graph):
     agents_worship = torch.where(random_activity==2)[0]
     agent_graph.ndata['x'][agents_worship] = agent_graph.ndata["worship_location"][agents_worship,0]
     agent_graph.ndata['y'][agents_worship] = agent_graph.ndata["worship_location"][agents_worship,1]
+
+    # 3 -> social
+    agents_social = torch.where(random_activity==3)[0]
+    social_weights = edge_weights[agents_social]
+    # social agents can only visit agents that are at home
+    at_home_mask = torch.zeros(social_weights.shape[1], dtype=torch.bool)
+    at_home_mask[agents_home] = True
+    social_weights = social_weights * at_home_mask
+    # only consider social agents that have at least one available neighbor
+    non_zero_indices = torch.where(torch.sum(social_weights, dim=1) != 0)[0]
+    agents_social = agents_social[non_zero_indices]
+    social_weights = social_weights[non_zero_indices]
+    # probabilities of visiting agents that are at home must sum to one
+    social_weights = social_weights / social_weights.sum(dim=1, keepdim=True)
+    # identify which neighbors to visit and update social agents' locations
+    visit_indices = torch.multinomial(social_weights, num_samples=1).squeeze()
+    agent_graph.ndata['x'][agents_social] = agent_graph.ndata["home_location"][visit_indices,0]
+    agent_graph.ndata['y'][agents_social] = agent_graph.ndata["home_location"][visit_indices,1]

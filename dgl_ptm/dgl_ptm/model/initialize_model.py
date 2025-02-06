@@ -819,7 +819,7 @@ class SVEIRModel(Model):
         return tensor
 
     def _initialize_agents_time_use(self):
-        tensor = torch.rand(self.graph.num_nodes(), 3) # categories: home, school, religious
+        tensor = torch.rand(self.graph.num_nodes(), 4) # categories: home, school, religious, social
         tensor /= tensor.sum(dim=1, keepdim=True)
         return tensor
     
