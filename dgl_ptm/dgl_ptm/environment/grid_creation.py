@@ -46,7 +46,7 @@ def grid_creation(**kwargs):
                             'round': False, 'decimals': None}})
             custom_import:
                 This method creates a grid environment by importing a 
-                numpy array or torch tensor from a file (.np or .pt)
+                numpy array or torch tensor from a file (.np or .pt or .npy)
                 and requires the following keyword arguments,
                 path: path at which .np or .pt file is located
                 properties: dictionary of property names to be assigned 

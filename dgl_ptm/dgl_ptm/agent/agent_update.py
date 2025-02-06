@@ -77,7 +77,7 @@ def _agent_position_update(model_graph,model_params,moving_agents):
     move_agents(model_graph,model_params,moving_agents)
 
 
-def sveir_agent_update(method, agent_graph, M, params=None, num_nodes=None, edge_weights=None):
+def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None, edge_weights=None, grid=None, adjacency=None):
     if method == "exposure_increment":
         _agent_increment_exposure_time(agent_graph, M)
     elif method == "exposed_to_infectious":
@@ -87,9 +87,11 @@ def sveir_agent_update(method, agent_graph, M, params=None, num_nodes=None, edge
     elif method == "susceptible_to_vaccinated":
         _agent_susceptible_to_vaccinated(agent_graph, M, params, num_nodes)
     elif method == "susceptible_to_exposed":
-        _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, edge_weights)
+        _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, edge_weights, adjacency)
     elif method == "vaccinated_to_exposed":
-        _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, edge_weights)
+        _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, edge_weights, adjacency)
+    elif method == "move":
+        _agent_move(agent_graph)
 
 def _agent_increment_exposure_time(agent_graph, M):
     agent_graph.ndata["exposure_time"][agent_graph.ndata["compartments"] == M["E"]] += 1
@@ -109,9 +111,9 @@ def _agent_susceptible_to_vaccinated(agent_graph, M, params, num_nodes):
     susceptible_to_vaccinated = (agent_graph.ndata["compartments"]==M["S"]) & (s_r_rng < params["vaccination_rate"])
     agent_graph.ndata["compartments"][susceptible_to_vaccinated] = M["V"]
 
-def _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, edge_weights):
+def _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, edge_weights, adjacency):
     susceptible_recovered_nodes = torch.where((agent_graph.ndata["compartments"] == M["S"]) | (agent_graph.ndata["compartments"] == M["R"]))[0]
-    infected_weights = torch.where(agent_graph.ndata["compartments"].repeat(num_nodes, 1) == 3, edge_weights, 0)[susceptible_recovered_nodes]
+    infected_weights = torch.where(agent_graph.ndata["compartments"].repeat(num_nodes, 1) == 3, adjacency, 0)[susceptible_recovered_nodes]
     nonzero_weights = torch.where(infected_weights > 0)
 
     RNG = torch.rand((2, nonzero_weights[0].shape[0]))
@@ -127,9 +129,9 @@ def _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, edge_weight
     agent_graph.ndata["compartments"][infected_nodes] = M["E"]
     agent_graph.ndata["exposure_time"][infected_nodes] = 0
 
-def _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, edge_weights):
+def _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, edge_weights, adjacency):
     vaccinated_nodes = (agent_graph.ndata["compartments"] == M["V"]).nonzero(as_tuple=True)[0]
-    infected_weights = torch.where(agent_graph.ndata["compartments"].repeat(num_nodes, 1) == 3, edge_weights, 0)[vaccinated_nodes]
+    infected_weights = torch.where(agent_graph.ndata["compartments"].repeat(num_nodes, 1) == 3, adjacency, 0)[vaccinated_nodes]
     nonzero_weights = torch.where(infected_weights > 0)
 
     RNG = torch.rand((2, nonzero_weights[0].shape[0]))
@@ -144,3 +146,21 @@ def _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, edge_weights
 
     agent_graph.ndata["compartments"][infected_nodes] = M["E"]
     agent_graph.ndata["exposure_time"][infected_nodes] = 0
+
+def _agent_move(agent_graph):
+    random_activity = torch.multinomial(agent_graph.ndata["time_use"], num_samples=1).squeeze()
+
+    # 0 -> home
+    agents_home = torch.where(random_activity==0)[0]
+    agent_graph.ndata['x'][agents_home] = agent_graph.ndata["home_location"][agents_home,0]
+    agent_graph.ndata['y'][agents_home] = agent_graph.ndata["home_location"][agents_home,1]
+
+    # 1 -> school
+    agents_school = torch.where(random_activity==1)[0]
+    agent_graph.ndata['x'][agents_school] = agent_graph.ndata["school_location"][agents_school,0]
+    agent_graph.ndata['y'][agents_school] = agent_graph.ndata["school_location"][agents_school,1]
+
+    # 2 -> place of worship
+    agents_worship = torch.where(random_activity==2)[0]
+    agent_graph.ndata['x'][agents_worship] = agent_graph.ndata["worship_location"][agents_worship,0]
+    agent_graph.ndata['y'][agents_worship] = agent_graph.ndata["worship_location"][agents_worship,1]

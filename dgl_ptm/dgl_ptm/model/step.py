@@ -167,7 +167,7 @@ def ptm_step(agent_graph, device, timestep, params):
             mode = params['mode']
             )
 
-def sveir_step(agent_graph, device, timestep, params):
+def sveir_step(agent_graph, device, timestep, params, grid):
     """Step - time-stepping module for the SVEIR model.
 
     Args:
@@ -180,6 +180,10 @@ def sveir_step(agent_graph, device, timestep, params):
         agent_graph: Updated agent_graph after one step of functional manipulation
     """
     num_nodes = agent_graph.num_nodes()
+
+    # agents choose location to move to based on time use distribution
+    sveir_agent_update("move", agent_graph)    
+
     M = {
         "S":0,
         "V":1,
@@ -204,10 +208,14 @@ def sveir_step(agent_graph, device, timestep, params):
     src, dst = agent_graph.edges()
     edge_weights = torch.zeros((num_nodes, num_nodes))
     edge_weights[src, dst] = agent_graph.edata["weight"]
-    sveir_agent_update("susceptible_to_exposed", agent_graph, M, params, num_nodes, edge_weights)
+
+    coordinates = torch.stack([agent_graph.ndata['x'], agent_graph.ndata['y']]).T
+    adjacency = (coordinates[:, None, :] == coordinates[None, :, :]).all(-1).float().fill_diagonal_(0)
+
+    sveir_agent_update("susceptible_to_exposed", agent_graph, M, params, num_nodes, edge_weights, adjacency=adjacency)
 
     # Vaccinated -> Exposed
-    sveir_agent_update("vaccinated_to_exposed", agent_graph, M, params, num_nodes, edge_weights)
+    sveir_agent_update("vaccinated_to_exposed", agent_graph, M, params, num_nodes, edge_weights, adjacency=adjacency)
 
     # Data can be collected periodically (every X steps) and/or at specified time steps.
     do_periodical_data_collection = (

@@ -693,7 +693,8 @@ class SVEIRModel(Model):
                 self.graph,
                 self.config.device,
                 self.step_count,
-                self.steering_parameters
+                self.steering_parameters,
+                self.grid_environment
             )
         except Exception as e:
             # TODO: Add model dump here.
@@ -782,12 +783,16 @@ class SVEIRModel(Model):
         agents_exposure_time = self._initialize_agents_exposure_time()
         agents_time_use = self._initialize_agents_time_use()
         agents_home_location = self._initialize_agents_home_location()
+        agents_school_location = self._initialize_agents_school_location(agents_home_location)
+        agents_worship_location = self._initialize_agents_worship_location(agents_home_location)
         if isinstance(self.graph, dgl.DGLGraph):
             self.graph.ndata["num_infections"] = agents_num_infections
             self.graph.ndata["compartments"] = agents_compartment
             self.graph.ndata["exposure_time"] = agents_exposure_time
             self.graph.ndata["time_use"] = agents_time_use
             self.graph.ndata["home_location"] = agents_home_location
+            self.graph.ndata["school_location"] = agents_school_location
+            self.graph.ndata["worship_location"] = agents_worship_location
         else:
             raise RuntimeError(
                 'model graph must be a defined as DGLgraph object. '
@@ -814,15 +819,31 @@ class SVEIRModel(Model):
         return tensor
 
     def _initialize_agents_time_use(self):
-        # categories: home, school, religious
-        tensor = torch.zeros((self.graph.num_nodes(), 3), dtype=torch.int)
+        tensor = torch.rand(self.graph.num_nodes(), 3) # categories: home, school, religious
+        tensor /= tensor.sum(dim=1, keepdim=True)
         return tensor
     
     def _initialize_agents_home_location(self):
         tensor = torch.zeros((self.graph.num_nodes(), 2), dtype=torch.int)
         tensor[:,0] = self.graph.ndata["x"]
         tensor[:,1] = self.graph.ndata["y"]
-        return tensor
+        return tensor.float()
+
+    def _initialize_agents_school_location(self, home_location):
+        school_grid = self.grid_environment.grid_tensor[:,:, self.grid_environment.property_to_index["school"]]
+        school_locations = torch.stack(torch.where(school_grid==1)).T.float()
+        distances = torch.cdist(home_location, school_locations)
+        nearest_school_indices = torch.argmin(distances, dim=1)
+        nearest_school_locations = school_locations[nearest_school_indices]
+        return nearest_school_locations
+    
+    def _initialize_agents_worship_location(self, home_location):
+        worship_grid = self.grid_environment.grid_tensor[:,:, self.grid_environment.property_to_index["place_of_worship"]]
+        worship_locations = torch.stack(torch.where(worship_grid==1)).T.float()
+        distances = torch.cdist(home_location, worship_locations)
+        nearest_worship_indices = torch.argmin(distances, dim=1)
+        nearest_worship_locations = worship_locations[nearest_worship_indices]
+        return nearest_worship_locations
 
 def _make_path_unique(path, extension = ''):
     """Check whether a path already exists and make it unique if it does.
