@@ -149,6 +149,7 @@ def _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, edge_weights
 
 def _agent_move(agent_graph, edge_weights):
     random_activity = torch.multinomial(agent_graph.ndata["time_use"], num_samples=1).squeeze()
+    agent_graph.ndata["activity_choice"] = random_activity
 
     # 0 -> home
     agents_home = torch.where(random_activity==0)[0]

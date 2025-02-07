@@ -785,6 +785,7 @@ class SVEIRModel(Model):
         agents_home_location = self._initialize_agents_home_location()
         agents_school_location = self._initialize_agents_school_location(agents_home_location)
         agents_worship_location = self._initialize_agents_worship_location(agents_home_location)
+        agents_activity_choice = self._initialize_agents_activity_choice()
         if isinstance(self.graph, dgl.DGLGraph):
             self.graph.ndata["num_infections"] = agents_num_infections
             self.graph.ndata["compartments"] = agents_compartment
@@ -793,6 +794,7 @@ class SVEIRModel(Model):
             self.graph.ndata["home_location"] = agents_home_location
             self.graph.ndata["school_location"] = agents_school_location
             self.graph.ndata["worship_location"] = agents_worship_location
+            self.graph.ndata["activity_choice"] = agents_activity_choice
         else:
             raise RuntimeError(
                 'model graph must be a defined as DGLgraph object. '
@@ -844,6 +846,10 @@ class SVEIRModel(Model):
         nearest_worship_indices = torch.argmin(distances, dim=1)
         nearest_worship_locations = worship_locations[nearest_worship_indices]
         return nearest_worship_locations
+
+    def _initialize_agents_activity_choice(self):
+        tensor = torch.zeros(self.graph.num_nodes(), dtype=torch.int)
+        return tensor
 
 def _make_path_unique(path, extension = ''):
     """Check whether a path already exists and make it unique if it does.
