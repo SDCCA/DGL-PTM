@@ -827,8 +827,8 @@ class SVEIRModel(Model):
     
     def _initialize_agents_home_location(self):
         tensor = torch.zeros((self.graph.num_nodes(), 2), dtype=torch.int)
-        tensor[:,0] = self.graph.ndata["x"]
-        tensor[:,1] = self.graph.ndata["y"]
+        tensor[:,0] = self.graph.ndata["y"]
+        tensor[:,1] = self.graph.ndata["x"]
         return tensor.float()
 
     def _initialize_agents_school_location(self, home_location):
