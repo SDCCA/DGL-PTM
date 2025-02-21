@@ -77,7 +77,7 @@ def _agent_position_update(model_graph,model_params,moving_agents):
     move_agents(model_graph,model_params,moving_agents)
 
 
-def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None, edge_weights=None, grid=None, adjacency=None):
+def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None, edge_weights=None, grid=None, adjacency=None, random_activity=None):
     if method == "exposure_increment":
         _agent_increment_exposure_time(agent_graph, M)
     elif method == "exposed_to_infectious":
@@ -87,11 +87,17 @@ def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None,
     elif method == "susceptible_to_vaccinated":
         _agent_susceptible_to_vaccinated(agent_graph, M, params, num_nodes)
     elif method == "susceptible_to_exposed":
-        _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, edge_weights, adjacency)
+        _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, adjacency)
     elif method == "vaccinated_to_exposed":
-        _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, edge_weights, adjacency)
+        _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, adjacency)
     elif method == "move":
-        _agent_move(agent_graph, edge_weights)
+        return _agent_move(agent_graph, edge_weights)
+    elif method == "human_to_water_transmission":
+        _agent_human_to_water_transmission(agent_graph, M, params, grid, random_activity)
+    elif method == "water_to_human_transmission":
+        _agent_water_to_human_transmission(agent_graph, M, params, grid, random_activity)
+    elif method == "water_recovery":
+        _water_recovery(params, grid)
 
 def _agent_increment_exposure_time(agent_graph, M):
     agent_graph.ndata["exposure_time"][agent_graph.ndata["compartments"] == M["E"]] += 1
@@ -111,7 +117,7 @@ def _agent_susceptible_to_vaccinated(agent_graph, M, params, num_nodes):
     susceptible_to_vaccinated = (agent_graph.ndata["compartments"]==M["S"]) & (s_r_rng < params["vaccination_rate"])
     agent_graph.ndata["compartments"][susceptible_to_vaccinated] = M["V"]
 
-def _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, edge_weights, adjacency):
+def _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, adjacency):
     susceptible_recovered_nodes = torch.where((agent_graph.ndata["compartments"] == M["S"]) | (agent_graph.ndata["compartments"] == M["R"]))[0]
     infected_weights = torch.where(agent_graph.ndata["compartments"].repeat(num_nodes, 1) == 3, adjacency, 0)[susceptible_recovered_nodes]
     nonzero_weights = torch.where(infected_weights > 0)
@@ -129,7 +135,7 @@ def _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, edge_weight
     agent_graph.ndata["compartments"][infected_nodes] = M["E"]
     agent_graph.ndata["exposure_time"][infected_nodes] = 0
 
-def _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, edge_weights, adjacency):
+def _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, adjacency):
     vaccinated_nodes = (agent_graph.ndata["compartments"] == M["V"]).nonzero(as_tuple=True)[0]
     infected_weights = torch.where(agent_graph.ndata["compartments"].repeat(num_nodes, 1) == 3, adjacency, 0)[vaccinated_nodes]
     nonzero_weights = torch.where(infected_weights > 0)
@@ -166,8 +172,13 @@ def _agent_move(agent_graph, edge_weights):
     agent_graph.ndata['x'][agents_worship] = agent_graph.ndata["worship_location"][agents_worship,0]
     agent_graph.ndata['y'][agents_worship] = agent_graph.ndata["worship_location"][agents_worship,1]
 
-    # 3 -> social
-    agents_social = torch.where(random_activity==3)[0]
+    # 3 -> water collection, water contamination by human, human contamination from water
+    agents_water = torch.where(random_activity==3)[0]
+    agent_graph.ndata['x'][agents_water] = agent_graph.ndata["water_location"][agents_water,0]
+    agent_graph.ndata['y'][agents_water] = agent_graph.ndata["water_location"][agents_water,1]
+
+    # 4 -> social
+    agents_social = torch.where(random_activity==4)[0]
     social_weights = edge_weights[agents_social]
     # social agents can only visit agents that are at home
     at_home_mask = torch.zeros(social_weights.shape[1], dtype=torch.bool)
@@ -183,3 +194,69 @@ def _agent_move(agent_graph, edge_weights):
     visit_indices = torch.multinomial(social_weights, num_samples=1).squeeze()
     agent_graph.ndata['x'][agents_social] = agent_graph.ndata["home_location"][visit_indices,0]
     agent_graph.ndata['y'][agents_social] = agent_graph.ndata["home_location"][visit_indices,1]
+
+    return random_activity
+
+def _agent_water_to_human_transmission(agent_graph, M, params, grid, random_activity):
+    infected_water_coords = torch.stack(torch.where(grid.get_slice("water")==2)).T
+    if infected_water_coords.shape[0] == 0:
+        return
+    
+    RNG = torch.rand(random_activity.shape[0])
+
+    agents_collecting_water = random_activity == 3
+    coords = torch.stack((agent_graph.ndata["x"][agents_collecting_water], agent_graph.ndata["y"][agents_collecting_water])).T
+    match_agent_coords_infected_water_coords = (coords[:, None, :] == infected_water_coords).all(dim=2)
+    agents_collecting_infected_water = match_agent_coords_infected_water_coords.any(dim=1)
+
+    agents_susceptible = agent_graph.ndata["compartments"] == M["S"]
+    agents_recovered = agent_graph.ndata["compartments"] == M["R"]
+    agents_vaccinated = agent_graph.ndata["compartments"] == M["V"]
+
+    s_r_agents = (agents_susceptible | agents_recovered) & (agents_collecting_infected_water)
+    prob_infection_s_r = params["water_to_human_infection_prob"] * torch.exp(-1.5 * agent_graph.ndata["num_infections"][s_r_agents])
+    s_r_infection = torch.where(s_r_agents, RNG, 1) < prob_infection_s_r
+    s_r_infected_nodes = torch.where(s_r_infection)[0]
+    agent_graph.ndata["compartments"][s_r_infected_nodes] = M["E"]
+    agent_graph.ndata["exposure_time"][s_r_infected_nodes] = 0
+
+    v_agents = (agents_vaccinated) & (agents_collecting_infected_water)
+    prob_infection_v = (1-params["vaccine_efficacy"]) * params["water_to_human_infection_prob"] * torch.exp(-1.5 * agent_graph.ndata["num_infections"][v_agents])
+    v_infection = torch.where(v_agents, RNG, 1) < prob_infection_v
+    v_infected_nodes = torch.where(v_infection)[0]
+    agent_graph.ndata["compartments"][v_infected_nodes] = M["E"]
+    agent_graph.ndata["exposure_time"][v_infected_nodes] = 0
+
+def _agent_human_to_water_transmission(agent_graph, M, params, grid, random_activity):
+
+    non_infected_water_coords = torch.stack(torch.where(grid.get_slice("water")==1)).T
+    if non_infected_water_coords.shape[0] == 0:
+        return
+    
+    RNG = torch.rand(random_activity.shape[0])
+    
+    agents_collecting_water = random_activity == 3
+    infected_agents = agent_graph.ndata["compartments"]==M["I"]
+
+    agents_capable_of_infecting_water = (agents_collecting_water) & (infected_agents)
+    agents_infecting_water = torch.where(agents_capable_of_infecting_water, RNG, 1) < params["human_to_water_infection_prob"]
+
+    water_points_to_infect = torch.unique(agent_graph.ndata["water_location"][agents_infecting_water], dim=0).int()
+    if water_points_to_infect.shape[0] == 0:
+        return
+
+    new_water_grid = torch.zeros((grid.grid_shape[0], grid.grid_shape[0]))
+    new_water_grid[water_points_to_infect[:,0], water_points_to_infect[:,1]] = 2
+    grid.set_slice("water", new_water_grid)
+
+def _water_recovery(params, grid):
+    infected_water_coords = torch.stack(torch.where(grid.get_slice("water")==2)).T
+    if infected_water_coords.shape[0] == 0:
+        return
+
+    RNG = torch.rand(infected_water_coords.shape[0], 1)
+    recovery = RNG < params["water_recovery_prob"]
+    recovered_coords = infected_water_coords[torch.where(recovery)[0]]
+    new_water_grid = torch.zeros((grid.grid_shape[0], grid.grid_shape[0]))
+    new_water_grid[recovered_coords[:,0], recovered_coords[:,1]] = 1
+    grid.set_slice("water", new_water_grid)

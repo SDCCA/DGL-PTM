@@ -21,6 +21,10 @@ class GridEnvironment:
             return self.grid_tensor
         else:
             return self.grid_tensor[:, :, index]
+        
+    def set_slice(self, property, new_grid):
+        index = self.property_to_index[property]
+        self.grid_tensor[:, :, index] = new_grid
 
     def __getitem__(self, property):
         return self.get_slice(property)

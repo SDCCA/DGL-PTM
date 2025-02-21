@@ -785,6 +785,7 @@ class SVEIRModel(Model):
         agents_home_location = self._initialize_agents_home_location()
         agents_school_location = self._initialize_agents_school_location(agents_home_location)
         agents_worship_location = self._initialize_agents_worship_location(agents_home_location)
+        agents_water_location = self._initialize_agents_water_location(agents_home_location)
         agents_activity_choice = self._initialize_agents_activity_choice()
         if isinstance(self.graph, dgl.DGLGraph):
             self.graph.ndata["num_infections"] = agents_num_infections
@@ -794,6 +795,7 @@ class SVEIRModel(Model):
             self.graph.ndata["home_location"] = agents_home_location
             self.graph.ndata["school_location"] = agents_school_location
             self.graph.ndata["worship_location"] = agents_worship_location
+            self.graph.ndata["water_location"] = agents_water_location
             self.graph.ndata["activity_choice"] = agents_activity_choice
         else:
             raise RuntimeError(
@@ -821,7 +823,7 @@ class SVEIRModel(Model):
         return tensor
 
     def _initialize_agents_time_use(self):
-        tensor = torch.rand(self.graph.num_nodes(), 4) # categories: home, school, religious, social
+        tensor = torch.rand(self.graph.num_nodes(), 5) # categories: home, school, religious, social, water
         tensor /= tensor.sum(dim=1, keepdim=True)
         return tensor
     
@@ -846,6 +848,14 @@ class SVEIRModel(Model):
         nearest_worship_indices = torch.argmin(distances, dim=1)
         nearest_worship_locations = worship_locations[nearest_worship_indices]
         return nearest_worship_locations
+
+    def _initialize_agents_water_location(self, home_location):
+        water_grid = self.grid_environment.grid_tensor[:,:, self.grid_environment.property_to_index["water"]]
+        water_locations = torch.stack(torch.where(water_grid==1)).T.float()
+        distances = torch.cdist(home_location, water_locations)
+        nearest_water_indices = torch.argmin(distances, dim=1)
+        nearest_water_locations = water_locations[nearest_water_indices]
+        return nearest_water_locations
 
     def _initialize_agents_activity_choice(self):
         tensor = torch.zeros(self.graph.num_nodes(), dtype=torch.int)

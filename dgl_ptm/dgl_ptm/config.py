@@ -59,6 +59,9 @@ class SteeringParamsSVEIR(BaseModel):
     vaccine_efficacy: float = 0.9
     exposure_period: int = 5
     initial_infected_proportion: float = 0.03
+    human_to_water_infection_prob: float = 0.01
+    water_to_human_infection_prob: float = 0.01
+    water_recovery_prob: float = 0.1
     truncation_weight: float = 1.0e-10
     proximity_decay_rate: float = 0.5
     step_type: str = "default"

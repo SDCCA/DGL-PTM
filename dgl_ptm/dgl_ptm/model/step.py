@@ -194,7 +194,7 @@ def sveir_step(agent_graph, device, timestep, params, grid):
     edge_weights[src, dst] = agent_graph.edata["weight"]
 
     # agents choose activity based on time use distribution
-    sveir_agent_update("move", agent_graph, edge_weights=edge_weights)
+    random_activity = sveir_agent_update("move", agent_graph, edge_weights=edge_weights)
 
     # increment exposure time
     sveir_agent_update("exposure_increment", agent_graph, M)
@@ -211,11 +211,18 @@ def sveir_step(agent_graph, device, timestep, params, grid):
     # Susceptible -> Exposed
     coordinates = torch.stack([agent_graph.ndata['x'], agent_graph.ndata['y']]).T
     adjacency = (coordinates[:, None, :] == coordinates[None, :, :]).all(-1).float().fill_diagonal_(0)
-
     sveir_agent_update("susceptible_to_exposed", agent_graph, M, params, num_nodes, edge_weights, adjacency=adjacency)
 
     # Vaccinated -> Exposed
     sveir_agent_update("vaccinated_to_exposed", agent_graph, M, params, num_nodes, edge_weights, adjacency=adjacency)
+
+    # water -> human infection
+    sveir_agent_update("water_to_human_transmission", agent_graph, M, params, grid=grid, random_activity=random_activity)
+
+    # human -> water infection
+    sveir_agent_update("human_to_water_transmission", agent_graph, M, params, grid=grid, random_activity=random_activity)
+
+    sveir_agent_update("water_recovery", agent_graph, params=params, grid=grid)
 
     # Data can be collected periodically (every X steps) and/or at specified time steps.
     do_periodical_data_collection = (
