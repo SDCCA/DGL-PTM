@@ -204,8 +204,7 @@ def _agent_water_to_human_transmission(agent_graph, M, params, grid, random_acti
     
     RNG = torch.rand(random_activity.shape[0])
 
-    agents_collecting_water = random_activity == 3
-    coords = torch.stack((agent_graph.ndata["x"][agents_collecting_water], agent_graph.ndata["y"][agents_collecting_water])).T
+    coords = torch.stack((agent_graph.ndata["x"], agent_graph.ndata["y"])).T
     match_agent_coords_infected_water_coords = (coords[:, None, :] == infected_water_coords).all(dim=2)
     agents_collecting_infected_water = match_agent_coords_infected_water_coords.any(dim=1)
 
@@ -214,14 +213,14 @@ def _agent_water_to_human_transmission(agent_graph, M, params, grid, random_acti
     agents_vaccinated = agent_graph.ndata["compartments"] == M["V"]
 
     s_r_agents = (agents_susceptible | agents_recovered) & (agents_collecting_infected_water)
-    prob_infection_s_r = params["water_to_human_infection_prob"] * torch.exp(-1.5 * agent_graph.ndata["num_infections"][s_r_agents])
+    prob_infection_s_r = params["water_to_human_infection_prob"] * torch.exp(-1.5 * agent_graph.ndata["num_infections"])
     s_r_infection = torch.where(s_r_agents, RNG, 1) < prob_infection_s_r
     s_r_infected_nodes = torch.where(s_r_infection)[0]
     agent_graph.ndata["compartments"][s_r_infected_nodes] = M["E"]
     agent_graph.ndata["exposure_time"][s_r_infected_nodes] = 0
 
     v_agents = (agents_vaccinated) & (agents_collecting_infected_water)
-    prob_infection_v = (1-params["vaccine_efficacy"]) * params["water_to_human_infection_prob"] * torch.exp(-1.5 * agent_graph.ndata["num_infections"][v_agents])
+    prob_infection_v = (1-params["vaccine_efficacy"]) * params["water_to_human_infection_prob"] * torch.exp(-1.5 * agent_graph.ndata["num_infections"])
     v_infection = torch.where(v_agents, RNG, 1) < prob_infection_v
     v_infected_nodes = torch.where(v_infection)[0]
     agent_graph.ndata["compartments"][v_infected_nodes] = M["E"]
@@ -229,7 +228,8 @@ def _agent_water_to_human_transmission(agent_graph, M, params, grid, random_acti
 
 def _agent_human_to_water_transmission(agent_graph, M, params, grid, random_activity):
 
-    non_infected_water_coords = torch.stack(torch.where(grid.get_slice("water")==1)).T
+    water_slice = grid.get_slice("water")
+    non_infected_water_coords = torch.stack(torch.where(water_slice==1)).T
     if non_infected_water_coords.shape[0] == 0:
         return
     
@@ -245,18 +245,18 @@ def _agent_human_to_water_transmission(agent_graph, M, params, grid, random_acti
     if water_points_to_infect.shape[0] == 0:
         return
 
-    new_water_grid = torch.zeros((grid.grid_shape[0], grid.grid_shape[0]))
-    new_water_grid[water_points_to_infect[:,0], water_points_to_infect[:,1]] = 2
-    grid.set_slice("water", new_water_grid)
+    water_slice[water_points_to_infect[:,0], water_points_to_infect[:,1]] = 2
 
 def _water_recovery(params, grid):
-    infected_water_coords = torch.stack(torch.where(grid.get_slice("water")==2)).T
+    water_slice = grid.get_slice("water")
+    infected_water_coords = torch.stack(torch.where(water_slice==2)).T
     if infected_water_coords.shape[0] == 0:
         return
 
     RNG = torch.rand(infected_water_coords.shape[0], 1)
     recovery = RNG < params["water_recovery_prob"]
     recovered_coords = infected_water_coords[torch.where(recovery)[0]]
-    new_water_grid = torch.zeros((grid.grid_shape[0], grid.grid_shape[0]))
-    new_water_grid[recovered_coords[:,0], recovered_coords[:,1]] = 1
-    grid.set_slice("water", new_water_grid)
+    if recovered_coords.shape[0] == 0:
+        return
+
+    water_slice[recovered_coords[:,0], recovered_coords[:,1]] = 1
