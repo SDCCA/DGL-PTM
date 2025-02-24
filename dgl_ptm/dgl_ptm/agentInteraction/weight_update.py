@@ -42,10 +42,10 @@ def weight_update_sveir(agent_graph, device, decay_rate, truncation_weight):
     """
     # Extract x and y positions of connected nodes (u = source, v = target)
     u, v = agent_graph.edges()
-    x_u = agent_graph.ndata['x'][u]  # x-coordinates of source nodes
-    y_u = agent_graph.ndata['y'][u]  # y-coordinates of source nodes
-    x_v = agent_graph.ndata['x'][v]  # x-coordinates of target nodes
-    y_v = agent_graph.ndata['y'][v]  # y-coordinates of target nodes
+    x_u = agent_graph.ndata['home_location'][u, 0]  # x-coordinates of source nodes
+    y_u = agent_graph.ndata['home_location'][u, 1]  # y-coordinates of source nodes
+    x_v = agent_graph.ndata['home_location'][v, 0]  # x-coordinates of target nodes
+    y_v = agent_graph.ndata['home_location'][v, 1]  # y-coordinates of target nodes
 
     # Compute pairwise Euclidean distance between connected nodes
     distance = torch.sqrt((x_u - x_v)**2 + (y_u - y_v)**2)  # Euclidean distance

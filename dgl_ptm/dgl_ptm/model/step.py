@@ -222,7 +222,12 @@ def sveir_step(agent_graph, device, timestep, params, grid):
     # human -> water infection
     sveir_agent_update("human_to_water_transmission", agent_graph, M, params, grid=grid, random_activity=random_activity)
 
+    # random water collection point recovery
     sveir_agent_update("water_recovery", agent_graph, params=params, grid=grid)
+
+    # cyclical shock to water collection points
+    if (timestep+1) % params["shock_frequency"] == 0:
+        sveir_agent_update("shock", agent_graph, params=params, grid=grid)
 
     # Data can be collected periodically (every X steps) and/or at specified time steps.
     do_periodical_data_collection = (

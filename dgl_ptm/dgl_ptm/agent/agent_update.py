@@ -98,6 +98,8 @@ def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None,
         _agent_water_to_human_transmission(agent_graph, M, params, grid)
     elif method == "water_recovery":
         _water_recovery(params, grid)
+    elif method == "shock":
+        _water_shock(params, grid)
 
 def _agent_increment_exposure_time(agent_graph, M):
     agent_graph.ndata["exposure_time"][agent_graph.ndata["compartments"] == M["E"]] += 1
@@ -260,3 +262,17 @@ def _water_recovery(params, grid):
         return
 
     water_slice[recovered_coords[:,0], recovered_coords[:,1]] = 1
+
+def _water_shock(params, grid):
+    water_slice = grid.get_slice("water")
+    water_coords = torch.stack(torch.where(water_slice==1)).T
+    if water_coords.shape[0] == 0:
+        return
+
+    RNG = torch.rand(water_coords.shape[0], 1)
+    shock = RNG < params["shock_infection_prob"]
+    shocked_coords = water_coords[torch.where(shock)[0]]
+    if shocked_coords.shape[0] == 0:
+        return
+
+    water_slice[shocked_coords[:,0], shocked_coords[:,1]] = 2

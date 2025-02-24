@@ -3,6 +3,9 @@
 *.pdf
 *.pickle
 .ipynb_checkpoints/
+DGL_testing/cache/*
+DGL_testing/gh_shp/*
+DGL_testing/ghana_grid*
 DGL_testing/edge_data
 DGL_testing/agent_data_s.zarr
 DGL_testing/agent_data.zarr
