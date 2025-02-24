@@ -95,7 +95,7 @@ def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None,
     elif method == "human_to_water_transmission":
         _agent_human_to_water_transmission(agent_graph, M, params, grid, random_activity)
     elif method == "water_to_human_transmission":
-        _agent_water_to_human_transmission(agent_graph, M, params, grid, random_activity)
+        _agent_water_to_human_transmission(agent_graph, M, params, grid)
     elif method == "water_recovery":
         _water_recovery(params, grid)
 
@@ -197,12 +197,12 @@ def _agent_move(agent_graph, edge_weights):
 
     return random_activity
 
-def _agent_water_to_human_transmission(agent_graph, M, params, grid, random_activity):
+def _agent_water_to_human_transmission(agent_graph, M, params, grid):
     infected_water_coords = torch.stack(torch.where(grid.get_slice("water")==2)).T
     if infected_water_coords.shape[0] == 0:
         return
-    
-    RNG = torch.rand(random_activity.shape[0])
+ 
+    RNG = torch.rand(agent_graph.ndata["compartments"].shape[0])
 
     coords = torch.stack((agent_graph.ndata["x"], agent_graph.ndata["y"])).T
     match_agent_coords_infected_water_coords = (coords[:, None, :] == infected_water_coords).all(dim=2)
@@ -232,9 +232,9 @@ def _agent_human_to_water_transmission(agent_graph, M, params, grid, random_acti
     non_infected_water_coords = torch.stack(torch.where(water_slice==1)).T
     if non_infected_water_coords.shape[0] == 0:
         return
-    
+
     RNG = torch.rand(random_activity.shape[0])
-    
+
     agents_collecting_water = random_activity == 3
     infected_agents = agent_graph.ndata["compartments"]==M["I"]
 

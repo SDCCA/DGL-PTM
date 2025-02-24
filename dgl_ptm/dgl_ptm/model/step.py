@@ -217,7 +217,7 @@ def sveir_step(agent_graph, device, timestep, params, grid):
     sveir_agent_update("vaccinated_to_exposed", agent_graph, M, params, num_nodes, edge_weights, adjacency=adjacency)
 
     # water -> human infection
-    sveir_agent_update("water_to_human_transmission", agent_graph, M, params, grid=grid, random_activity=random_activity)
+    sveir_agent_update("water_to_human_transmission", agent_graph, M, params, grid=grid)
 
     # human -> water infection
     sveir_agent_update("human_to_water_transmission", agent_graph, M, params, grid=grid, random_activity=random_activity)
