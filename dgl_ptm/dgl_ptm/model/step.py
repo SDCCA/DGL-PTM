@@ -179,6 +179,17 @@ def sveir_step(agent_graph, device, timestep, params, grid):
     Output:
         agent_graph: Updated agent_graph after one step of functional manipulation
     """
+    if timestep == 0:
+        data_collection(
+            agent_graph,
+            timestep = timestep,
+            npath = params['npath'],
+            epath = params['epath'],
+            ndata = params['ndata'],
+            edata = params['edata'],
+            mode = params['mode']
+        )
+
     num_nodes = agent_graph.num_nodes()
 
     M = {
@@ -241,7 +252,7 @@ def sveir_step(agent_graph, device, timestep, params, grid):
     if do_periodical_data_collection or do_specific_data_collection:
         data_collection(
             agent_graph,
-            timestep = timestep,
+            timestep = timestep+1,
             npath = params['npath'],
             epath = params['epath'],
             ndata = params['ndata'],

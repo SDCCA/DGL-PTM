@@ -810,7 +810,7 @@ class SVEIRModel(Model):
 
     def _initialize_agents_compartment(self):
         proportion = self.steering_parameters["initial_infected_proportion"]
-        if not 0 < proportion < 1.0: 
+        if not 0 <= proportion <= 1.0: 
             raise ValueError("Initial infected proportion must be between 0 and 1.")
         num_infected = round(self.graph.num_nodes() * proportion)
         tensor = torch.zeros(self.graph.num_nodes(), dtype=torch.int)
