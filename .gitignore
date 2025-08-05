@@ -2,7 +2,10 @@
 **/.DS_Store
 *.pdf
 *.pickle
+*.vscode/
 .ipynb_checkpoints/
+dgl_ptm/sveir_test/*
+DGL_testing/*
 DGL_testing/cache/*
 DGL_testing/gh_shp/*
 DGL_testing/ghana_grid*

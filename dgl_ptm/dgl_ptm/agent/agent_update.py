@@ -1,278 +1,317 @@
-from dgl_ptm.agent.income_generation import income_generation
-from dgl_ptm.agent.wealth_consumption import wealth_consumption
-from dgl_ptm.agent.capital_update import capital_update
-from dgl_ptm.util.network_metrics import node_degree, node_weighted_degree
-from dgl_ptm.util.utils import sample_distribution_tensor
+from dgl_ptm.model.policy_engine import *
 import torch
-#from dgl_ptm.agent.movement import move_agents
 
+def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None, edge_weights=None, grid=None, adjacency=None, random_activity=None, policy=None):
+    """
+    Dispatcher function that calls the appropriate agent update logic.
+    """
+    # Define a mapping from method names to functions
+    update_functions = {
+        "exposure_increment": (_agent_increment_exposure_time, [agent_graph, M]),
+        "health_investment": (_agent_health_investment_vectorized, [agent_graph, params, policy]),
+        "exposed_to_infectious": (_agent_exposed_to_infectious, [agent_graph, M, params]),
+        "infectious_to_recovered": (_agent_infectious_to_recovered, [agent_graph, M, params, num_nodes]),
+        "susceptible_to_vaccinated": (_agent_susceptible_to_vaccinated, [agent_graph, M, params, num_nodes]),
+        "susceptible_to_exposed": (_agent_susceptible_to_exposed, [agent_graph, M, params, num_nodes, adjacency]),
+        "vaccinated_to_exposed": (_agent_vaccinated_to_exposed, [agent_graph, M, params, num_nodes, adjacency]),
+        "move": (_agent_move, [agent_graph, edge_weights]),
+        "human_to_water_transmission": (_agent_human_to_water_transmission, [agent_graph, M, params, grid, random_activity]),
+        "water_to_human_transmission": (_agent_water_to_human_transmission, [agent_graph, M, params, grid]),
+        "water_recovery": (_water_recovery, [params, grid]),
+        "shock": (_water_shock, [params, grid]),
+    }
 
-def agent_update(model_graph, model_params=None, device=None, timestep=None, method='pseudo'):
-    '''
-    agent_update - Updates agent attributes
-    '''
-    if method == 'capital':
-        _agent_capital_update(model_graph, model_params, timestep)
-    elif method == 'theta':
-        _agent_theta_update(model_graph, model_params, timestep)
-    elif method == 'consumption':
-        _agent_consumption_update(model_graph, model_params, timestep, device)
-    elif method == 'income':
-        _agent_income_update(model_graph,model_params,device)
-    elif method == 'degree':
-        _agent_degree_update(model_graph)
-    elif method == 'weighted_degree':
-        _agent_weighted_degree_update(model_graph)
-    elif method == 'position':
-        _agent_position_update(model_graph)
-    elif method == 'pseudo':
-        _pseudo_agent_update(model_graph,model_params,device)
+    if method in update_functions:
+        func, args = update_functions[method]
+        # Special case for 'move' which has a return value
+        if method == "move":
+            return func(*args)
+        else:
+            func(*args)
     else:
-        raise NotImplementedError(f"Unrecognized agent update type {method} attempted during time step implementation.'")
-
-def _pseudo_agent_update(model_graph,model_params,device): 
-    '''
-    agent_update - Updates the state of the agent based on income generation and money trades
-    '''
-    model_graph.ndata['wealth'] = model_graph.ndata['wealth'] + model_graph.ndata['net_trade']
-    income_generation(model_graph, device, model_params, method = model_params['income_method'])
-    wealth_consumption(model_graph, model_params, method=model_params['consume_method'], device=device)
-    model_graph.ndata['wealth'] = model_graph.ndata['wealth'] + model_graph.ndata['income'] - model_graph.ndata['wealth_consumption']
-
-
-
-def _agent_capital_update(model_graph,model_params,timestep):
-    '''
-    formula for k_t+1 is applied at the beginning of each time step 
-    k_t+1 becomes the new k_t
-    '''
-    capital_update(model_graph, model_params, timestep, method=model_params['capital_method'])
-    #self.connections=0
-    #self.trades=0
-    #self.net_traded=model_graph.ndata['wealth']
-    
-def _agent_theta_update(model_graph,model_params,timestep):
-    '''Updates agent perception of theta based on observation and sensitivity'''
-    global_θ =model_params['global_theta'][timestep]
-    model_graph.ndata['theta'] = model_graph.ndata['theta'] * (1-model_graph.ndata['sensitivity']) + global_θ * model_graph.ndata['sensitivity']
-
-def _agent_consumption_update(model_graph, model_params, timestep, device):
-    '''Updates agent consumption based on method specified in model parameters.'''
-    wealth_consumption(model_graph, model_params,timestep, device, method=model_params['consume_method'])
-
-def _agent_income_update(model_graph, model_params, device):
-    '''Updates agent income based on method specified in model parameters.'''
-    income_generation(model_graph,device,model_params,method=model_params['income_method'])
-
-def _agent_degree_update(model_graph):
-    '''Updates agent degree. Note both edge directions are considered.'''
-    model_graph.ndata['degree'] = node_degree(model_graph)
-
-def _agent_weighted_degree_update(model_graph):
-    '''Updates agent weighted degree. Note both edge directions are considered.'''
-    model_graph.ndata['weighted_degree'] = node_weighted_degree(model_graph)
-
-def _agent_position_update(model_graph,model_params,moving_agents):
-    '''Updates agent position.'''
-    move_agents(model_graph,model_params,moving_agents)
-
-
-def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None, edge_weights=None, grid=None, adjacency=None, random_activity=None):
-    if method == "exposure_increment":
-        _agent_increment_exposure_time(agent_graph, M)
-    elif method == "exposed_to_infectious":
-        _agent_exposed_to_infectious(agent_graph, M, params)
-    elif method == "infectious_to_recovered":
-        _agent_infectious_to_recovered(agent_graph, M, params, num_nodes)
-    elif method == "susceptible_to_vaccinated":
-        _agent_susceptible_to_vaccinated(agent_graph, M, params, num_nodes)
-    elif method == "susceptible_to_exposed":
-        _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, adjacency)
-    elif method == "vaccinated_to_exposed":
-        _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, adjacency)
-    elif method == "move":
-        return _agent_move(agent_graph, edge_weights)
-    elif method == "human_to_water_transmission":
-        _agent_human_to_water_transmission(agent_graph, M, params, grid, random_activity)
-    elif method == "water_to_human_transmission":
-        _agent_water_to_human_transmission(agent_graph, M, params, grid)
-    elif method == "water_recovery":
-        _water_recovery(params, grid)
-    elif method == "shock":
-        _water_shock(params, grid)
+        raise ValueError(f"Unknown agent update method: {method}")
 
 def _agent_increment_exposure_time(agent_graph, M):
-    agent_graph.ndata["exposure_time"][agent_graph.ndata["compartments"] == M["E"]] += 1
+    """Increments the exposure time for all agents currently in the 'Exposed' compartment."""
+    exposed_mask = agent_graph.ndata["compartments"] == M["E"]
+    agent_graph.ndata["exposure_time"][exposed_mask] += 1
+
+def _agent_health_investment_vectorized(agent_graph, params, policy):
+    """
+    Vectorized function for agents to decide on health investment.    
+    """
+    num_agents = agent_graph.num_nodes()
+    wealth = agent_graph.ndata["wealth"].clone().long()
+    health = agent_graph.ndata["health"].clone().long()
+
+    # Get decisions from the policy matrix for all agents at once
+    # Note: policy is a list of numpy arrays. We need to handle this.
+    # This assumes policy is structured such that we can retrieve decisions this way.
+    # If policy is a list of 2D arrays, this needs careful handling.
+    # Assuming policy is a list of (W,H) policy arrays, one for each agent.
+    decisions = torch.tensor([policy[i][wealth[i]-1, health[i]-1] for i in range(num_agents)], device=agent_graph.device)
+
+    invest_mask = (decisions == 1)
+    
+    # Calculate costs and health changes for all agents
+    investment_cost = compute_health_cost(health)
+    health_change = compute_health_delta(health)
+
+    can_afford_mask = (wealth >= investment_cost)
+    
+    new_wealth = wealth.clone().float()
+    new_health = health.clone().float()
+
+    # --- Update agents who INVEST ---
+    invest_and_can_afford = invest_mask & can_afford_mask
+    if torch.any(invest_and_can_afford):
+        new_wealth[invest_and_can_afford] -= investment_cost[invest_and_can_afford]
+        
+        # Probabilistic health increase for investors
+        prob_increase = torch.rand(torch.sum(invest_and_can_afford), device=agent_graph.device)
+        success_increase_mask = prob_increase < params["PH_increase"]
+
+        health_to_update = new_health[invest_and_can_afford]
+        health_to_update[success_increase_mask] += health_change[invest_and_can_afford][success_increase_mask]
+        new_health[invest_and_can_afford] = health_to_update
+
+    # --- Update agents who could NOT afford to invest (or chose not to) ---
+    save_mask = ~invest_mask
+    invest_but_cant_afford = invest_mask & ~can_afford_mask
+    
+    # Probabilistic health decrease for savers and those who couldn't afford it
+    decrease_candidates = save_mask | invest_but_cant_afford
+    if torch.any(decrease_candidates):
+        prob_decrease = torch.rand(torch.sum(decrease_candidates), device=agent_graph.device)
+        success_decrease_mask = prob_decrease < params["PH_decrease"]
+        
+        health_to_update = new_health[decrease_candidates]
+        health_to_update[success_decrease_mask] -= health_change[decrease_candidates][success_decrease_mask]
+        new_health[decrease_candidates] = health_to_update
+        
+    # Clamp health to be within [1, 100]
+    new_health.clamp_(min=1, max=100)
+
+    # --- Final wealth update based on new utility ---
+    current_utility = utility(new_wealth, new_health, agent_graph.ndata["alpha"])
+    updated_wealth = compute_new_wealth(new_wealth, params["wealth_update_A"], current_utility)
+
+    agent_graph.ndata["wealth"] = updated_wealth
+    agent_graph.ndata["health"] = new_health
+
 
 def _agent_exposed_to_infectious(agent_graph, M, params):
-    exposed_to_infections = (agent_graph.ndata["compartments"]==M["E"]) & (agent_graph.ndata["exposure_time"] >= params["exposure_period"])
-    agent_graph.ndata["compartments"][exposed_to_infections] = M["I"]
-    agent_graph.ndata["num_infections"][exposed_to_infections] += 1
+    """Transitions agents from 'Exposed' to 'Infectious' if their exposure time exceeds the threshold."""
+    exposed_to_infections_mask = (agent_graph.ndata["compartments"]==M["E"]) & \
+                                 (agent_graph.ndata["exposure_time"] >= params["exposure_period"])
+    
+    if torch.any(exposed_to_infections_mask):
+        agent_graph.ndata["compartments"][exposed_to_infections_mask] = M["I"]
+        agent_graph.ndata["num_infections"][exposed_to_infections_mask] += 1
+
 
 def _agent_infectious_to_recovered(agent_graph, M, params, num_nodes):
-    i_r_rng = sample_distribution_tensor('uniform', [0.0, 1.0], num_nodes)
-    infectious_to_recovered = (agent_graph.ndata["compartments"]==M["I"]) & (i_r_rng < params["recovery_rate"])
-    agent_graph.ndata["compartments"][infectious_to_recovered] = M["R"]
+    """Transitions agents from 'Infectious' to 'Recovered' based on a recovery probability."""
+    infectious_mask = agent_graph.ndata["compartments"] == M["I"]
+    if not torch.any(infectious_mask):
+        return
+        
+    recovery_chance = torch.rand(torch.sum(infectious_mask), device=agent_graph.device)
+    recovered_mask = recovery_chance < params["recovery_rate"]
+    
+    agents_to_recover = infectious_mask.nonzero(as_tuple=True)[0][recovered_mask]
+    agent_graph.ndata["compartments"][agents_to_recover] = M["R"]
+
 
 def _agent_susceptible_to_vaccinated(agent_graph, M, params, num_nodes):
-    s_r_rng = sample_distribution_tensor('uniform', [0.0, 1.0], num_nodes)
-    susceptible_to_vaccinated = (agent_graph.ndata["compartments"]==M["S"]) & (s_r_rng < params["vaccination_rate"])
-    agent_graph.ndata["compartments"][susceptible_to_vaccinated] = M["V"]
+    """Transitions agents from 'Susceptible' to 'Vaccinated' based on a vaccination probability."""
+    susceptible_mask = agent_graph.ndata["compartments"] == M["S"]
+    if not torch.any(susceptible_mask):
+        return
+
+    vaccination_chance = torch.rand(torch.sum(susceptible_mask), device=agent_graph.device)
+    vaccinated_mask = vaccination_chance < params["vaccination_rate"]
+    
+    agents_to_vaccinate = susceptible_mask.nonzero(as_tuple=True)[0][vaccinated_mask]
+    agent_graph.ndata["compartments"][agents_to_vaccinate] = M["V"]
+
+
+def _calculate_and_apply_new_infections(agent_graph, M, params, target_nodes_mask, adjacency, base_prob_multiplier=1.0):
+    """
+    Helper function to handle infection logic for any group of agents.
+    """
+    if not torch.any(target_nodes_mask):
+        return
+
+    target_nodes_indices = target_nodes_mask.nonzero(as_tuple=True)[0]
+    
+    # Create a mask for infectious agents to find infectious neighbors
+    is_infectious_mask = agent_graph.ndata["compartments"] == M["I"]
+    
+    # Calculate infection pressure from infectious agents at the same location
+    infection_pressure = torch.matmul(adjacency[target_nodes_indices].float(), is_infectious_mask.float())
+
+    if torch.sum(infection_pressure) == 0:
+        return # No one is exposed to an infectious agent
+
+    # Base infection probability, reduced by prior infections and health
+    num_infections = agent_graph.ndata["num_infections"][target_nodes_indices].float()
+    health = agent_graph.ndata["health"][target_nodes_indices].float()
+    
+    prob_infection_base = params["infection_probability"] * torch.exp(-1.5 * num_infections)
+    health_susceptibility = torch.exp(-params["infection_reduction_factor_per_health_unit"] * (health - 1.0))
+    
+    final_prob = base_prob_multiplier * prob_infection_base * health_susceptibility
+    final_prob = torch.clamp(final_prob, 0.0, 1.0)
+
+    # The probability of NOT getting infected is (1-p)^k, where k is infection_pressure
+    prob_not_infected = (1 - final_prob) ** infection_pressure
+    prob_getting_infected = 1 - prob_not_infected
+
+    # Determine new infections
+    random_samples = torch.rand(len(target_nodes_indices), device=agent_graph.device)
+    newly_infected_mask = random_samples < prob_getting_infected
+
+    infected_nodes_indices = target_nodes_indices[newly_infected_mask]
+
+    if len(infected_nodes_indices) > 0:
+        agent_graph.ndata["compartments"][infected_nodes_indices] = M["E"]
+        agent_graph.ndata["exposure_time"][infected_nodes_indices] = 0
 
 def _agent_susceptible_to_exposed(agent_graph, M, params, num_nodes, adjacency):
-    susceptible_recovered_nodes = torch.where((agent_graph.ndata["compartments"] == M["S"]) | (agent_graph.ndata["compartments"] == M["R"]))[0]
-    infected_weights = torch.where(agent_graph.ndata["compartments"].repeat(num_nodes, 1) == 3, adjacency, 0)[susceptible_recovered_nodes]
-    nonzero_weights = torch.where(infected_weights > 0)
-
-    RNG = torch.rand((2, nonzero_weights[0].shape[0]))
-    RNG1 = torch.zeros_like(infected_weights)
-    RNG1[nonzero_weights] = RNG[0]
-    RNG2 = torch.zeros_like(infected_weights)
-    RNG2[nonzero_weights] = RNG[1]
-
-    prob_infection = params["infection_probability"] * torch.exp(-1.5 * agent_graph.ndata["num_infections"][susceptible_recovered_nodes])
-    infection = (infected_weights > 0).type(torch.float32) * (RNG1 < infected_weights) * (RNG2 < prob_infection[:, None])
-    infected_nodes = susceptible_recovered_nodes[torch.where(infection.sum(axis=1) > 0)]
-
-    agent_graph.ndata["compartments"][infected_nodes] = M["E"]
-    agent_graph.ndata["exposure_time"][infected_nodes] = 0
+    """Transitions 'Susceptible' agents to 'Exposed' based on proximity to 'Infectious' agents."""
+    susceptible_mask = (agent_graph.ndata["compartments"] == M["S"])
+    _calculate_and_apply_new_infections(agent_graph, M, params, susceptible_mask, adjacency, base_prob_multiplier=1.0)
 
 def _agent_vaccinated_to_exposed(agent_graph, M, params, num_nodes, adjacency):
-    vaccinated_nodes = (agent_graph.ndata["compartments"] == M["V"]).nonzero(as_tuple=True)[0]
-    infected_weights = torch.where(agent_graph.ndata["compartments"].repeat(num_nodes, 1) == 3, adjacency, 0)[vaccinated_nodes]
-    nonzero_weights = torch.where(infected_weights > 0)
-
-    RNG = torch.rand((2, nonzero_weights[0].shape[0]))
-    RNG1 = torch.zeros_like(infected_weights)
-    RNG1[nonzero_weights] = RNG[0]
-    RNG2 = torch.zeros_like(infected_weights)
-    RNG2[nonzero_weights] = RNG[1]
-
-    prob_infection = (1-params["vaccine_efficacy"]) * params["infection_probability"] * torch.exp(-1.5 * agent_graph.ndata["num_infections"][vaccinated_nodes])
-    infection = (infected_weights > 0).type(torch.float32) * (RNG1 < infected_weights) * (RNG2 < prob_infection[:, None])
-    infected_nodes = vaccinated_nodes[torch.where(infection.sum(axis=1) > 0)]
-
-    agent_graph.ndata["compartments"][infected_nodes] = M["E"]
-    agent_graph.ndata["exposure_time"][infected_nodes] = 0
+    """Transitions 'Vaccinated' agents to 'Exposed' (breakthrough infection)."""
+    vaccinated_mask = (agent_graph.ndata["compartments"] == M["V"])
+    breakthrough_multiplier = 1.0 - params["vaccine_efficacy"]
+    _calculate_and_apply_new_infections(agent_graph, M, params, vaccinated_mask, adjacency, base_prob_multiplier=breakthrough_multiplier)
 
 def _agent_move(agent_graph, edge_weights):
+    """Moves agents to different locations based on their daily activity schedule."""
     random_activity = torch.multinomial(agent_graph.ndata["time_use"], num_samples=1).squeeze()
     agent_graph.ndata["activity_choice"] = random_activity
 
-    # 0 -> home
-    agents_home = torch.where(random_activity==0)[0]
-    agent_graph.ndata['x'][agents_home] = agent_graph.ndata["home_location"][agents_home,0]
-    agent_graph.ndata['y'][agents_home] = agent_graph.ndata["home_location"][agents_home,1]
+    # Location mapping: 0:home, 1:school, 2:worship, 3:water, 4:social
+    location_map = {
+        0: "home_location", 1: "school_location", 2: "worship_location", 3: "water_location"
+    }
 
-    # 1 -> school
-    agents_school = torch.where(random_activity==1)[0]
-    agent_graph.ndata['x'][agents_school] = agent_graph.ndata["school_location"][agents_school,0]
-    agent_graph.ndata['y'][agents_school] = agent_graph.ndata["school_location"][agents_school,1]
+    for activity_idx, location_key in location_map.items():
+        mask = (random_activity == activity_idx)
+        if torch.any(mask):
+            agent_graph.ndata['x'][mask] = agent_graph.ndata[location_key][mask, 0]
+            agent_graph.ndata['y'][mask] = agent_graph.ndata[location_key][mask, 1]
 
-    # 2 -> place of worship
-    agents_worship = torch.where(random_activity==2)[0]
-    agent_graph.ndata['x'][agents_worship] = agent_graph.ndata["worship_location"][agents_worship,0]
-    agent_graph.ndata['y'][agents_worship] = agent_graph.ndata["worship_location"][agents_worship,1]
-
-    # 3 -> water collection, water contamination by human, human contamination from water
-    agents_water = torch.where(random_activity==3)[0]
-    agent_graph.ndata['x'][agents_water] = agent_graph.ndata["water_location"][agents_water,0]
-    agent_graph.ndata['y'][agents_water] = agent_graph.ndata["water_location"][agents_water,1]
-
-    # 4 -> social
-    agents_social = torch.where(random_activity==4)[0]
-    social_weights = edge_weights[agents_social]
-    # social agents can only visit agents that are at home
-    at_home_mask = torch.zeros(social_weights.shape[1], dtype=torch.bool)
-    at_home_mask[agents_home] = True
-    social_weights = social_weights * at_home_mask
-    # only consider social agents that have at least one available neighbor
-    non_zero_indices = torch.where(torch.sum(social_weights, dim=1) != 0)[0]
-    agents_social = agents_social[non_zero_indices]
-    social_weights = social_weights[non_zero_indices]
-    # probabilities of visiting agents that are at home must sum to one
-    social_weights = social_weights / social_weights.sum(dim=1, keepdim=True)
-    # identify which neighbors to visit and update social agents' locations
-    visit_indices = torch.multinomial(social_weights, num_samples=1).squeeze()
-    agent_graph.ndata['x'][agents_social] = agent_graph.ndata["home_location"][visit_indices,0]
-    agent_graph.ndata['y'][agents_social] = agent_graph.ndata["home_location"][visit_indices,1]
+    # Handle social visits separately as they are more complex
+    social_mask = (random_activity == 4)
+    if torch.any(social_mask):
+        agents_social_indices = social_mask.nonzero(as_tuple=True)[0]
+        
+        # Social agents visit other agents who are at home
+        is_at_home_mask = (random_activity == 0)
+        
+        # Weights for visiting agents at home
+        social_weights = edge_weights[agents_social_indices][:, is_at_home_mask]
+        
+        # Only consider agents who have neighbors at home to visit
+        can_visit_mask = social_weights.sum(dim=1) > 0
+        if torch.any(can_visit_mask):
+            visiting_agents = agents_social_indices[can_visit_mask]
+            visiting_weights = social_weights[can_visit_mask]
+            
+            # Normalize weights to form a probability distribution
+            visiting_weights /= visiting_weights.sum(dim=1, keepdim=True)
+            
+            # Choose a neighbor to visit
+            hosts_at_home = is_at_home_mask.nonzero(as_tuple=True)[0]
+            visited_host_indices = hosts_at_home[torch.multinomial(visiting_weights, num_samples=1).squeeze()]
+            
+            # Update location of visiting agents to the home of their host
+            agent_graph.ndata['x'][visiting_agents] = agent_graph.ndata["home_location"][visited_host_indices, 0]
+            agent_graph.ndata['y'][visiting_agents] = agent_graph.ndata["home_location"][visited_host_indices, 1]
 
     return random_activity
 
 def _agent_water_to_human_transmission(agent_graph, M, params, grid):
-    infected_water_coords = torch.stack(torch.where(grid.get_slice("water")==2)).T
+    """Handles infection of agents from contaminated water sources."""
+    infected_water_coords = torch.stack(torch.where(grid.get_slice("water") == 2)).T
     if infected_water_coords.shape[0] == 0:
+        return  # No contaminated water sources
+
+    # Find agents at contaminated water locations
+    agent_coords = torch.stack((agent_graph.ndata["x"], agent_graph.ndata["y"])).T
+    at_infected_source_mask = (agent_coords.unsqueeze(1) == infected_water_coords.unsqueeze(0)).all(dim=-1).any(dim=1)
+
+    if not torch.any(at_infected_source_mask):
         return
- 
-    RNG = torch.rand(agent_graph.ndata["compartments"].shape[0])
 
-    coords = torch.stack((agent_graph.ndata["x"], agent_graph.ndata["y"])).T
-    match_agent_coords_infected_water_coords = (coords[:, None, :] == infected_water_coords).all(dim=2)
-    agents_collecting_infected_water = match_agent_coords_infected_water_coords.any(dim=1)
+    # Handle Susceptible/Recovered agents
+    s_r_mask = ((agent_graph.ndata["compartments"] == M["S"]) | (agent_graph.ndata["compartments"] == M["R"])) & at_infected_source_mask
+    _calculate_and_apply_new_infections(agent_graph, M, params, s_r_mask, torch.eye(agent_graph.num_nodes()), base_prob_multiplier=params["water_to_human_infection_prob"])
 
-    agents_susceptible = agent_graph.ndata["compartments"] == M["S"]
-    agents_recovered = agent_graph.ndata["compartments"] == M["R"]
-    agents_vaccinated = agent_graph.ndata["compartments"] == M["V"]
+    # Handle Vaccinated agents
+    v_mask = (agent_graph.ndata["compartments"] == M["V"]) & at_infected_source_mask
+    breakthrough_multiplier = (1.0 - params["vaccine_efficacy"]) * params["water_to_human_infection_prob"]
+    _calculate_and_apply_new_infections(agent_graph, M, params, v_mask, torch.eye(agent_graph.num_nodes()), base_prob_multiplier=breakthrough_multiplier)
 
-    s_r_agents = (agents_susceptible | agents_recovered) & (agents_collecting_infected_water)
-    prob_infection_s_r = params["water_to_human_infection_prob"] * torch.exp(-1.5 * agent_graph.ndata["num_infections"])
-    s_r_infection = torch.where(s_r_agents, RNG, 1) < prob_infection_s_r
-    s_r_infected_nodes = torch.where(s_r_infection)[0]
-    agent_graph.ndata["compartments"][s_r_infected_nodes] = M["E"]
-    agent_graph.ndata["exposure_time"][s_r_infected_nodes] = 0
-
-    v_agents = (agents_vaccinated) & (agents_collecting_infected_water)
-    prob_infection_v = (1-params["vaccine_efficacy"]) * params["water_to_human_infection_prob"] * torch.exp(-1.5 * agent_graph.ndata["num_infections"])
-    v_infection = torch.where(v_agents, RNG, 1) < prob_infection_v
-    v_infected_nodes = torch.where(v_infection)[0]
-    agent_graph.ndata["compartments"][v_infected_nodes] = M["E"]
-    agent_graph.ndata["exposure_time"][v_infected_nodes] = 0
 
 def _agent_human_to_water_transmission(agent_graph, M, params, grid, random_activity):
-
+    """Handles contamination of water sources by infectious agents."""
     water_slice = grid.get_slice("water")
-    non_infected_water_coords = torch.stack(torch.where(water_slice==1)).T
-    if non_infected_water_coords.shape[0] == 0:
+    
+    # Find infectious agents who are at a water source
+    infectious_mask = agent_graph.ndata["compartments"] == M["I"]
+    at_water_source_mask = random_activity == 3
+    contaminator_mask = infectious_mask & at_water_source_mask
+
+    if not torch.any(contaminator_mask):
         return
 
-    RNG = torch.rand(random_activity.shape[0])
+    # Probabilistic contamination
+    contamination_chance = torch.rand(torch.sum(contaminator_mask), device=agent_graph.device)
+    contamination_success = contamination_chance < params["human_to_water_infection_prob"]
+    
+    successful_contaminators = contaminator_mask.nonzero(as_tuple=True)[0][contamination_success]
+    
+    if len(successful_contaminators) > 0:
+        # Get the unique locations of water points to be contaminated
+        water_points_to_infect = torch.unique(agent_graph.ndata["water_location"][successful_contaminators], dim=0).int()
+        if water_points_to_infect.shape[0] > 0:
+            water_slice[water_points_to_infect[:, 0], water_points_to_infect[:, 1]] = 2 # Mark as contaminated
 
-    agents_collecting_water = random_activity == 3
-    infected_agents = agent_graph.ndata["compartments"]==M["I"]
-
-    agents_capable_of_infecting_water = (agents_collecting_water) & (infected_agents)
-    agents_infecting_water = torch.where(agents_capable_of_infecting_water, RNG, 1) < params["human_to_water_infection_prob"]
-
-    water_points_to_infect = torch.unique(agent_graph.ndata["water_location"][agents_infecting_water], dim=0).int()
-    if water_points_to_infect.shape[0] == 0:
-        return
-
-    water_slice[water_points_to_infect[:,0], water_points_to_infect[:,1]] = 2
 
 def _water_recovery(params, grid):
+    """Handles the random recovery of contaminated water sources."""
     water_slice = grid.get_slice("water")
-    infected_water_coords = torch.stack(torch.where(water_slice==2)).T
-    if infected_water_coords.shape[0] == 0:
+    infected_water_mask = water_slice == 2
+    if not torch.any(infected_water_mask):
         return
 
-    RNG = torch.rand(infected_water_coords.shape[0], 1)
-    recovery = RNG < params["water_recovery_prob"]
-    recovered_coords = infected_water_coords[torch.where(recovery)[0]]
-    if recovered_coords.shape[0] == 0:
-        return
+    recovery_chance = torch.rand(torch.sum(infected_water_mask), device=water_slice.device)
+    recovery_success = recovery_chance < params["water_recovery_prob"]
 
-    water_slice[recovered_coords[:,0], recovered_coords[:,1]] = 1
+    coords_to_recover = infected_water_mask.nonzero(as_tuple=True)
+    recovered_coords = (coords_to_recover[0][recovery_success], coords_to_recover[1][recovery_success])
+    
+    if len(recovered_coords[0]) > 0:
+        water_slice[recovered_coords] = 1 # Mark as clean
+
 
 def _water_shock(params, grid):
+    """Applies a cyclical shock that contaminates clean water sources."""
     water_slice = grid.get_slice("water")
-    water_coords = torch.stack(torch.where(water_slice==1)).T
-    if water_coords.shape[0] == 0:
+    clean_water_mask = water_slice == 1
+    if not torch.any(clean_water_mask):
         return
 
-    RNG = torch.rand(water_coords.shape[0], 1)
-    shock = RNG < params["shock_infection_prob"]
-    shocked_coords = water_coords[torch.where(shock)[0]]
-    if shocked_coords.shape[0] == 0:
-        return
+    shock_chance = torch.rand(torch.sum(clean_water_mask), device=water_slice.device)
+    shock_success = shock_chance < params["shock_infection_prob"]
 
-    water_slice[shocked_coords[:,0], shocked_coords[:,1]] = 2
+    coords_to_shock = clean_water_mask.nonzero(as_tuple=True)
+    shocked_coords = (coords_to_shock[0][shock_success], coords_to_shock[1][shock_success])
+
+    if len(shocked_coords[0]) > 0:
+        water_slice[shocked_coords] = 2 # Mark as contaminated

@@ -31,6 +31,7 @@ dependencies = [
     "osmnx>=2.0.1",
     "contextily>=1.6.2",
     "imageio>=2.37.0",
+    "selenium>=4.29.0",
 ]
 description = "The deep graph library reimplementation of the poverty trap model."
 readme = "README.md"

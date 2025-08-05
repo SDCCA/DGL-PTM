@@ -1,261 +1,157 @@
-#!/usr/bin/env python
+"""Time-stepping module for the SVEIR model."""
 
-"""step - time-stepping for the poverty-trap model."""
+from typing import Any, Dict
 
-from dgl_ptm.agent.agent_update import agent_update, sveir_agent_update
-from dgl_ptm.agentInteraction.trade_money import trade_money
-from dgl_ptm.agentInteraction.weight_update import multi_property_weight_update
-from dgl_ptm.model.data_collection import data_collection
-from dgl_ptm.network.global_attachment import global_attachment
-from dgl_ptm.network.link_deletion import link_deletion
-from dgl_ptm.network.local_attachment import local_attachment
-from dgl_ptm.network.local_attachment_basic_homophily import local_attachment_homophily
-from dgl_ptm.network.random_edge_noise import random_edge_noise
-from dgl_ptm.util.utils import sample_distribution_tensor
 import torch
+import dgl
 
-def ptm_step(agent_graph, device, timestep, params):
-    """Step - time-stepping module for the poverty-trap model.
+from dgl_ptm.agent.agent_update import sveir_agent_update
+from dgl_ptm.model.data_collection import data_collection
+
+# Define compartment mapping globally or as a constant if it's fixed
+COMPARTMENT_MAP = {
+    "S": 0,  # Susceptible
+    "V": 1,  # Vaccinated
+    "E": 2,  # Exposed
+    "I": 3,  # Infectious
+    "R": 4   # Recovered
+}
+
+def _calculate_adjacency(agent_graph: dgl.DGLGraph) -> torch.Tensor:
+    """
+    Calculates the adjacency matrix based on agent spatial coordinates.
+
+    Two agents are considered adjacent if they share the exact same (x, y) coordinates.
+    This is used to model infection transmission in a shared location.
 
     Args:
-        agent_graph: DGLGraph with agent nodes and edges connecting agents
-        device: Device to run the model on, e.g. 'cpu' or 'cuda'
-        timestep: Current time step
-        params: List of user-defined parameters
+        agent_graph (dgl.DGLGraph): The DGL graph containing agent 'x' and 'y'
+                                    coordinates in its node data.
 
-    Output:
-        agent_graph: Updated agent_graph after one step of functional manipulation
+    Returns:
+        torch.Tensor: A square adjacency matrix where A[i,j] = 1 if agents i and j
+                      are at the same location (and i != j), else 0.
     """
-    if params['step_type']=='default':
-        #Wealth transfer
-        trade_money(agent_graph, device, method = params['trade_method'])
-
-        #Edge manipulation
-        local_attachment(
-            agent_graph, n_FoF_links = 1, edge_prop = 'weight', p_attach=1.
-            )
-        link_deletion(
-            agent_graph,
-            method = params['del_method'],
-            threshold = params['del_threshold']
-            )
-        global_attachment(agent_graph, device, ratio = params['noise_ratio'])
-
-        #Update agent states
-        agent_update(agent_graph, params, device=device)
-
-        #Weight update
-        multi_property_weight_update(
-            agent_graph,
-            device,
-            truncation_weight = params['truncation_weight'],
-            properties = {'wealth':{'keys':["wealth"],'homophily_parameter':params['homophily_parameter'],'characteristic_distance':params['characteristic_distance']}})
-        
-    elif params['step_type']=='ptm':
-        if timestep==0:
-            if agent_graph.number_of_edges()+params['noise_ratio']*agent_graph.number_of_nodes()+params['local_ratio']*agent_graph.number_of_nodes()<2**32:
-                agent_graph = agent_graph.int()
-                print(f"Agent graph storage type: {agent_graph.idtype}")
+    coordinates = torch.stack([agent_graph.ndata['x'], agent_graph.ndata['y']], dim=1)
+    # Compare all pairs of coordinates. (N, 1, 2) == (1, N, 2) -> (N, N, 2)
+    # .all(-1) checks if both x and y match -> (N, N) bool tensor
+    # .float() converts bool to float (0.0 or 1.0)
+    # .fill_diagonal_(0) sets self-loops to 0, as an agent cannot infect itself.
+    adjacency_matrix = (coordinates.unsqueeze(1) == coordinates.unsqueeze(0)).all(dim=-1).float()
+    adjacency_matrix.fill_diagonal_(0)
+    return adjacency_matrix
 
 
+def sveir_step(
+    agent_graph: dgl.DGLGraph,
+    device: torch.device,
+    timestep: int,
+    params: Dict[str, Any],
+    grid: Any,
+    optimal_policy: torch.Tensor
+) -> None:
+    """
+    Performs a single step of the SVEIR model simulation.
 
-            #Update agent income
-            agent_update(agent_graph,
-                         params,
-                         device=device,
-                         method ='income'
-                         )
-            #Update agent consumption
-            agent_update(
-                agent_graph,
-                params,
-                device=device,
-                timestep=timestep,
-                method ='consumption'
-            )
-            #Collect specified data
-            data_collection(
-                agent_graph,
-                timestep = timestep,
-                npath = params['npath'],
-                epath = params['epath'],
-                ndata = params['ndata'],
-                edata = params['edata'],
-                mode = params['mode']
-                )
-            return
-        #For timestep 1 and beyond:
-
-        #Update agent capital, k_t+1 for the previous step becomes k_t
-        agent_update(
-            agent_graph, 
-            params, 
-            device=device, 
-            timestep=timestep, 
-            method = 'capital'
-            )
-        #Update agent theta with the information from the previous step
-        agent_update(
-            agent_graph, params, device=device, timestep=timestep-1, method ='theta'
-            )
-
-        #Update edge weights
-
-        multi_property_weight_update(
-            agent_graph,
-            device,
-            truncation_weight = params['truncation_weight'],
-            properties = params['homophily_basis'])
-
-
-        #Edge manipulation
-        start_edges = agent_graph.number_of_edges()
-        random_edge_noise(
-            agent_graph,
-            device,
-            n_perturbances = int(params['noise_ratio']*agent_graph.number_of_nodes())
-            )
-        local_attachment_homophily(
-            agent_graph,
-            device,
-            n_FoF_links = int(params['local_ratio']*agent_graph.number_of_nodes()),
-            homophily_parameter = params['homophily_parameter'],
-            characteristic_distance = params['characteristic_distance'],
-            truncation_weight = params['truncation_weight']
-            )
-        if params['del_threshold'] == 'balance':
-            threshold = int((agent_graph.number_of_edges()-start_edges)/2)
-        else:
-            threshold = params['del_threshold']
-        link_deletion(
-            agent_graph, method = params['del_method'], threshold = threshold
-            )
-        #Update agent degree and weighted degree
-        agent_update(agent_graph, method='degree')
-        agent_update(agent_graph, method='weighted_degree')
-
-        #Wealth transfer
-        trade_money(agent_graph, device, method = params['trade_method'])
-
-
-        # Update agent income
-        agent_update(agent_graph, params, device=device, method ='income')
-        # Predict agent consumption (and investment if applicable)
-        agent_update(
-            agent_graph, params, device=device, timestep=timestep, method ='consumption'
-            )
-
-
-    # Data can be collected periodically (every X steps) and/or at specified time steps.
-    do_periodical_data_collection = (
-        params['data_collection_period'] > 0
-        and timestep % params['data_collection_period'] == 0
-        )
-    do_specific_data_collection = (
-        params['data_collection_list']
-        and timestep in params['data_collection_list']
-        )
-    if do_periodical_data_collection or do_specific_data_collection:
-        #Data collection and storage
-        data_collection(
-            agent_graph,
-            timestep = timestep,
-            npath = params['npath'],
-            epath = params['epath'],
-            ndata = params['ndata'],
-            edata = params['edata'],
-            mode = params['mode']
-            )
-
-def sveir_step(agent_graph, device, timestep, params, grid):
-    """Step - time-stepping module for the SVEIR model.
+    This function orchestrates the various updates that occur in one time step,
+    including agent movement, disease progression, health investment decisions,
+    and data collection. The order of these operations is critical for the
+    simulation's logic.
 
     Args:
-        agent_graph: DGLGraph with agent nodes and edges connecting agents
-        device: Device to run the model on, e.g. 'cpu' or 'cuda'
-        timestep: Current time step
-        params: List of user-defined parameters
-
-    Output:
-        agent_graph: Updated agent_graph after one step of functional manipulation
+        agent_graph (dgl.DGLGraph): The DGLGraph representing agents and their states.
+                                    This graph is modified in-place.
+        device (torch.device): The computation device (e.g., 'cpu' or 'cuda').
+        timestep (int): The current simulation time step.
+        params (Dict[str, Any]): A dictionary of steering parameters for the model.
+        grid (Any): The spatial grid environment object.
+        optimal_policy (torch.Tensor): The pre-computed optimal policy table for
+                                       health investment decisions.
     """
+    # On the first step, collect initial state data.
     if timestep == 0:
         data_collection(
             agent_graph,
-            timestep = timestep,
-            npath = params['npath'],
-            epath = params['epath'],
-            ndata = params['ndata'],
-            edata = params['edata'],
-            mode = params['mode']
+            timestep=timestep,
+            npath=params['npath'],
+            epath=params['epath'],
+            ndata=params['ndata'],
+            edata=params['edata'],
+            mode=params['mode']
         )
 
     num_nodes = agent_graph.num_nodes()
 
-    M = {
-        "S":0,
-        "V":1,
-        "E":2,
-        "I":3,
-        "R":4
-    }
-
+    # Calculate edge weights for social interaction (e.g., visiting friends)
     src, dst = agent_graph.edges()
-    edge_weights = torch.zeros((num_nodes, num_nodes))
-    edge_weights[src, dst] = agent_graph.edata["weight"]
+    edge_weights = torch.zeros((num_nodes, num_nodes), device=device)
+    edge_weights[src, dst] = agent_graph.edata["weight"].to(device)
 
-    # agents choose activity based on time use distribution
+    # --- Agent and Environment Updates ---
+    
+    # 1. Agent movement based on time use distribution
     random_activity = sveir_agent_update("move", agent_graph, edge_weights=edge_weights)
 
-    # increment exposure time
-    sveir_agent_update("exposure_increment", agent_graph, M)
+    # 2. Increment exposure time for agents in the 'Exposed' state
+    sveir_agent_update("exposure_increment", agent_graph, M=COMPARTMENT_MAP)
 
-    # Exposed -> Infectious
-    sveir_agent_update("exposed_to_infectious", agent_graph, M, params)
+    # 3. Transition from Exposed to Infectious after exposure period
+    sveir_agent_update("exposed_to_infectious", agent_graph, M=COMPARTMENT_MAP, params=params)
 
-    # Infectious -> Recovered
-    sveir_agent_update("infectious_to_recovered", agent_graph, M, params, num_nodes)
+    # 4. Transition from Infectious to Recovered based on recovery rate
+    sveir_agent_update("infectious_to_recovered", agent_graph, M=COMPARTMENT_MAP, params=params, num_nodes=num_nodes)
 
-    # Susceptible -> Vaccinated
-    sveir_agent_update("susceptible_to_vaccinated", agent_graph, M, params, num_nodes)
+    # 5. Transition from Susceptible to Vaccinated based on vaccination rate
+    sveir_agent_update("susceptible_to_vaccinated", agent_graph, M=COMPARTMENT_MAP, params=params, num_nodes=num_nodes)
 
-    # Susceptible -> Exposed
-    coordinates = torch.stack([agent_graph.ndata['x'], agent_graph.ndata['y']]).T
-    adjacency = (coordinates[:, None, :] == coordinates[None, :, :]).all(-1).float().fill_diagonal_(0)
-    sveir_agent_update("susceptible_to_exposed", agent_graph, M, params, num_nodes, edge_weights, adjacency=adjacency)
+    # 6. Agent health investment decision and subsequent wealth/health updates
+    sveir_agent_update("health_investment", agent_graph, M=COMPARTMENT_MAP, params=params,
+                       num_nodes=num_nodes, policy=optimal_policy)
 
-    # Vaccinated -> Exposed
-    sveir_agent_update("vaccinated_to_exposed", agent_graph, M, params, num_nodes, edge_weights, adjacency=adjacency)
+    # 7. Calculate adjacency based on current locations for infection transmission
+    adjacency = _calculate_adjacency(agent_graph).to(device)
 
-    # water -> human infection
-    sveir_agent_update("water_to_human_transmission", agent_graph, M, params, grid=grid)
+    # 8. Transmission from Susceptible to Exposed (human-to-human)
+    sveir_agent_update("susceptible_to_exposed", agent_graph, M=COMPARTMENT_MAP, params=params, num_nodes=num_nodes,
+                       adjacency=adjacency)
 
-    # human -> water infection
-    sveir_agent_update("human_to_water_transmission", agent_graph, M, params, grid=grid, random_activity=random_activity)
+    # 9. Transmission from Vaccinated to Exposed (breakthrough infections)
+    sveir_agent_update("vaccinated_to_exposed", agent_graph, M=COMPARTMENT_MAP, params=params, num_nodes=num_nodes,
+                       adjacency=adjacency)
 
-    # random water collection point recovery
+    # 10. Water-to-human transmission at contaminated water points
+    sveir_agent_update("water_to_human_transmission", agent_graph, M=COMPARTMENT_MAP, params=params, grid=grid)
+
+    # 11. Human-to-water transmission (infected agents contaminate water points)
+    sveir_agent_update("human_to_water_transmission", agent_graph, M=COMPARTMENT_MAP, params=params, grid=grid,
+                       random_activity=random_activity)
+
+    # 12. Random recovery of contaminated water collection points
     sveir_agent_update("water_recovery", agent_graph, params=params, grid=grid)
 
-    # cyclical shock to water collection points
-    if (timestep+1) % params["shock_frequency"] == 0:
+    # 13. Cyclical shock event contaminates water points
+    if (timestep + 1) % params["shock_frequency"] == 0:
         sveir_agent_update("shock", agent_graph, params=params, grid=grid)
 
-    # Data can be collected periodically (every X steps) and/or at specified time steps.
+    # --- Data Collection ---
+    
+    # Determine if data should be collected at this timestep
     do_periodical_data_collection = (
         params['data_collection_period'] > 0
-        and timestep % params['data_collection_period'] == 0
+        and (timestep % params['data_collection_period'] == 0)
     )
     do_specific_data_collection = (
         params['data_collection_list']
-        and timestep in params['data_collection_list']
+        and (timestep in params['data_collection_list'])
     )
+
     if do_periodical_data_collection or do_specific_data_collection:
         data_collection(
             agent_graph,
-            timestep = timestep+1,
-            npath = params['npath'],
-            epath = params['epath'],
-            ndata = params['ndata'],
-            edata = params['edata'],
-            mode = params['mode']
+            timestep=timestep + 1,
+            npath=params['npath'],
+            epath=params['epath'],
+            ndata=params['ndata'],
+            edata=params['edata'],
+            mode=params['mode']
         )

@@ -61,6 +61,13 @@ class SteeringParamsSVEIR(BaseModel):
     initial_infected_proportion: float = 0.03
     human_to_water_infection_prob: float = 0.01
     water_to_human_infection_prob: float = 0.01
+    infection_reduction_factor_per_health_unit: float = 0.005
+    beta: float = 0.95
+    gamma: float = 10e-3
+    theta: float = 0.88
+    PH_decrease: float = 0.50
+    PH_increase: float = 0.75
+    wealth_update_A: float = 0.50
     water_recovery_prob: float = 0.1
     shock_frequency: int = 40
     shock_infection_prob: float = 0.33
