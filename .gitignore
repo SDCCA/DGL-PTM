@@ -3,6 +3,8 @@
 *.pdf
 *.pickle
 *.vscode/
+*.png
+*.npy
 .ipynb_checkpoints/
 dgl_ptm/sveir_test/*
 DGL_testing/*
