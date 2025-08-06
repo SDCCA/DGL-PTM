@@ -46,7 +46,7 @@ def compute_new_wealth(w, wealth_update_scale, utility_val):
 def compute_health_delta(h):
     """Calculates the potential change in health from an investment or decline."""
     k = np.log(10) / 150
-    return (10 * np.exp(-k * h) + 1).astype(int)
+    return 10 * np.exp(-k * h) + 1
 
 def compute_health_cost(h):
     """Calculates the cost of investing to improve health."""
@@ -62,7 +62,7 @@ def _calculate_invest_value(wealth, health, value_function, params):
     if wealth <= invest_cost:
         return -np.inf  # Cannot afford to invest
 
-    health_delta = compute_health_delta(health)
+    health_delta = compute_health_delta(health).astype(int)
     reference_utility = utility(wealth, health, params['alpha'])
 
     # State after paying cost
@@ -89,7 +89,7 @@ def _calculate_invest_value(wealth, health, value_function, params):
 
 def _calculate_save_value(wealth, health, value_function, params):
     """Helper to calculate the expected value of the 'save' (not invest) action."""
-    health_delta = compute_health_delta(health)
+    health_delta = compute_health_delta(health).astype(int)
     reference_utility = utility(wealth, health, params['alpha'])
 
     # --- Health Declines ---

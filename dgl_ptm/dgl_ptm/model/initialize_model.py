@@ -500,6 +500,7 @@ class SVEIRModel(Model):
         logger.info(f"Starting policy generation for {num_agents} agents.")
         
         for i in range(num_agents):
+            print("Computing policy for agent", i)
             policies.append(
                 value_iteration(
                     100,
@@ -515,7 +516,7 @@ class SVEIRModel(Model):
                 )
             )
         logger.info("Finished policy generation.")
-        return policies
+        return torch.tensor(np.stack(policies))
 
 def _make_path_unique(path, extension = ''):
     """Check whether a path already exists and make it unique if it does.

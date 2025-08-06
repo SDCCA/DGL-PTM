@@ -54,13 +54,13 @@ def _agent_health_investment_vectorized(agent_graph, params, policy):
     invest_mask = (decisions == 1)
     
     # Calculate costs and health changes for all agents
-    investment_cost = compute_health_cost(health)
-    health_change = compute_health_delta(health)
+    investment_cost = compute_health_cost(health).int()
+    health_change = compute_health_delta(health).int()
 
     can_afford_mask = (wealth >= investment_cost)
     
-    new_wealth = wealth.clone().float()
-    new_health = health.clone().float()
+    new_wealth = wealth.clone().int()
+    new_health = health.clone().int()
 
     # --- Update agents who INVEST ---
     invest_and_can_afford = invest_mask & can_afford_mask
@@ -69,7 +69,7 @@ def _agent_health_investment_vectorized(agent_graph, params, policy):
         
         # Probabilistic health increase for investors
         prob_increase = torch.rand(torch.sum(invest_and_can_afford), device=agent_graph.device)
-        success_increase_mask = prob_increase < params["PH_increase"]
+        success_increase_mask = prob_increase < params["P_H_increase"]
 
         health_to_update = new_health[invest_and_can_afford]
         health_to_update[success_increase_mask] += health_change[invest_and_can_afford][success_increase_mask]
@@ -83,7 +83,7 @@ def _agent_health_investment_vectorized(agent_graph, params, policy):
     decrease_candidates = save_mask | invest_but_cant_afford
     if torch.any(decrease_candidates):
         prob_decrease = torch.rand(torch.sum(decrease_candidates), device=agent_graph.device)
-        success_decrease_mask = prob_decrease < params["PH_decrease"]
+        success_decrease_mask = prob_decrease < params["P_H_decrease"]
         
         health_to_update = new_health[decrease_candidates]
         health_to_update[success_decrease_mask] -= health_change[decrease_candidates][success_decrease_mask]
@@ -156,7 +156,7 @@ def _calculate_and_apply_new_infections(agent_graph, M, params, target_nodes_mas
 
     # Base infection probability, reduced by prior infections and health
     num_infections = agent_graph.ndata["num_infections"][target_nodes_indices].float()
-    health = agent_graph.ndata["health"][target_nodes_indices].float()
+    health = agent_graph.ndata["health"][target_nodes_indices].int()
     
     prob_infection_base = params["infection_probability"] * torch.exp(-1.5 * num_infections)
     health_susceptibility = torch.exp(-params["infection_reduction_factor_per_health_unit"] * (health - 1.0))

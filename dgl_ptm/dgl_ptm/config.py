@@ -65,8 +65,8 @@ class SteeringParamsSVEIR(BaseModel):
     beta: float = 0.95
     gamma: float = 10e-3
     theta: float = 0.88
-    PH_decrease: float = 0.50
-    PH_increase: float = 0.75
+    P_H_decrease: float = 0.50
+    P_H_increase: float = 0.75
     wealth_update_A: float = 0.50
     water_recovery_prob: float = 0.1
     shock_frequency: int = 40
