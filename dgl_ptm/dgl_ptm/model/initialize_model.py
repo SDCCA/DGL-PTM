@@ -10,8 +10,8 @@ import torch
 from dgl.data.utils import load_graphs, save_graphs
 
 from dgl_ptm.agentInteraction.weight_update import weight_update_sveir
-from dgl_ptm.config import CONFIG, Config, SVEIRCONFIG, SVEIRConfig
-from dgl_ptm.model.step import ptm_step, sveir_step
+from dgl_ptm.config import Config, SVEIRCONFIG, SVEIRConfig
+from dgl_ptm.model.step import sveir_step
 from dgl_ptm.network.network_creation import network_creation
 from dgl_ptm.util.network_metrics import average_degree, node_degree
 from dgl_ptm.environment.grid_creation import grid_creation
