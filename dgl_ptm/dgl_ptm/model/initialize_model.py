@@ -3,6 +3,7 @@
 import copy
 import logging
 import pickle
+import numpy as np
 from pathlib import Path
 
 import dgl
@@ -173,6 +174,38 @@ class SVEIRModel(Model):
         # Save updated config to yaml file.
         self.save_model_parameters(overwrite=True)
 
+    def _load_policy_library(self):
+        """
+        Loads the pre-computed policy library and agent personas from a file.
+        This is "the rest of the loading logic".
+        """
+        policy_path = Path(self.config.policy_library_path)
+        logger.info(f"Attempting to load policy library from: {policy_path}")
+        
+        if not policy_path.exists():
+            error_msg = (
+                f"Policy library file not found at '{policy_path}'.\n"
+                f"Please run the pre-computation script first:\n"
+                f"python precompute_policies.py --config-file path/to/your/config.yaml"
+            )
+            raise FileNotFoundError(error_msg)
+
+        # Load the compressed numpy file
+        data = np.load(policy_path)
+        
+        # Load the agent personas tensor
+        self.agent_personas = torch.from_numpy(data['agent_personas']).float()
+        
+        # Reconstruct the policy library dictionary from the saved arrays
+        self.policy_library = {}
+        for persona_id in range(self.config.num_agent_personas):
+            key = f"policies_{persona_id}"
+            if key not in data:
+                raise KeyError(f"Policy for persona ID {persona_id} not found in the policy library file.")
+            self.policy_library[persona_id] = data[key]
+            
+        logger.info(f"Successfully loaded {len(self.policy_library)} policy sets and agent personas.")
+
     def initialize_model(self, restart = False, verbose = False):
         """Initialize a model.
 
@@ -187,6 +220,7 @@ class SVEIRModel(Model):
             and (2,1) would be the second milestone at step 2.
             Default False.
         """
+        self._load_policy_library()
         self.inputs = None
         if isinstance(restart, bool):
             if restart:
@@ -361,6 +395,16 @@ class SVEIRModel(Model):
         agents, with values subsequently being assigned to the nodes.
         """
         agent_properties = {}
+
+        num_agents = self.graph.num_nodes()
+        persona_ids = torch.randint(0, self.config.num_agent_personas, (num_agents,))
+        assigned_personas = self.agent_personas[persona_ids]
+        agent_properties["persona_id"] = persona_ids
+        agent_properties["alpha"] = assigned_personas[:, 0]
+        agent_properties["gamma"] = assigned_personas[:, 1]
+        agent_properties["omega"] = assigned_personas[:, 2]
+        agent_properties["eta"]   = assigned_personas[:, 3]
+
         agent_properties["num_infections"] = self._initialize_agent_num_infections()
         agent_properties["compartments"] = self._initialize_agents_compartment()
         agent_properties["exposure_time"] = self._initialize_agents_exposure_time()
@@ -376,12 +420,6 @@ class SVEIRModel(Model):
         agent_properties["wealth"] = self._initialize_agents_wealth(min=1, max=100)
         agent_properties["health"] = self._initialize_agents_health(min=1, max=100)
 
-        # CPT and utility
-        agent_properties["eta"] = self._initialize_agents_eta(min=0.5, max=1.0)
-        agent_properties["omega"] = self._initialize_agents_omega(min=1.0, max=4.0)
-        agent_properties["gamma"] = self._initialize_agents_gamma(min=0.2, max=0.8)
-        agent_properties["alpha"] = self._initialize_agents_alpha()
-
         # Assign properties before calculating policy, as policy depends on them
         if isinstance(self.graph, dgl.DGLGraph):
             for key, value in agent_properties.items():
@@ -392,10 +430,6 @@ class SVEIRModel(Model):
                 'Consider running `create_network` before initializing '
                 'agent properties.'
             )
-
-        # Now initialize policy, which depends on other agent properties
-        self.graph.ndata["policy"] = self._initialize_agents_policy()
-
 
     def _initialize_agent_num_infections(self):
         tensor = torch.zeros(self.graph.num_nodes(), dtype=torch.int)

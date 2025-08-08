@@ -2,11 +2,12 @@
 *.egg-info
 *.eggs
 .ipynb_checkpoints
-
+*.npz
 build
 dist
-.cache
+cache/
 __pycache__
+gif/
 
 htmlcov
 .coverage

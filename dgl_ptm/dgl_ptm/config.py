@@ -63,9 +63,7 @@ class SteeringParamsSVEIR(BaseModel):
     water_to_human_infection_prob: float = 0.01
     infection_reduction_factor_per_health_unit: float = 0.005
     beta: float = 0.95
-    gamma: float = 10e-3
     theta: float = 0.88
-    P_H_decrease: float = 0.50
     P_H_increase: float = 0.75
     wealth_update_A: float = 0.50
     water_recovery_prob: float = 0.1
@@ -293,6 +291,15 @@ class SVEIRConfig(BaseModel):
     initial_graph_type: str = "barabasi-albert"
     initial_graph_args: InitialGraphArgs = InitialGraphArgs()
     step_target: PositiveInt = 5
+
+    policy_library_path: str = "./policy_library.npz"
+    num_agent_personas: int = 1
+    p_h_decrease_values: list[float] = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+    alpha_range: list[float] = [0.1, 0.9]
+    gamma_range: list[float] = [0.2, 0.8]
+    omega_range: list[float] = [1.0, 4.0]
+    eta_range:   list[float] = [0.5, 1.0]
+
     steering_parameters: SteeringParamsSVEIR = SteeringParamsSVEIR()
     checkpoint_period: int = 10
     milestones: list[PositiveInt] | None = None
@@ -334,6 +341,22 @@ class SVEIRConfig(BaseModel):
         cfg = _convert_value(cfg)
         with open(config_file, "w") as f:
             yaml.dump(cfg, f, sort_keys=False)
+
+    @classmethod
+    def from_yaml(cls, config_file):
+        """Read configs from a config.yaml file.
+
+        If key is not found in config.yaml, the default value is used.
+        """
+        if not Path(config_file).exists():
+            raise FileNotFoundError(f"Config file {config_file} not found.")
+
+        with open(config_file) as f:
+            try:
+                cfg = yaml.safe_load(f)
+            except yaml.YAMLError as exc:
+                raise SyntaxError(f"Error parsing config file {config_file}.") from exc
+        return cls(**cfg)
 
 class Config(BaseModel):
     """Base class for configuration parameters.
