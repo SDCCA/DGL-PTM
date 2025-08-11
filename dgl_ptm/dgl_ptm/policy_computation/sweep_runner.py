@@ -1,11 +1,10 @@
 # policy_computation/sweep_runner.py
 
 import os
-from tqdm import tqdm
 import multiprocessing
-from functools import partial
+from tqdm import tqdm
+import time
 
-# Import our shared experiment settings and the necessary model components
 from simulation_analysis.experiment_config import (
     COST_SUBSIDY_FACTORS,
     EFFICACY_MULTIPLIERS,
@@ -16,96 +15,77 @@ from simulation_analysis.experiment_config import (
 from dgl_ptm.config import SVEIRConfig
 from .generator import create_and_save_policy_library
 
-# --- 1. The Worker Function ---
-# We define the work for a SINGLE job in this function.
-# It takes the base config and the specific parameters for one run.
-def process_one_policy_set(task_params: tuple, base_config: SVEIRConfig):
+# --- Worker Function (Updated with correct error logging) ---
+def process_one_policy_set(config_for_job: SVEIRConfig, pbar_position: int, lock: multiprocessing.Lock):
     """
-    This is the "worker" function that will be executed by each parallel process.
-    It handles the complete logic for generating one policy file.
-
-    Args:
-        task_params (tuple): A tuple containing the (efficacy, subsidy) for this job.
-        base_config (SVEIRConfig): The base model configuration template.
+    The worker function, with corrected error logging.
     """
-    efficacy, subsidy = task_params
-    
-    # Determine the standardized path for this policy file
-    policy_path = get_policy_path(efficacy, subsidy)
-    
-    # Check if the file already exists (for resumability)
-    if os.path.exists(policy_path):
-        # We return a status so the main process knows what happened.
-        return f"Skipped: {policy_path}"
-    
-    current_config = base_config.model_copy(deep=True)
-    current_config.policy_library_path = policy_path
-    current_config.steering_parameters.efficacy_multiplier = efficacy
-    current_config.steering_parameters.cost_subsidy_factor = subsidy
-
     try:
         create_and_save_policy_library(
-            config=current_config,
-            infection_risk_levels=INFECTION_RISK_LEVELS
+            config=config_for_job,
+            infection_risk_levels=INFECTION_RISK_LEVELS,
+            pbar_position=pbar_position,
+            lock=lock
         )
-        return f"Success: {policy_path}"
+        return "Success"
     except Exception as e:
-        # Log the full error with traceback for debugging
-        print(f"Failed to generate policy for E={efficacy}, S={subsidy}: {e}", exc_info=True)
-        return f"Failed: {policy_path}"
+        print(f"Failed to generate policy for {config_for_job.policy_library_path}: {e}", exc_info=True)
+        return "Failed"
 
-# --- 2. The Main Orchestrator Function ---
-# This function now sets up the pool and distributes the work.
+# --- Unpacker Helper (Unchanged) ---
+def worker_unpacker(args):
+    """Helper to unpack arguments for pool.imap_unordered."""
+    config_for_job, pbar_position, lock = args
+    return process_one_policy_set(config_for_job, pbar_position, lock)
+
+# --- Main Orchestrator (Unchanged) ---
 def compute_all_policies_for_sweep():
-    """
-    Orchestrates the PARALLEL batch pre-computation of all policy libraries
-    needed for the full intervention sweep.
-    """
     print("Starting PARALLEL batch pre-computation of all policy libraries...")
     
-    # --- Setup ---
-    # You can change the number of cores here
     NUM_CORES = 6
     print(f"Using up to {NUM_CORES} CPU cores.")
 
     base_config = SVEIRConfig()
-    base_config.seed = 42
 
     os.makedirs(POLICY_DIR, exist_ok=True)
     
-    # --- Create the full list of tasks ---
-    # Each task is a tuple of the parameters that define a single job.
-    tasks = [(efficacy, subsidy) for efficacy in EFFICACY_MULTIPLIERS for subsidy in COST_SUBSIDY_FACTORS]
-    
-    # --- Filter out tasks that are already complete ---
-    # This is more efficient than letting each worker check individually.
-    incomplete_tasks = [
-        task for task in tasks if not os.path.exists(get_policy_path(task[0], task[1]))
-    ]
-    
-    if not incomplete_tasks:
+    tasks = []
+    for efficacy in EFFICACY_MULTIPLIERS:
+        for subsidy in COST_SUBSIDY_FACTORS:
+            policy_path = get_policy_path(efficacy, subsidy)
+            if not os.path.exists(policy_path):
+                job_config = base_config.model_copy(deep=True)
+                job_config.policy_library_path = policy_path
+                job_config.steering_parameters.efficacy_multiplier = efficacy
+                job_config.steering_parameters.cost_subsidy_factor = subsidy
+                tasks.append(job_config)
+
+    if not tasks:
         print("All policy libraries have already been computed. Nothing to do.")
         return
         
-    print(f"Found {len(incomplete_tasks)} policy sets to generate out of {len(tasks)} total.")
+    print(f"Found {len(tasks)} policy sets to generate.")
+    print("Efficacy Multipliers:", EFFICACY_MULTIPLIERS)
+    print("Cost Subsidy Factors:", COST_SUBSIDY_FACTORS)
+    print("Infection Risk Levels:", INFECTION_RISK_LEVELS)
+    print(f"Number of Agent Personas: {base_config.num_agent_personas}\n")
+    time.sleep(1)
 
-    # --- Distribute tasks to the process pool ---
-    # We use `functools.partial` to "bake" the base_config into our worker function.
-    # This is a clean way to pass constant arguments to a function used in a map.
-    worker = partial(process_one_policy_set, base_config=base_config)
+    manager = multiprocessing.Manager()
+    lock = manager.Lock()
 
-    # The 'with' statement ensures the pool is properly shut down even if errors occur.
+    main_pbar = tqdm(total=len(tasks), desc="Overall Progress", position=0)
+
     with multiprocessing.Pool(processes=NUM_CORES) as pool:
-        # `pool.imap` is a lazy version of `map`. It's good for memory and lets tqdm update progress
-        # as each job finishes, not when all jobs are submitted.
-        results = list(tqdm(pool.imap(worker, incomplete_tasks), total=len(incomplete_tasks), desc="Policy Sets Generated"))
+        tasks_with_args = [(task_config, (i % NUM_CORES) + 1, lock) for i, task_config in enumerate(tasks)]
+        
+        for result in pool.imap_unordered(worker_unpacker, tasks_with_args):
+            with lock:
+                if result == "Success":
+                    main_pbar.set_postfix_str("Last task finished successfully.")
+                else:
+                    main_pbar.set_postfix_str("Last task failed. Check logs.")
+                main_pbar.update(1)
 
-    print("--- Batch processing complete. Summary ---")
-    # Optional: Print a summary of what happened
-    success_count = sum(1 for r in results if r.startswith("Success"))
-    failed_count = sum(1 for r in results if r.startswith("Failed"))
-    print(f"Successfully generated: {success_count} policy sets.")
-    if failed_count > 0:
-        print(f"Failed to generate: {failed_count} policy sets. Check logs for details.")
-    
+    main_pbar.close()
     print("All policy libraries have been computed.")

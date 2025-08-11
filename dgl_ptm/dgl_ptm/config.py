@@ -71,6 +71,8 @@ class SteeringParamsSVEIR(BaseModel):
     efficacy_multiplier: float = 1.0
     cost_subsidy_factor: float = 1.0
 
+    infection_health_shock: int = 20
+
     wealth_update_A: float = 0.50
     water_recovery_prob: float = 0.1
     shock_frequency: int = 40
@@ -306,7 +308,7 @@ class SVEIRConfig(BaseModel):
     
     # --- Parameters for Policy Pre-computation ---
     policy_library_path: str = "./policy_library.npz"
-    num_agent_personas: int = 1
+    num_agent_personas: int = 16
 
     alpha_range: list[float] = [0.1, 0.9]
     gamma_range: list[float] = [0.2, 0.8]

@@ -8,9 +8,7 @@ import os
 COST_SUBSIDY_FACTORS = np.linspace(1.0, 0.4, 5)  # From no subsidy to a 60% subsidy
 EFFICACY_MULTIPLIERS = np.linspace(1.0, 2.0, 5)  # From normal to double efficacy
 
-# --- Define the Policy Space Parameters ---
-# Defines the granularity of the policy space computed for the analysis.
-INFECTION_RISK_LEVELS = np.array([0.01])
+INFECTION_RISK_LEVELS = np.array([0.01, 0.03, 0.05, 0.08, 0.12])
 
 # --- Define File and Directory Settings ---
 # The central directory where all generated policy libraries will be stored.
