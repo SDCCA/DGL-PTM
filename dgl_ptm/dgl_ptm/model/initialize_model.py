@@ -18,7 +18,7 @@ from dgl_ptm.util.network_metrics import average_degree, node_degree
 from dgl_ptm.environment.grid_creation import grid_creation
 from dgl_ptm.environment.grid_assignment import grid_assignment
 from dgl_ptm.util.utils import sample_distribution_tensor
-from dgl_ptm.model.policy_engine import *
+from dgl_ptm.policy_computation.engine import *
 
 # Set the seed of the random number generator
 # this is global and will affect all random number generators
@@ -177,7 +177,6 @@ class SVEIRModel(Model):
     def _load_policy_library(self):
         """
         Loads the pre-computed policy library and agent personas from a file.
-        This is "the rest of the loading logic".
         """
         policy_path = Path(self.config.policy_library_path)
         logger.info(f"Attempting to load policy library from: {policy_path}")
@@ -190,21 +189,19 @@ class SVEIRModel(Model):
             )
             raise FileNotFoundError(error_msg)
 
-        # Load the compressed numpy file
         data = np.load(policy_path)
-        
-        # Load the agent personas tensor
         self.agent_personas = torch.from_numpy(data['agent_personas']).float()
+        self.risk_levels_tensor = torch.from_numpy(data['infection_risk_levels']).float().to(self.config.device)
         
-        # Reconstruct the policy library dictionary from the saved arrays
         self.policy_library = {}
         for persona_id in range(self.config.num_agent_personas):
             key = f"policies_{persona_id}"
             if key not in data:
-                raise KeyError(f"Policy for persona ID {persona_id} not found in the policy library file.")
-            self.policy_library[persona_id] = data[key]
+                raise KeyError(f"Policy for persona ID {persona_id} not found...")
+            # Policies are now loaded as a tensor: (risk_levels, wealth, health)
+            self.policy_library[persona_id] = torch.from_numpy(data[key]).long().to(self.config.device)
             
-        logger.info(f"Successfully loaded {len(self.policy_library)} policy sets and agent personas.")
+        logger.info(f"Successfully loaded {len(self.policy_library)} policy sets for {len(self.risk_levels_tensor)} risk levels.")
 
     def initialize_model(self, restart = False, verbose = False):
         """Initialize a model.
@@ -511,47 +508,6 @@ class SVEIRModel(Model):
         tensor = torch.rand(self.graph.num_nodes(),)
         return tensor
     
-    def _initialize_agents_policy(self):
-        """
-        Initializes the health investment policy for each agent.
-        
-        # PERFORMANCE WARNING:
-        # This function iterates through every agent and calls `value_iteration`,
-        # which is a computationally expensive, iterative algorithm. This will be
-        # extremely slow for a large number of agents and is a major bottleneck
-        # during model initialization.
-        #
-        # Potential Solutions:
-        # 1. Parallelization: Use Python's `multiprocessing` library to run
-        #    `value_iteration` for multiple agents in parallel.
-        # 2. Policy Approximation: If agents have similar parameters (`alpha`, `gamma`, etc.),
-        #    group them and compute the policy only once per group.
-        # 3. Pre-computation: If the parameter space is limited, pre-compute policies
-        #    and load them instead of calculating them at runtime.
-        """
-        policies = []
-        num_agents = self.graph.num_nodes()
-        logger.info(f"Starting policy generation for {num_agents} agents.")
-        
-        for i in range(num_agents):
-            print("Computing policy for agent", i)
-            policies.append(
-                value_iteration(
-                    100,
-                    self.graph.ndata["alpha"][i],
-                    self.graph.ndata["gamma"][i],
-                    self.steering_parameters["theta"],
-                    self.graph.ndata["omega"][i],
-                    self.graph.ndata["eta"][i],
-                    self.steering_parameters["beta"],
-                    self.steering_parameters["P_H_increase"],
-                    self.steering_parameters["wealth_update_A"],
-                    self.steering_parameters["P_H_decrease"]
-                )
-            )
-        logger.info("Finished policy generation.")
-        return torch.tensor(np.stack(policies))
-
 def _make_path_unique(path, extension = ''):
     """Check whether a path already exists and make it unique if it does.
 

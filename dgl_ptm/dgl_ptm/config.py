@@ -65,6 +65,12 @@ class SteeringParamsSVEIR(BaseModel):
     beta: float = 0.95
     theta: float = 0.88
     P_H_increase: float = 0.75
+    P_H_decrease: float = 0.50
+
+    # --- INTERVENTION PARAMETERS HERE ---
+    efficacy_multiplier: float = 1.0
+    cost_subsidy_factor: float = 1.0
+
     wealth_update_A: float = 0.50
     water_recovery_prob: float = 0.1
     shock_frequency: int = 40
@@ -291,10 +297,17 @@ class SVEIRConfig(BaseModel):
     initial_graph_type: str = "barabasi-albert"
     initial_graph_args: InitialGraphArgs = InitialGraphArgs()
     step_target: PositiveInt = 5
-
+    
+    # Parameters to control the stochastic nature of the global infection probability during the run.
+    # Example: A mean-reverting process or a simple random walk.
+    # Let's use a simple normal distribution around a mean for this example.
+    infection_prob_mean: float = 0.05
+    infection_prob_std: float = 0.02
+    
+    # --- Parameters for Policy Pre-computation ---
     policy_library_path: str = "./policy_library.npz"
     num_agent_personas: int = 1
-    p_h_decrease_values: list[float] = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8]
+
     alpha_range: list[float] = [0.1, 0.9]
     gamma_range: list[float] = [0.2, 0.8]
     omega_range: list[float] = [1.0, 4.0]

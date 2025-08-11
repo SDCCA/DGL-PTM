@@ -48,7 +48,8 @@ def sveir_step(
     timestep: int,
     params: Dict[str, Any],
     grid: Any,
-    optimal_policy: torch.Tensor
+    policy_library: torch.Tensor,
+    risk_levels
 ) -> None:
     """
     Performs a single step of the SVEIR model simulation.
@@ -82,6 +83,16 @@ def sveir_step(
 
     num_nodes = agent_graph.num_nodes()
 
+    # --- DYNAMIC ENVIRONMENT UPDATE ---
+    # Update the global infection probability for this timestep.
+    # Here we draw from a normal distribution and clamp it to be non-negative.
+    # A more complex model (e.g., seasonal sine wave) could be used here.
+    current_infection_prob = torch.normal(mean=params["infection_prob_mean"], std=params["infection_prob_std"]).item()
+    current_infection_prob = max(0.001, current_infection_prob)
+    
+    # Store it in the params dict to pass to agent_update
+    params['infection_probability'] = current_infection_prob
+
     # Calculate edge weights for social interaction (e.g., visiting friends)
     src, dst = agent_graph.edges()
     edge_weights = torch.zeros((num_nodes, num_nodes), device=device)
@@ -105,8 +116,7 @@ def sveir_step(
     sveir_agent_update("susceptible_to_vaccinated", agent_graph, M=COMPARTMENT_MAP, params=params, num_nodes=num_nodes)
 
     # 6. Agent health investment decision and subsequent wealth/health updates
-    sveir_agent_update("health_investment", agent_graph, M=COMPARTMENT_MAP, params=params,
-                       num_nodes=num_nodes, policy=optimal_policy)
+    sveir_agent_update("health_investment", agent_graph, params=params, policy_library=policy_library, risk_levels=risk_levels)
 
     # 7. Calculate adjacency based on current locations for infection transmission
     adjacency = _calculate_adjacency(agent_graph).to(device)

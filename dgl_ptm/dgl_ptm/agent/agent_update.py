@@ -1,4 +1,3 @@
-from dgl_ptm.model.policy_engine import *
 import torch
 
 def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None, edge_weights=None, grid=None, adjacency=None, random_activity=None, policy=None):
@@ -36,20 +35,32 @@ def _agent_increment_exposure_time(agent_graph, M):
     exposed_mask = agent_graph.ndata["compartments"] == M["E"]
     agent_graph.ndata["exposure_time"][exposed_mask] += 1
 
-def _agent_health_investment_vectorized(agent_graph, params, policy):
+def _agent_health_investment_vectorized(agent_graph, params, policy_library, risk_levels):
     """
     Vectorized function for agents to decide on health investment.    
     """
     num_agents = agent_graph.num_nodes()
     wealth = agent_graph.ndata["wealth"].clone().long()
     health = agent_graph.ndata["health"].clone().long()
+    persona_ids = agent_graph.ndata["persona_id"].long()
 
-    # Get decisions from the policy matrix for all agents at once
-    # Note: policy is a list of numpy arrays. We need to handle this.
-    # This assumes policy is structured such that we can retrieve decisions this way.
-    # If policy is a list of 2D arrays, this needs careful handling.
-    # Assuming policy is a list of (W,H) policy arrays, one for each agent.
-    decisions = torch.tensor([policy[i][wealth[i]-1, health[i]-1] for i in range(num_agents)], device=agent_graph.device)
+    # --- DYNAMIC POLICY SELECTION ---
+    # 1. Get the current global infection probability
+    current_prob = params['infection_probability']
+    
+    # 2. Find the index of the closest pre-computed risk level
+    # risk_levels is the tensor of [0.01, 0.03, 0.05, ...]
+    risk_level_index = torch.argmin(torch.abs(risk_levels - current_prob))
+
+    # 3. Get decisions for all agents at once
+    # We select the policy slice for the determined risk level from each agent's persona-specific policy set.
+    decisions = torch.zeros(num_agents, dtype=torch.long, device=agent_graph.device)
+    for i in range(num_agents):
+        pid = persona_ids[i].item()
+        # policy_library[pid] -> (num_risks, wealth, health)
+        # We select the policy for the current risk index.
+        agent_policy = policy_library[pid][risk_level_index]
+        decisions[i] = agent_policy[wealth[i]-1, health[i]-1]
 
     invest_mask = (decisions == 1)
     
