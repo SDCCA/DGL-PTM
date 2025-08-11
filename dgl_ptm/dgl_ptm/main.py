@@ -21,14 +21,10 @@ def main():
     args = parser.parse_args()
 
     if args.stage == 'precompute':
-        print("--- STAGE 1: Starting Policy Pre-computation ---")
         compute_all_policies_for_sweep()
-        print("--- STAGE 1: Policy Pre-computation Finished ---")
-    
+
     elif args.stage == 'simulate':
-        print("--- STAGE 2: Starting Simulation and Analysis ---")
         run_sweep_and_generate_heatmap()
-        print("--- STAGE 2: Simulation and Analysis Finished ---")
 
 if __name__ == "__main__":
     main()
