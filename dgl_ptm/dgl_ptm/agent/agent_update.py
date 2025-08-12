@@ -1,13 +1,24 @@
+# agent/agent_update.py
+
 import torch
 
-def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None, edge_weights=None, grid=None, adjacency=None, random_activity=None, policy=None):
+# Import from the new shared utility module
+from .health_cpt_utils import (
+    utility,
+    compute_new_wealth,
+    compute_health_delta,
+    compute_health_decline,
+    compute_health_cost
+)
+
+def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None, edge_weights=None, grid=None, adjacency=None, random_activity=None, policy=None, risk_levels=None):
     """
     Dispatcher function that calls the appropriate agent update logic.
     """
     # Define a mapping from method names to functions
     update_functions = {
         "exposure_increment": (_agent_increment_exposure_time, [agent_graph, M]),
-        "health_investment": (_agent_health_investment_vectorized, [agent_graph, params, policy]),
+        "health_investment": (_agent_health_investment_vectorized, [agent_graph, params, policy, risk_levels]),
         "exposed_to_infectious": (_agent_exposed_to_infectious, [agent_graph, M, params]),
         "infectious_to_recovered": (_agent_infectious_to_recovered, [agent_graph, M, params, num_nodes]),
         "susceptible_to_vaccinated": (_agent_susceptible_to_vaccinated, [agent_graph, M, params, num_nodes]),
@@ -22,11 +33,12 @@ def sveir_agent_update(method, agent_graph, M=None, params=None, num_nodes=None,
 
     if method in update_functions:
         func, args = update_functions[method]
-        # Special case for 'move' which has a return value
-        if method == "move":
-            return func(*args)
+        
+        if method in ["move", "exposed_to_infectious"]:
+             return func(*args)
         else:
-            func(*args)
+            filtered_args = [arg for arg in args if arg is not None]
+            func(*filtered_args)
     else:
         raise ValueError(f"Unknown agent update method: {method}")
 
@@ -45,28 +57,26 @@ def _agent_health_investment_vectorized(agent_graph, params, policy_library, ris
     persona_ids = agent_graph.ndata["persona_id"].long()
 
     # --- DYNAMIC POLICY SELECTION ---
-    # 1. Get the current global infection probability
     current_prob = params['infection_probability']
-    
-    # 2. Find the index of the closest pre-computed risk level
-    # risk_levels is the tensor of [0.01, 0.03, 0.05, ...]
     risk_level_index = torch.argmin(torch.abs(risk_levels - current_prob))
 
-    # 3. Get decisions for all agents at once
-    # We select the policy slice for the determined risk level from each agent's persona-specific policy set.
     decisions = torch.zeros(num_agents, dtype=torch.long, device=agent_graph.device)
     for i in range(num_agents):
         pid = persona_ids[i].item()
-        # policy_library[pid] -> (num_risks, wealth, health)
-        # We select the policy for the current risk index.
         agent_policy = policy_library[pid][risk_level_index]
         decisions[i] = agent_policy[wealth[i]-1, health[i]-1]
 
     invest_mask = (decisions == 1)
     
-    # Calculate costs and health changes for all agents
-    investment_cost = compute_health_cost(health).int()
-    health_change = compute_health_delta(health).int()
+    # --- Calculate potential changes and costs ---
+    cost_params = {'cost_subsidy_factor': params['cost_subsidy_factor'], 'efficacy_multiplier': params['efficacy_multiplier']}
+    delta_params = {'efficacy_multiplier': params['efficacy_multiplier']}
+
+    investment_cost = compute_health_cost(health, cost_params).int()
+    health_change = compute_health_delta(health, delta_params).int()
+    
+    # *** KEY CHANGE: Calculate health decline separately ***
+    health_decline = compute_health_decline(health).int()
 
     can_afford_mask = (wealth >= investment_cost)
     
@@ -78,7 +88,6 @@ def _agent_health_investment_vectorized(agent_graph, params, policy_library, ris
     if torch.any(invest_and_can_afford):
         new_wealth[invest_and_can_afford] -= investment_cost[invest_and_can_afford]
         
-        # Probabilistic health increase for investors
         prob_increase = torch.rand(torch.sum(invest_and_can_afford), device=agent_graph.device)
         success_increase_mask = prob_increase < params["P_H_increase"]
 
@@ -90,35 +99,37 @@ def _agent_health_investment_vectorized(agent_graph, params, policy_library, ris
     save_mask = ~invest_mask
     invest_but_cant_afford = invest_mask & ~can_afford_mask
     
-    # Probabilistic health decrease for savers and those who couldn't afford it
     decrease_candidates = save_mask | invest_but_cant_afford
     if torch.any(decrease_candidates):
         prob_decrease = torch.rand(torch.sum(decrease_candidates), device=agent_graph.device)
         success_decrease_mask = prob_decrease < params["P_H_decrease"]
         
         health_to_update = new_health[decrease_candidates]
-        health_to_update[success_decrease_mask] -= health_change[decrease_candidates][success_decrease_mask]
+        
+        health_to_update[success_decrease_mask] -= health_decline[decrease_candidates][success_decrease_mask]
         new_health[decrease_candidates] = health_to_update
         
-    # Clamp health to be within [1, 100]
-    new_health.clamp_(min=1, max=100)
+    new_health.clamp_(min=1, max=params["max_state_value"])
 
     # --- Final wealth update based on new utility ---
     current_utility = utility(new_wealth, new_health, agent_graph.ndata["alpha"])
     updated_wealth = compute_new_wealth(new_wealth, params["wealth_update_A"], current_utility)
 
-    agent_graph.ndata["wealth"] = updated_wealth
+    agent_graph.ndata["wealth"] = updated_wealth.clamp(min=1, max=params['max_state_value'])
     agent_graph.ndata["health"] = new_health
 
 
 def _agent_exposed_to_infectious(agent_graph, M, params):
-    """Transitions agents from 'Exposed' to 'Infectious' if their exposure time exceeds the threshold."""
+    """Transitions agents from 'Exposed' to 'Infectious' and returns the count."""
     exposed_to_infections_mask = (agent_graph.ndata["compartments"]==M["E"]) & \
                                  (agent_graph.ndata["exposure_time"] >= params["exposure_period"])
     
     if torch.any(exposed_to_infections_mask):
         agent_graph.ndata["compartments"][exposed_to_infections_mask] = M["I"]
         agent_graph.ndata["num_infections"][exposed_to_infections_mask] += 1
+        return torch.sum(exposed_to_infections_mask).item()
+
+    return 0 # Return 0 if no new infections
 
 
 def _agent_infectious_to_recovered(agent_graph, M, params, num_nodes):
@@ -248,7 +259,9 @@ def _agent_move(agent_graph, edge_weights):
 
 def _agent_water_to_human_transmission(agent_graph, M, params, grid):
     """Handles infection of agents from contaminated water sources."""
-    infected_water_coords = torch.stack(torch.where(grid.get_slice("water") == 2)).T
+    water_idx = grid.property_to_index['water']
+    water_slice = grid.grid_tensor[:, :, water_idx]
+    infected_water_coords = torch.stack(torch.where(water_slice == 2)).T
     if infected_water_coords.shape[0] == 0:
         return  # No contaminated water sources
 
@@ -271,7 +284,8 @@ def _agent_water_to_human_transmission(agent_graph, M, params, grid):
 
 def _agent_human_to_water_transmission(agent_graph, M, params, grid, random_activity):
     """Handles contamination of water sources by infectious agents."""
-    water_slice = grid.get_slice("water")
+    water_idx = grid.property_to_index['water']
+    water_slice = grid.grid_tensor[:, :, water_idx]
     
     # Find infectious agents who are at a water source
     infectious_mask = agent_graph.ndata["compartments"] == M["I"]
@@ -296,7 +310,8 @@ def _agent_human_to_water_transmission(agent_graph, M, params, grid, random_acti
 
 def _water_recovery(params, grid):
     """Handles the random recovery of contaminated water sources."""
-    water_slice = grid.get_slice("water")
+    water_idx = grid.property_to_index['water']
+    water_slice = grid.grid_tensor[:, :, water_idx]
     infected_water_mask = water_slice == 2
     if not torch.any(infected_water_mask):
         return
@@ -313,7 +328,8 @@ def _water_recovery(params, grid):
 
 def _water_shock(params, grid):
     """Applies a cyclical shock that contaminates clean water sources."""
-    water_slice = grid.get_slice("water")
+    water_idx = grid.property_to_index['water']
+    water_slice = grid.grid_tensor[:, :, water_idx]
     clean_water_mask = water_slice == 1
     if not torch.any(clean_water_mask):
         return
