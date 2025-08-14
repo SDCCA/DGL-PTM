@@ -1,3 +1,5 @@
+# environment/grid_generator.py
+
 import numpy as np
 import osmnx as ox
 from shapely.geometry import Polygon, box

@@ -1,3 +1,5 @@
+# config.py
+
 """Configuration parameters for the SVEIR model.
 
 The configuration parameters are stored in a pydantic object. The model is
@@ -69,6 +71,7 @@ class SteeringParamsSVEIR(BaseModel):
     data_collection_period: int = 0
     data_collection_list: list[int] | None = None
     max_state_value: int = 100
+    prior_infection_immunity_factor: float = 1.5
 
 class SVEIRConfig(BaseModel):
     """Main configuration class for the SVEIR model."""

@@ -1,4 +1,5 @@
-import numpy as np
+# agent/health_cpt_utils.py
+
 import torch
 
 # --- CPT & Utility Functions ---
@@ -30,14 +31,20 @@ def utility(w, h, alpha, rate=1.0):
 
 # --- Functions for Health/Cost Dynamics ---
 
+def _calculate_base_health_change(h):
+    """
+    Calculates the potential health decline from not investing (natural decay).
+    This now uses torch functions to be compatible with both torch and numpy inputs.
+    """
+    k = torch.log(torch.tensor(10.0)) / 150
+    return 10 * torch.exp(-k * h) + 1
+
 def compute_health_delta(h, params):
     """
     Calculates the POSITIVE change in health from a successful investment.
     This now uses torch functions to be compatible with both torch and numpy inputs.
     """
-    # *** KEY CHANGE: Use torch functions for universal compatibility ***
-    k = torch.log(torch.tensor(10.0)) / 150
-    base_delta = 10 * torch.exp(-k * h) + 1
+    base_delta = _calculate_base_health_change(h)
     return base_delta * params.get('efficacy_multiplier', 1.0)
 
 def compute_health_decline(h):
@@ -45,9 +52,7 @@ def compute_health_decline(h):
     Calculates the potential health decline from not investing (natural decay).
     This now uses torch functions to be compatible with both torch and numpy inputs.
     """
-    # *** KEY CHANGE: Use torch functions for universal compatibility ***
-    k = torch.log(torch.tensor(10.0)) / 150
-    return 10 * torch.exp(-k * h) + 1
+    return _calculate_base_health_change(h)
 
 def compute_health_cost(h, params):
     """Calculates the cost of investing to improve health."""

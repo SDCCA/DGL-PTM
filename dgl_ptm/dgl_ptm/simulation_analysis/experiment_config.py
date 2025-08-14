@@ -1,3 +1,5 @@
+# simulation_analysis/experiment_config.py
+
 import numpy as np
 import os
 

@@ -180,7 +180,7 @@ def _calculate_and_apply_new_infections(agent_graph, M, params, target_nodes_mas
     num_infections = agent_graph.ndata["num_infections"][target_nodes_indices].float()
     health = agent_graph.ndata["health"][target_nodes_indices].int()
     
-    prob_infection_base = params["infection_probability"] * torch.exp(-1.5 * num_infections)
+    prob_infection_base = params["infection_probability"] * torch.exp(-params["prior_infection_immunity_factor"] * num_infections)
     health_susceptibility = torch.exp(-params["infection_reduction_factor_per_health_unit"] * (health - 1.0))
     
     final_prob = base_prob_multiplier * prob_infection_base * health_susceptibility
