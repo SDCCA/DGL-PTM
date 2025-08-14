@@ -1,11 +1,11 @@
-# model/initialize_model.py
+# model/initialize_model.py (Complete and Corrected File)
 
 """This module contains the model class and functions to initialize the model."""
 
 import copy
-import logging
 import pickle
 import numpy as np
+import os
 from pathlib import Path
 
 import torch
@@ -20,8 +20,6 @@ from dgl_ptm.environment.grid_assignment import grid_assignment
 
 # Set the seed of the random number generator
 generator = torch.manual_seed(0)
-
-logger = logging.getLogger(__name__)
 
 class Model:
     """Abstract model class."""
@@ -57,8 +55,8 @@ class SVEIRModel(Model):
     def __init__(self, *, model_identifier, root_path='.'):
         super().__init__(model_identifier=model_identifier, root_path=root_path)
 
-        self.config = copy.deepcopy(SVEIRCONFIG)
-        self.steering_parameters = self.config.steering_parameters.__dict__
+        self.config = None
+        self.steering_parameters = None
         self.graph = None
         self.step_first = -1
         self.policy_library = None
@@ -86,12 +84,12 @@ class SVEIRModel(Model):
                             setattr(cfg.__dict__[key], subkey, subvalue)
                     else:
                         setattr(cfg, key, value)
-                logger.warning('**kwargs will overwrite parameter_file_path')
+                print('**kwargs will overwrite parameter_file_path')
         elif kwargs:
             cfg = SVEIRConfig.from_dict(kwargs)
 
         if not parameter_file_path and not kwargs:
-            logger.warning('No model parameters provided; using defaults.')
+            print('No model parameters provided; using defaults.')
 
         cfg.model_identifier = self._model_identifier
         self.config = cfg
@@ -204,6 +202,7 @@ class SVEIRModel(Model):
             return 0.0
 
         num_infections_per_agent = self.graph.ndata["num_infections"]
+
         # Create a boolean mask of agents with 1 or more infections
         infected_mask = num_infections_per_agent > 0
         
@@ -237,13 +236,18 @@ class SVEIRModel(Model):
         grid_params = self.config.spatial_creation_args
         
         if grid_params.method == "realistic_import":
-            if not Path(grid_params.path).exists():
+            if not grid_params.grid_id:
+                raise ValueError("A 'grid_id' must be provided in the configuration to load a realistic grid.")
+            
+            grid_path = os.path.join("grids", grid_params.grid_id, "grid.npz")
+            
+            if not Path(grid_path).exists():
                 raise FileNotFoundError(
-                    f"Realistic grid file not found at '{grid_params.path}'.\n"
-                    "Please run the 'create-grid' stage first: uv run python main.py create-grid"
+                    f"Realistic grid file for ID '{grid_params.grid_id}' not found at '{grid_path}'.\n"
+                    "Please run the 'create-grid' stage first."
                 )
             
-            data = np.load(grid_params.path, allow_pickle=True)
+            data = np.load(grid_path, allow_pickle=True)            
             self.grid_tensor = data['grid']
             self.grid_bounds = data['bounds']
             # The loaded property_map is a 0-d array, get the item
@@ -345,14 +349,14 @@ class SVEIRModel(Model):
         num_infected = round(self.graph.num_nodes() * proportion)
         tensor = torch.zeros(self.graph.num_nodes(), dtype=torch.int)
         indices = torch.randperm(self.graph.num_nodes())[:num_infected]
-        tensor[indices] = 3  # Infectious state
+        tensor[indices] = 3
         return tensor
     
     def _initialize_agents_exposure_time(self):
         return torch.zeros(self.graph.num_nodes(), dtype=torch.int)
 
     def _initialize_agents_time_use(self):
-        tensor = torch.rand(self.graph.num_nodes(), 5) # home, school, religious, social, water
+        tensor = torch.rand(self.graph.num_nodes(), 5)
         return tensor / tensor.sum(dim=1, keepdim=True)
     
     def _initialize_agents_home_location(self):
@@ -381,7 +385,6 @@ class SVEIRModel(Model):
     def _initialize_agents_health(self, min_val, max_val):
         return torch.randint(min_val, max_val + 1, (self.graph.num_nodes(),), dtype=torch.int)
 
-# --- Checkpointing and Restart Helper Functions ---
 def _make_path_unique(path_str, extension=''):
     path = Path(path_str)
     if not path.with_suffix(extension).exists():

@@ -12,7 +12,7 @@ import traceback
 
 from .experiment_config import (
     COST_SUBSIDY_FACTORS, EFFICACY_MULTIPLIERS, get_policy_path,
-    get_results_path, get_full_results_path, RESULTS_DIR, SIM_RUNS_DIR
+    get_results_path, get_full_results_path, get_sim_runs_path
 )
 from dgl_ptm.config import SVEIRConfig
 from dgl_ptm.model.initialize_model import SVEIRModel
@@ -22,21 +22,25 @@ def run_single_simulation(params: dict) -> dict:
     Worker function: runs a single simulation instance and returns the result.
     """
     run_name = params['run_name']
-    efficacy = params['efficacy']
-    subsidy = params['subsidy']
-    policy_path = params['policy_path']
-    base_config = params['base_config']
-    run_seed = params['seed']
+    sim_runs_path = params['sim_runs_path']
+    config_dict = params["config_dict"]
+    # efficacy = params['efficacy']
+    # subsidy = params['subsidy']
+    # policy_path = params['policy_path']
+    # base_config = params['base_config']
+    # run_seed = params['seed']
+    # grid_id = params['grid_id']
 
-    current_config = base_config.model_copy(deep=True)
-    current_config.seed = run_seed
-    current_config.policy_library_path = policy_path
-    current_config.steering_parameters.efficacy_multiplier = efficacy
-    current_config.steering_parameters.cost_subsidy_factor = subsidy
+    # current_config = base_config.model_copy(deep=True)
+    # current_config.seed = run_seed
+    # current_config.policy_library_path = policy_path
+    # current_config.steering_parameters.efficacy_multiplier = efficacy
+    # current_config.steering_parameters.cost_subsidy_factor = subsidy
+    # current_config.spatial_creation_args.grid_id = grid_id
 
     try:
-        model = SVEIRModel(model_identifier=run_name, root_path=SIM_RUNS_DIR)
-        model.set_model_parameters(**current_config.model_dump())
+        model = SVEIRModel(model_identifier=run_name, root_path=sim_runs_path)
+        model.set_model_parameters(**config_dict)
         model.initialize_model(verbose=False)
         model.run()
         
@@ -44,7 +48,8 @@ def run_single_simulation(params: dict) -> dict:
         incidence_curve = time_series_data['incidence']
 
         return {
-            'efficacy': efficacy, 'subsidy': subsidy,
+            'efficacy': config_dict['steering_parameters']['efficacy_multiplier'],
+            'subsidy': config_dict['steering_parameters']['cost_subsidy_factor'],
             'total_infections': model.get_total_infections(),
             'peak_incidence': max(incidence_curve) if incidence_curve else 0,
             'incidence_curve': incidence_curve,
@@ -55,7 +60,11 @@ def run_single_simulation(params: dict) -> dict:
         print(f"\n--- ERROR IN WORKER: {run_name} ---")
         traceback.print_exc()
         print(f"--- END ERROR ---")
-        return {'efficacy': efficacy, 'subsidy': subsidy, 'total_infections': -1, 'peak_incidence': -1, 'incidence_curve': []}
+        return {
+            'efficacy': config_dict.get('steering_parameters', {}).get('efficacy_multiplier', -1),
+            'subsidy': config_dict.get('steering_parameters', {}).get('cost_subsidy_factor', -1),
+            'proportion_infected': -1.0
+        }
 
 
 def worker_unpacker(args):
@@ -63,41 +72,56 @@ def worker_unpacker(args):
     return run_single_simulation(args)
 
 
-def run_simulation_sweep(number_agents: int, repetitions: int, num_cores: int, steps: int):
+def run_simulation_sweep(number_agents: int, repetitions: int, num_cores: int, steps: int, experiment_name: str, grid_id: str, policy_set_id: str):
     """
     Runs the full simulation sweep in parallel and saves both detailed and summary results.
     """
-    print("Starting parallel simulation sweep...")
-    os.makedirs(RESULTS_DIR, exist_ok=True)
-    os.makedirs(SIM_RUNS_DIR, exist_ok=True) # Ensure the main output directory exists
+    print(f"Starting parallel simulation sweep for experiment: {experiment_name}")
+    sim_runs_path = get_sim_runs_path(experiment_name)
+    print(f"Individual run outputs will be saved in: {sim_runs_path}")
 
-    base_config = SVEIRConfig()
-    base_config.number_agents = number_agents
-    base_config.num_agent_personas = 16
-    base_config.step_target = steps
+    # base_config = SVEIRConfig()
+    # base_config.number_agents = number_agents
+    # base_config.step_target = steps
 
     tasks = []
-    base_seed = base_config.seed
+    base_seed = SVEIRConfig().seed
+
     for i, efficacy in enumerate(EFFICACY_MULTIPLIERS):
         for j, subsidy in enumerate(COST_SUBSIDY_FACTORS):
-            policy_path = get_policy_path(efficacy, subsidy)
+            policy_path = get_policy_path(policy_set_id, efficacy, subsidy)
             if not os.path.exists(policy_path):
-                print(f"Warning: Policy file not found for E={efficacy:.2f}, S={subsidy:.2f}. Skipping.")
+                print(f"WARNING: Policy file not found at '{policy_path}'. Skipping combination.")
                 continue
 
             for r in range(repetitions):
                 unique_seed = base_seed + (i * len(COST_SUBSIDY_FACTORS) * repetitions) + (j * repetitions) + r
                 run_name = f"sim_eff_{efficacy:.2f}_cost_{subsidy:.2f}_rep_{r+1}"
+
+                # Create the complete configuration dictionary for this specific run
+                config_for_run = {
+                    "number_agents": number_agents,
+                    "step_target": steps,
+                    "seed": unique_seed,
+                    "policy_library_path": policy_path,
+                    "spatial_creation_args": {"grid_id": grid_id},
+                    "steering_parameters": {
+                        "efficacy_multiplier": efficacy,
+                        "cost_subsidy_factor": subsidy
+                    }
+                }
+
                 tasks.append({
-                    'run_name': run_name, 'efficacy': efficacy, 'subsidy': subsidy,
-                    'policy_path': policy_path, 'base_config': base_config, 'seed': unique_seed
+                    'run_name': run_name,
+                    'config_dict': config_for_run,
+                    'sim_runs_path': sim_runs_path
                 })
     
     if not tasks:
         print("No valid policy files found. Cannot run simulations.")
         return
 
-    print(f"Total simulation runs to perform: {len(tasks)}")
+    print(f"Total simulation runs to perform: {len(tasks)}\n")
     time.sleep(1)
 
     raw_results = []
@@ -107,13 +131,11 @@ def run_simulation_sweep(number_agents: int, repetitions: int, num_cores: int, s
                 if result:
                     raw_results.append(result)
                 pbar.update(1)
-
-    print("\nAll simulations complete. Saving results...")
     
-    full_results_path = get_full_results_path(number_agents, repetitions)
+    full_results_path = get_full_results_path(experiment_name, number_agents, repetitions)
     with open(full_results_path, 'wb') as f:
         pickle.dump(raw_results, f)
-    print(f"Full, detailed results saved to: {full_results_path}")
+    print(f"\nResults saved to: {full_results_path}")
 
     results_agg = {}
     for res in raw_results:
@@ -130,9 +152,8 @@ def run_simulation_sweep(number_agents: int, repetitions: int, num_cores: int, s
             valid_proportions = [p for p in proportions_list if p >= 0]
             summary_grid[i, j] = np.mean(valid_proportions) if valid_proportions else -1
             
-    summary_grid_path = get_results_path(number_agents, repetitions)
+    summary_grid_path = get_results_path(experiment_name, number_agents, repetitions)
     np.save(summary_grid_path, summary_grid)
-    print(f"Summary grid (peak incidence) for heatmap saved to: {summary_grid_path}")
 
 
 def generate_heatmap(results_grid_file: str):
@@ -145,7 +166,6 @@ def generate_heatmap(results_grid_file: str):
     results_grid_flipped = np.flipud(results_grid)
     plt.figure(figsize=(12, 10))
     
-    # *** KEY CHANGE: Update annotation format for proportions ***
     annot_data = np.char.mod('%.2f', results_grid_flipped)
     annot_data[results_grid_flipped < 0] = 'FAIL'
 
@@ -159,8 +179,10 @@ def generate_heatmap(results_grid_file: str):
     ax.set_xlabel("Cost Subsidy Factor (Lower is Cheaper Healthcare)", fontsize=12)
     ax.set_ylabel("Health Efficacy Multiplier (Higher is Better Healthcare)", fontsize=12)
     
+    output_dir = os.path.dirname(results_grid_file)
     base_name = os.path.basename(results_grid_file)
-    output_filename = f"heatmap_{os.path.splitext(base_name)[0]}.png"
+    output_filename = os.path.join(output_dir, f"heatmap_{os.path.splitext(base_name)[0]}.png")
+    
     plt.savefig(output_filename, bbox_inches='tight')
     print(f"Heatmap saved to {output_filename}")
     plt.show()

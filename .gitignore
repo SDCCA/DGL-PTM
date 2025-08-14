@@ -1,6 +1,7 @@
 */__pycache__/*
 **/.DS_Store
 dgl_ptm/dgl_ptm/simulation_results/
+dgl_ptm/dgl_ptm/outputs/
 dgl_ptm/dgl_ptm/simulation_runs/
 *.pdf
 *.pickle

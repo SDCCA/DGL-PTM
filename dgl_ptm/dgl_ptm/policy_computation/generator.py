@@ -1,6 +1,5 @@
 # policy_computation/generator.py
 
-import logging
 import numpy as np
 from scipy.stats import qmc
 import torch
@@ -10,8 +9,6 @@ import multiprocessing
 from dgl_ptm.config import SVEIRConfig
 from .engine import value_iteration
 from simulation_analysis.experiment_config import get_policy_path
-
-logger = logging.getLogger(__name__)
 
 def create_and_save_policy_library(
     config: SVEIRConfig,

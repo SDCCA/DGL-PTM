@@ -7,14 +7,11 @@ initialized with default values. The default values can be overwritten by
 providing a yaml file or a dictionary.
 """
 
-import logging
 from pathlib import Path
 
 import torch
 import yaml
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt
-
-logger = logging.getLogger(__name__)
 
 class InitialGraphArgs(BaseModel):
     """Base class for initial graph arguments."""
@@ -25,10 +22,10 @@ class InitialGraphArgs(BaseModel):
 class GridCreationParams(BaseModel):
     """Base class for grid creation arguments"""
     method: str = "realistic_import"
+    grid_id: str | None = None
     x: int | None = 75
     y: int | None = 75
     properties: dict | None = None
-    path: str | None = "base_grid.npz"
     model_config = ConfigDict(validate_default=True)
 
 class GridAssignmentParams(BaseModel):
@@ -45,15 +42,15 @@ class SteeringParamsSVEIR(BaseModel):
     ndata: list[str | list[str | list[str]]] | None = ["all_except", ["a_table"]]
     edata: list[str] | None = ["all"]
     mode: str = "w"
-    infection_prob_mean: float = 0.001
-    infection_prob_std: float = 0.0002
-    recovery_rate: float = 0.12
+    infection_prob_mean: float = 0.003
+    infection_prob_std: float = 0.00015
+    recovery_rate: float = 0.25
     vaccination_rate: float = 0.01
     vaccine_efficacy: float = 0.9
     exposure_period: int = 5
     initial_infected_proportion: float = 0.03
-    human_to_water_infection_prob: float = 0.01
-    water_to_human_infection_prob: float = 0.01
+    human_to_water_infection_prob: float = 0.002
+    water_to_human_infection_prob: float = 0.002
     infection_reduction_factor_per_health_unit: float = 0.005
     beta: float = 0.95
     theta: float = 0.88
@@ -65,7 +62,7 @@ class SteeringParamsSVEIR(BaseModel):
     wealth_update_A: float = 0.50
     water_recovery_prob: float = 0.1
     shock_frequency: int = 40
-    shock_infection_prob: float = 0.33
+    shock_infection_prob: float = 0.05
     truncation_weight: float = 1.0e-10
     proximity_decay_rate: float = 0.5
     data_collection_period: int = 0
@@ -89,7 +86,7 @@ class SVEIRConfig(BaseModel):
     
     # Parameters for Policy Pre-computation
     policy_library_path: str = "./policy_library.npz"
-    num_agent_personas: int = 16
+    num_agent_personas: int = 32
     alpha_range: list[float] = [0.1, 0.9]
     gamma_range: list[float] = [0.2, 0.8]
     omega_range: list[float] = [1.0, 4.0]
@@ -115,7 +112,7 @@ class SVEIRConfig(BaseModel):
     
     def to_yaml(self, config_file):
         if Path(config_file).exists():
-            logger.warning(f"Overwriting config file {config_file}.")
+            print(f"Overwriting config file {config_file}.")
 
         cfg = self.model_dump(by_alias=True, warnings=False)
 

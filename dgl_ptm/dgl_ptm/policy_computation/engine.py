@@ -75,9 +75,9 @@ def value_iteration(max_state_value, alpha, gamma, theta, omega, eta, beta, para
     while norm > CONVERGENCE_TOLERANCE:
         old_value_function = value_function.copy()
         
-        health_delta_array = compute_health_delta(np.arange(1, max_state_value + 1), local_params).astype(int)
-        health_decline_array = compute_health_decline(np.arange(1, max_state_value + 1)).astype(int)
-        invest_cost_array = compute_health_cost(np.arange(1, max_state_value + 1), local_params)
+        health_delta_array = compute_health_delta(np.arange(1, max_state_value + 1), local_params).numpy().astype(int)
+        health_decline_array = compute_health_decline(np.arange(1, max_state_value + 1)).numpy().astype(int)
+        invest_cost_array = compute_health_cost(np.arange(1, max_state_value + 1), local_params).numpy()
 
         for w_idx in range(max_state_value):
             for h_idx in range(max_state_value):
