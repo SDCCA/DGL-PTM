@@ -43,7 +43,7 @@ class SteeringParamsSVEIR(BaseModel):
     edata: list[str] | None = ["all"]
     mode: str = "w"
     infection_prob_mean: float = 0.003
-    infection_prob_std: float = 0.00015
+    infection_prob_std: float = 0.001
     recovery_rate: float = 0.25
     vaccination_rate: float = 0.01
     vaccine_efficacy: float = 0.9

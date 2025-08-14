@@ -24,23 +24,13 @@ def run_single_simulation(params: dict) -> dict:
     run_name = params['run_name']
     sim_runs_path = params['sim_runs_path']
     config_dict = params["config_dict"]
-    # efficacy = params['efficacy']
-    # subsidy = params['subsidy']
-    # policy_path = params['policy_path']
-    # base_config = params['base_config']
-    # run_seed = params['seed']
-    # grid_id = params['grid_id']
-
-    # current_config = base_config.model_copy(deep=True)
-    # current_config.seed = run_seed
-    # current_config.policy_library_path = policy_path
-    # current_config.steering_parameters.efficacy_multiplier = efficacy
-    # current_config.steering_parameters.cost_subsidy_factor = subsidy
-    # current_config.spatial_creation_args.grid_id = grid_id
 
     try:
         model = SVEIRModel(model_identifier=run_name, root_path=sim_runs_path)
-        model.set_model_parameters(**config_dict)
+        config_for_model = config_dict.copy()
+        config_for_model = config_dict.copy()
+        config_for_model.pop('model_identifier', None)
+        model.set_model_parameters(**config_for_model)
         model.initialize_model(verbose=False)
         model.run()
         
@@ -80,10 +70,6 @@ def run_simulation_sweep(number_agents: int, repetitions: int, num_cores: int, s
     sim_runs_path = get_sim_runs_path(experiment_name)
     print(f"Individual run outputs will be saved in: {sim_runs_path}")
 
-    # base_config = SVEIRConfig()
-    # base_config.number_agents = number_agents
-    # base_config.step_target = steps
-
     tasks = []
     base_seed = SVEIRConfig().seed
 
@@ -100,6 +86,7 @@ def run_simulation_sweep(number_agents: int, repetitions: int, num_cores: int, s
 
                 # Create the complete configuration dictionary for this specific run
                 config_for_run = {
+                    "model_identifier": run_name,
                     "number_agents": number_agents,
                     "step_target": steps,
                     "seed": unique_seed,

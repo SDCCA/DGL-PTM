@@ -34,8 +34,8 @@ OSM_POI_TAGS = {
 #    This enriches the environment and prevents agent pile-ups.
 #    The key is the 'property_name' that will be used in the model.
 PROCEDURAL_POI_COUNTS = {
-    "school": 10,
-    "place_of_worship": 10,
+    "school": 5,
+    "place_of_worship": 5,
     "water": 20
 }
 

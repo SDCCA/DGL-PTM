@@ -32,13 +32,13 @@ class Model:
 
     def save_model_parameters(self, overwrite=False):
         """Save model parameters to a yaml file."""
-        cfg_filename = self.model_dir / f'{self._model_identifier}_{self.step_count}'
+        filename = f"{self._model_identifier}.yaml"
+        cfg_filename = self.model_dir / filename
         if overwrite:
             cfg_filename = cfg_filename.with_suffix('.yaml')
         else:
             cfg_filename = _make_path_unique(cfg_filename.as_posix(), '.yaml')
         self.config.to_yaml(cfg_filename)
-        logger.info(f'The model parameters are saved to {cfg_filename}.')
 
     def create_network(self):
         raise NotImplementedError('network creation is not implemented for this class.')
@@ -61,42 +61,23 @@ class SVEIRModel(Model):
         self.step_first = -1
         self.policy_library = None
         self.risk_levels_tensor = None
-
         self.infection_incidence = []
         self.prevalence_history = []
         self.susceptible_history = []
         self.exposed_history = []
         self.recovered_history = []
         self.vaccinated_history = []
-
         version_path = Path(__file__).resolve().parents[2] / 'version.md'
         self.version = version_path.read_text().splitlines()[0] if version_path.exists() else "dev"
 
-    def set_model_parameters(self, *, parameter_file_path=None, overwrite=False, **kwargs):
-        cfg = SVEIRCONFIG
-
-        if parameter_file_path:
-            cfg = SVEIRConfig.from_yaml(parameter_file_path)
-            if kwargs:
-                for key, value in kwargs.items():
-                    if isinstance(value, dict):
-                        for subkey, subvalue in value.items():
-                            setattr(cfg.__dict__[key], subkey, subvalue)
-                    else:
-                        setattr(cfg, key, value)
-                print('**kwargs will overwrite parameter_file_path')
-        elif kwargs:
-            cfg = SVEIRConfig.from_dict(kwargs)
-
-        if not parameter_file_path and not kwargs:
-            print('No model parameters provided; using defaults.')
-
-        cfg.model_identifier = self._model_identifier
-        self.config = cfg
+    def set_model_parameters(self, **kwargs):
+        self.config = SVEIRCONFIG.from_dict(kwargs)
 
         self.steering_parameters = self.config.steering_parameters.__dict__
+
         self.model_dir = self.root_path / Path(self._model_identifier)
         self.model_dir.mkdir(parents=True, exist_ok=True)
+
         self.steering_parameters['npath'] = str(self.model_dir / Path(self.config.steering_parameters.npath).name)
         self.steering_parameters['epath'] = str(self.model_dir / Path(self.config.steering_parameters.epath).name)
 
@@ -117,18 +98,16 @@ class SVEIRModel(Model):
             if key not in data:
                 raise KeyError(f"Policy for persona ID {persona_id} not found...")
             self.policy_library[persona_id] = torch.from_numpy(data[key]).long().to(self.config.device)
-            
-        logger.info(f"Loaded {len(self.policy_library)} policy sets for {len(self.risk_levels_tensor)} risk levels.")
 
     def initialize_model(self, restart=False, verbose=False):
         self._load_policy_library()
         self.inputs = None
         if isinstance(restart, bool) and restart:
-            logger.info(f'Loading model state from checkpoint: {self.model_dir}')
+            print(f'Loading model state from checkpoint: {self.model_dir}')
             self.inputs = _load_model(self.model_dir)
         elif isinstance(restart, tuple):
             milestone_dir = self.model_dir / f'milestone_{restart[0]}' if restart[1] == 0 else self.model_dir / f'milestone_{restart[0]}_{restart[1]}'
-            logger.info(f'Loading model state from milestone: {milestone_dir}')
+            print(f'Loading model state from milestone: {milestone_dir}')
             self.inputs = _load_model(milestone_dir)
 
         if self.inputs:
@@ -155,7 +134,6 @@ class SVEIRModel(Model):
         self.generator_state = generator.get_state()
 
     def run(self, verbose=False):
-        self.save_model_parameters(overwrite=True)
         self.infection_incidence.clear()
         self.prevalence_history.clear()
         self.susceptible_history.clear()
@@ -370,7 +348,7 @@ class SVEIRModel(Model):
         property_locations = torch.stack(torch.where(property_grid == 1)).T.float()
         
         if property_locations.shape[0] == 0:
-            logger.warning(f"No grid locations found for '{property_name}'. Defaulting to home.")
+            print(f"No grid locations found for '{property_name}'. Defaulting to home.")
             return home_locations
 
         distances = torch.cdist(home_locations, property_locations)
@@ -419,5 +397,5 @@ def _load_model(path):
     if graph_step != generator_step:
         raise ValueError('Step count mismatch in saved model files.')
 
-    logger.warning(f'Loading model state from step {generator_step}.')
+    print(f'Loading model state from step {generator_step}.')
     return {'graph': graph[0], 'generator_state': generator, 'step_count': generator_step, 'process_version': process_version}
