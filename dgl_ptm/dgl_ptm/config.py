@@ -44,13 +44,13 @@ class SteeringParamsSVEIR(BaseModel):
     mode: str = "w"
     infection_prob_mean: float = 0.003
     infection_prob_std: float = 0.001
-    recovery_rate: float = 0.25
+    recovery_rate: float = 0.33
     vaccination_rate: float = 0.01
     vaccine_efficacy: float = 0.9
     exposure_period: int = 5
     initial_infected_proportion: float = 0.03
-    human_to_water_infection_prob: float = 0.002
-    water_to_human_infection_prob: float = 0.002
+    human_to_water_infection_prob: float = 0.001
+    water_to_human_infection_prob: float = 0.001
     infection_reduction_factor_per_health_unit: float = 0.005
     beta: float = 0.95
     theta: float = 0.88
@@ -60,8 +60,8 @@ class SteeringParamsSVEIR(BaseModel):
     cost_subsidy_factor: float = 1.0
     infection_health_shock: int = 20
     wealth_update_A: float = 0.50
-    water_recovery_prob: float = 0.1
-    shock_frequency: int = 40
+    water_recovery_prob: float = 0.2
+    shock_frequency: int = 30
     shock_infection_prob: float = 0.05
     truncation_weight: float = 1.0e-10
     proximity_decay_rate: float = 0.5
