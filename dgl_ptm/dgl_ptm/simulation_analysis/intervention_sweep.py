@@ -249,7 +249,7 @@ def plot_epidemic_curves(experiment_name: str, agents: int, repetitions: int):
     ax.set_title("Impact of Interventions on Epidemic Progression (Prevalence)", fontsize=16, pad=15)
     ax.set_xlabel("Time (Days)", fontsize=12)
     ax.set_ylabel("Number of Currently Infected Agents", fontsize=12)
-    ax.legend(title="Intervention Scenario", fontsize=10, loc='upper left')
+    ax.legend(title="Intervention Scenario", fontsize=10, loc='upper right')
     ax.grid(True, which='both', linestyle='--', linewidth=0.5)
     ax.set_ylim(bottom=0)
 
