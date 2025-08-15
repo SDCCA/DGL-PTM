@@ -5,11 +5,12 @@ import os
 import time
 
 from policy_computation.sweep_runner import compute_all_policies_for_sweep
-from simulation_analysis.intervention_sweep import (
-    run_simulation_sweep,
-    generate_heatmap,
+from simulation_analysis.intervention_sweep import run_simulation_sweep
+from simulation_analysis.plots import (
+    plot_heatmap,
     plot_epidemic_curves,
-    plot_final_state_violins
+    plot_final_state_violins,
+    plot_final_state_scatter,
 )
 from simulation_analysis.experiment_config import (
     get_results_path,
@@ -33,7 +34,7 @@ def main():
     )
     parser.add_argument(
         'stage',
-        choices=['precompute', 'simulate', 'plot-heatmap', 'plot-curves', 'create-grid', 'plot-curves', 'plot-violins'],
+        choices=['precompute', 'simulate', 'plot-heatmap', 'plot-curves', 'create-grid', 'plot-curves', 'plot-violins', 'plot-scatter'],
         help=(
             "The stage of the experiment to run:\n"
             "  'create-grid'  - Generate the realistic base grid from real-world data (run once).\n"
@@ -42,6 +43,7 @@ def main():
             "  'plot-heatmap' - Generate the summary heatmap from saved results.\n"
             "  'plot-curves'  - Compare incidence curves.\n"
             "  'plot-violins' - Compare final agent health and wealth levels.\n"
+            "  'plot-scatter' - Generate density scatter plots of final agent states.\n"
         )
     )
 
@@ -123,20 +125,12 @@ def main():
 
     # --- (Optional) PlOTTING STAGES ---
     elif args.stage == 'plot-heatmap':
-        # Check for the required argument
         if not args.experiment_name:
-            parser.error("The 'plot-heatmap' stage requires the --experiment-name argument.")
-        
-        print("--- Stage: Generating Heatmap ---")
-        print(f"  Loading results from experiment: {args.experiment_name}")
-        
-        # Use the new helper to find the results file inside the unique experiment directory
+            parser.error("The 'plot-heatmap' stage requires the --experiment-name argument.")    
         results_grid_path = get_results_path(args.experiment_name, args.agents, args.repetitions)
-
         if not os.path.exists(results_grid_path):
             parser.error(f"Results grid file not found at '{results_grid_path}'. Make sure the experiment name and parameters are correct.")
-
-        generate_heatmap(results_grid_path)
+        plot_heatmap(results_grid_path)
 
     elif args.stage == "plot-curves":
         if not args.experiment_name:
@@ -148,6 +142,10 @@ def main():
             parser.error("The 'plot-violins' stage requires the --experiment-name argument.")
         plot_final_state_violins(args.experiment_name, args.agents, args.repetitions)
 
+    elif args.stage == 'plot-scatter':
+        if not args.experiment_name:
+            print("The 'plot-scatter' stage requires the --experiment-name argument.")    
+        plot_final_state_scatter(args.experiment_name, args.agents, args.repetitions)
 
 if __name__ == "__main__":
     main()
