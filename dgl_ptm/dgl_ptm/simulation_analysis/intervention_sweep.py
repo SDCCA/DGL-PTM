@@ -307,8 +307,8 @@ def plot_final_state_violins(experiment_name: str, agents: int, repetitions: int
     # --- Generate the Plots ---
     sns.set_theme(style="whitegrid")
     color_palette = {
-        "Baseline": "royalblue",
-        "Best Intervention": "darkorange"
+        "Baseline": "dodgerblue",
+        "Best Intervention": "forestgreen"
     }
 
     fig, axes = plt.subplots(1, 2, figsize=(14, 7), sharey=True)
@@ -316,14 +316,14 @@ def plot_final_state_violins(experiment_name: str, agents: int, repetitions: int
 
     # Health Plot
     sns.violinplot(ax=axes[0], data=df[df['Metric'] == 'Health'], x='Scenario', y='value',
-                   hue='Scenario', palette=color_palette, inner='quartile', legend=False, alpha=0.8)
+                   hue='Scenario', palette=color_palette, inner='quartile', legend=False, alpha=0.7)
     axes[0].set_title('Final Health Distribution', fontsize=14)
     axes[0].set_ylabel('State Value (1-100)', fontsize=12)
     axes[0].set_xlabel(None)
 
     # Wealth Plot
     sns.violinplot(ax=axes[1], data=df[df['Metric'] == 'Wealth'], x='Scenario', y='value',
-                   hue='Scenario', palette=color_palette, inner='quartile', legend=False, alpha=0.8)
+                   hue='Scenario', palette=color_palette, inner='quartile', legend=False, alpha=0.7)
     axes[1].set_title('Final Wealth Distribution', fontsize=14)
     axes[1].set_ylabel(None)
     axes[1].set_xlabel(None)
