@@ -42,8 +42,8 @@ class SteeringParamsSVEIR(BaseModel):
     ndata: list[str | list[str | list[str]]] | None = ["all_except", ["a_table"]]
     edata: list[str] | None = ["all"]
     mode: str = "w"
-    infection_prob_mean: float = 0.003
-    infection_prob_std: float = 0.001
+    infection_prob_mean: float = 0.002
+    infection_prob_std: float = 0.0002
     recovery_rate: float = 0.33
     vaccination_rate: float = 0.01
     vaccine_efficacy: float = 0.9
@@ -62,7 +62,7 @@ class SteeringParamsSVEIR(BaseModel):
     wealth_update_A: float = 0.50
     water_recovery_prob: float = 0.2
     shock_frequency: int = 30
-    shock_infection_prob: float = 0.05
+    shock_infection_prob: float = 0.10
     truncation_weight: float = 1.0e-10
     proximity_decay_rate: float = 0.5
     data_collection_period: int = 0

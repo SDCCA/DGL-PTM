@@ -5,7 +5,12 @@ import os
 import time
 
 from policy_computation.sweep_runner import compute_all_policies_for_sweep
-from simulation_analysis.intervention_sweep import run_simulation_sweep, generate_heatmap
+from simulation_analysis.intervention_sweep import (
+    run_simulation_sweep,
+    generate_heatmap,
+    plot_epidemic_curves,
+    plot_final_state_violins
+)
 from simulation_analysis.experiment_config import (
     get_results_path,
     get_policy_set_id,
@@ -28,13 +33,15 @@ def main():
     )
     parser.add_argument(
         'stage',
-        choices=['precompute', 'simulate', 'plot-heatmap', 'plot-curves', 'create-grid'],
+        choices=['precompute', 'simulate', 'plot-heatmap', 'plot-curves', 'create-grid', 'plot-curves', 'plot-violins'],
         help=(
             "The stage of the experiment to run:\n"
             "  'create-grid'  - Generate the realistic base grid from real-world data (run once).\n"
             "  'precompute'   - Generate all policy files.\n"
             "  'simulate'     - Run simulations and save the results.\n"
             "  'plot-heatmap' - Generate the summary heatmap from saved results.\n"
+            "  'plot-curves'  - Compare incidence curves.\n"
+            "  'plot-violins' - Compare final agent health and wealth levels.\n"
         )
     )
 
@@ -114,8 +121,7 @@ def main():
         print("\nTo generate the heatmap for this run, use the following command:")
         print(f"  uv run main.py plot-heatmap --experiment-name {experiment_name} --agents {args.agents} --repetitions {args.repetitions}")
 
-
-    # --- STAGE 4: PLOT HEATMAP (Updated to use a specific experiment name) ---
+    # --- (Optional) PlOTTING STAGES ---
     elif args.stage == 'plot-heatmap':
         # Check for the required argument
         if not args.experiment_name:
@@ -131,6 +137,17 @@ def main():
             parser.error(f"Results grid file not found at '{results_grid_path}'. Make sure the experiment name and parameters are correct.")
 
         generate_heatmap(results_grid_path)
+
+    elif args.stage == "plot-curves":
+        if not args.experiment_name:
+            parser.error("The 'plot-curves' stage requires the --experiment-name argument.")
+        plot_epidemic_curves(args.experiment_name, args.agents, args.repetitions)
+
+    elif args.stage == "plot-violins":
+        if not args.experiment_name:
+            parser.error("The 'plot-violins' stage requires the --experiment-name argument.")
+        plot_final_state_violins(args.experiment_name, args.agents, args.repetitions)
+
 
 if __name__ == "__main__":
     main()

@@ -200,6 +200,18 @@ class SVEIRModel(Model):
             "recovered": self.recovered_history, "vaccinated": self.vaccinated_history,
         }
 
+    def get_final_agent_states(self) -> dict:
+        """
+        Returns the final health and wealth vectors for all agents as numpy arrays.
+        """
+        if "health" not in self.graph.ndata or "wealth" not in self.graph.ndata:
+            return {'health': np.array([]), 'wealth': np.array([])}
+
+        return {
+            'health': self.graph.ndata['health'].cpu().numpy(),
+            'wealth': self.graph.ndata['wealth'].cpu().numpy()
+        }
+
     def create_network(self, verbose):
         self.graph = network_creation(
             self.config.number_agents, self.config.initial_graph_type, verbose,
