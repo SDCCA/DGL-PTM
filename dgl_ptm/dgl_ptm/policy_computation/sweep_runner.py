@@ -3,7 +3,6 @@
 import os
 import multiprocessing
 from tqdm import tqdm
-import time
 
 from simulation_analysis.experiment_config import (
     COST_SUBSIDY_FACTORS,

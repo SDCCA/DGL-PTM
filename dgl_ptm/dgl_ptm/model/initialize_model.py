@@ -1,4 +1,4 @@
-# model/initialize_model.py (Complete and Corrected File)
+# model/initialize_model.py
 
 """This module contains the model class and functions to initialize the model."""
 

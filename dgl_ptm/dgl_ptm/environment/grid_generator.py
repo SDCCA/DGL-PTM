@@ -1,4 +1,4 @@
-# environment/grid_generator.py (Refactored)
+# environment/grid_generator.py
 
 import os
 import numpy as np
