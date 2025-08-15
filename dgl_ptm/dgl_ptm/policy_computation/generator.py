@@ -8,7 +8,6 @@ import multiprocessing
 
 from dgl_ptm.config import SVEIRConfig
 from .engine import value_iteration
-from simulation_analysis.experiment_config import get_policy_path
 
 def create_and_save_policy_library(
     config: SVEIRConfig,

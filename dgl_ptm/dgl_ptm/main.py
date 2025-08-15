@@ -10,7 +10,7 @@ from simulation_analysis.plots import (
     plot_heatmap,
     plot_epidemic_curves,
     plot_final_state_violins,
-    plot_final_state_scatter,
+    plot_final_state_scatter
 )
 from simulation_analysis.experiment_config import (
     get_results_path,
@@ -34,7 +34,16 @@ def main():
     )
     parser.add_argument(
         'stage',
-        choices=['precompute', 'simulate', 'plot-heatmap', 'plot-curves', 'create-grid', 'plot-curves', 'plot-violins', 'plot-scatter'],
+        choices=[
+            'create-grid',
+            'precompute',
+            'simulate',
+            'plot-heatmap',
+            'plot-curves',
+            'plot-curves',
+            'plot-violins',
+            'plot-scatter'
+        ],
         help=(
             "The stage of the experiment to run:\n"
             "  'create-grid'  - Generate the realistic base grid from real-world data (run once).\n"
@@ -51,7 +60,6 @@ def main():
     parser.add_argument('-r', '--repetitions', type=int, default=5, help="Repetitions for each scenario.")
     parser.add_argument('-c', '--cores', type=int, default=6, help="Number of CPU cores for parallel processing.")
     parser.add_argument('-s', '--steps', type=int, default=SVEIRCONFIG.step_target, help=f"Simulation steps (default: {SVEIRCONFIG.step_target}).")
-    
     parser.add_argument('-g', '--grid-id', type=str, help="REQUIRED for 'simulate': The unique ID of the grid to use.")
     parser.add_argument('-p', '--policy-set-id', type=str, help="REQUIRED for 'simulate': The unique ID of the policy set to use for the simulation.")
     parser.add_argument('-e', '--experiment-name', type=str, help="REQUIRED for 'plot-heatmap': The unique name of the experiment run to plot.")

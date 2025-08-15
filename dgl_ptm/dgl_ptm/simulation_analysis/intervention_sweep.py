@@ -40,6 +40,10 @@ def run_single_simulation(params: dict) -> dict:
         final_states = model.get_final_agent_states()
         incidence_curve = time_series_data['incidence']
         prevalence_curve = time_series_data['prevalence']
+        infection_counts = model.get_final_infection_counts()
+        personas = model.get_agent_personas()
+        initial_wealth = model.get_initial_wealth()
+        initial_health = model.get_initial_health()
 
         return {
             'efficacy': config_dict['steering_parameters']['efficacy_multiplier'],
@@ -50,7 +54,11 @@ def run_single_simulation(params: dict) -> dict:
             'prevalence_curve': prevalence_curve,
             'proportion_infected': model.get_proportion_infected_at_least_once(),
             'final_health': final_states['health'],
-            'final_wealth': final_states['wealth']
+            'final_wealth': final_states['wealth'],
+            'final_num_infections': infection_counts,
+            'personas': personas,
+            'initial_wealth': initial_wealth,
+            'initial_health': initial_health
         }
 
     except Exception:
@@ -66,7 +74,11 @@ def run_single_simulation(params: dict) -> dict:
             'prevalence_curve': [],
             'proportion_infected': -1.0,
             'final_health': [],
-            'final_wealth': []
+            'final_wealth': [],
+            'final_num_infections': np.array([]),
+            'personas': np.array([]),
+            'initial_wealth': np.array([]),
+            'initial_health': np.array([])
         }
 
 

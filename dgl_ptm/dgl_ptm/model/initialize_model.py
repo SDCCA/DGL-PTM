@@ -12,7 +12,7 @@ import torch
 from dgl.data.utils import load_graphs, save_graphs
 
 from dgl_ptm.agentInteraction.weight_update import weight_update_sveir
-from dgl_ptm.config import SVEIRConfig, SVEIRCONFIG
+from dgl_ptm.config import SVEIRCONFIG
 from dgl_ptm.model.step import sveir_step
 from dgl_ptm.network.network_creation import network_creation
 from dgl_ptm.environment.grid_creation import grid_creation
@@ -212,6 +212,42 @@ class SVEIRModel(Model):
             'wealth': self.graph.ndata['wealth'].cpu().numpy()
         }
 
+    def get_final_infection_counts(self) -> np.ndarray:
+        """
+        Returns the final number of infections for all agents as a numpy array.
+        """
+        if "num_infections" not in self.graph.ndata:
+            return np.array([])
+        
+        return self.graph.ndata['num_infections'].cpu().numpy()
+    
+    def get_agent_personas(self) -> np.ndarray:
+        """
+        Returns the persona ID for all agents as a numpy array.
+        """
+        if "persona_id" not in self.graph.ndata:
+            return np.array([])
+        
+        return self.graph.ndata['persona_id'].cpu().numpy()
+
+    def get_initial_wealth(self) -> np.ndarray:
+        """
+        Returns the initial wealth for all agents as a numpy array.
+        """
+        if "initial_wealth" not in self.graph.ndata:
+            return np.array([])
+
+        return self.graph.ndata['initial_wealth'].cpu().numpy()
+
+    def get_initial_health(self) -> np.ndarray:
+        """
+        Returns the initial wealth for all agents as a numpy array.
+        """
+        if "initial_wealth" not in self.graph.ndata:
+            return np.array([])
+
+        return self.graph.ndata['initial_health'].cpu().numpy()
+
     def create_network(self, verbose):
         self.graph = network_creation(
             self.config.number_agents, self.config.initial_graph_type, verbose,
@@ -325,6 +361,8 @@ class SVEIRModel(Model):
         agent_properties["activity_choice"] = self._initialize_agents_activity_choice()
         agent_properties["wealth"] = self._initialize_agents_wealth(min_val=1, max_val=self.config.steering_parameters.max_state_value)
         agent_properties["health"] = self._initialize_agents_health(min_val=1, max_val=self.config.steering_parameters.max_state_value)
+        agent_properties["initial_wealth"] = agent_properties["wealth"].clone()
+        agent_properties["initial_health"] = agent_properties["health"].clone()
 
         for key, value in agent_properties.items():
             self.graph.ndata[key] = value
