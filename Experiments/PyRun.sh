@@ -12,7 +12,7 @@ module load CUDA/12.1.1
 module load cuDNN/8.9.2.26-CUDA-12.1.1 
 
 # Environment (Snellius specific)
-source /home/vgaribay/anaconda3/etc/profile.d/conda.sh
+source ${CONDA_HOME}/etc/profile.d/conda.sh
 conda activate dgl_ptm_gpu
 echo "Script: PyRun.sh File: $1"
 date=$(date)
