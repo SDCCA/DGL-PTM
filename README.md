@@ -1,1 +1,1 @@
-The deep graph library reimplementation of the poverty trap model.
+The deep graph library implementation of the epidemiological spatial ABM.
