@@ -79,7 +79,7 @@ export CONDA_HOME=/path/to/your/anaconda3  # Replace with your anaconda path
 This model code was designed and developed with support from the Netherlands eScience Center by the Dutch Research Council (NWO) under contract 27020G08, titled “Computing societal dynamics of climate change adaptation in cities” through the contributions of Meiert Grootes, Pranav Chandramouli, Sara Alidoost, and Victoria Garibay. Acknowledgements to Debraj Roy and Tatiana Filatova for consultation on the model design, Namitha Jopan for foundational work on the past model, and Thijs van Lankveld for contributions to later versions of the model.
 
 ## Contact
-Victoria Garibay, Ph.D. - [Contact Form](https://vmgaribay.github.io/portfolio/contact_form.html) | [GitHub Profile](https://github.com/yourusername)
+Victoria Garibay, Ph.D. - [Contact Form](https://vmgaribay.github.io/portfolio/contact_form.html) | [GitHub Profile](https://github.com/vmgaribay)
 
 ## References
 
