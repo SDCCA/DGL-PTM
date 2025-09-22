@@ -38,39 +38,39 @@ The experiments were conducted using the GPU nodes on Snellius, the Dutch Nation
 
 ### Overview of Relevant Files
 #### Manuscript Figures:
-Manuscript_Figures.ipynb — Notebook  recreating the figures used in the manuscript and supplement
-Note: requires csv files from the DataSummaries folder on [Zenodo](https://doi.org/10.5281/zenodo.17163314)
+Manuscript_Figures.ipynb — Notebook  recreating the figures used in the manuscript and supplement  
+Note: requires csv files from the DataSummaries folder on [Zenodo](https://doi.org/10.5281/zenodo.17163314)  
 #### Main Model Run Files (1,000,000 agents):
-gpu_default.py — Default specification (social exchange and adaptation options active)
-gpu_no_adapt.py — No Adaptation specification (social exchange active)
-gpu_no_social.py — No Social specification (adaptation active)
-gpu_null.py — Null specification (no social exchange or adaptation)
+gpu_default.py — Default arrangement (social exchange and adaptation options active)  
+gpu_no_adapt.py — No Adaptation arrangement (social exchange active)  
+gpu_no_social.py — No Social arrangement (adaptation active)  
+gpu_null.py — Null arrangement (no social exchange or adaptation)  
 #### Experimental Model Run Files (10,000 agents):
-default_schemeA.py — Default specification, subsidized adaptation
-default_schemeB.py — Default specification, increased adaptation efficacy
-default_schemeSQ.py — Default specification
-no_social_schemeA.py — No Social specification, subsidized adaptation
-no_social_schemeB.py — No Social specification, increased adaptation efficacy
-no_social_schemeSQ.py — No Social specification
+default_schemeA.py — Default arrangement, subsidized adaptation  
+default_schemeB.py — Default arrangement, increased adaptation efficacy  
+default_schemeSQ.py — Default arrangement  
+no_social_schemeA.py — No Social arrangement, subsidized adaptation  
+no_social_schemeB.py — No Social arrangement, increased adaptation efficacy  
+no_social_schemeSQ.py — No Social arrangement  
 #### Analysis Files:
-data_processor.py — Processes the data from the main runs
-scheme_data_processor.py — Processes the data from the subsidy and efficacy experiments
-disruption_data_processor.py — Processes the data from the scheduled disruption experiments
+data_processor.py — Processes the data from the main runs  
+scheme_data_processor.py — Processes the data from the subsidy and efficacy experiments  
+disruption_data_processor.py — Processes the data from the scheduled disruption experiments  
 #### Supporting Scripts:
-default_run.sh — Monte Carlo runs of gpu_default.py
-no_adapt_run.sh — Monte Carlo runs of gpu_no_adapt.py
-no_social_run.sh — Monte Carlo runs of gpu_no_social.py
-null_run.sh — Monte Carlo runs of gpu_null.py
-default_run_schemeA.sh — Monte Carlo runs of default_schemeA.py
-default_run_schemeB.sh — Monte Carlo runs of default_schemeB.py
-default_run_schemeSQ.sh — Monte Carlo runs of default_schemeSQ.py
-no_social_run_schemeA.sh — Monte Carlo runs of no_social_schemeA.py
-no_social_run_schemeB.sh — Monte Carlo runs of no_social_schemeB.py
-no_social_run_schemeSQ.sh — Monte Carlo runs of no_social_schemeSQ.py
-disruption_run_6.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.6 every fifth timestep
-disruption_run_7.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.7 every fifth timestep
-disruption_run_8.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.8 every fifth timestep
-PyRun.sh — runs a Python script specified as an argument (e.g., data_processor.py)
+default_run.sh — Monte Carlo runs of gpu_default.py  
+no_adapt_run.sh — Monte Carlo runs of gpu_no_adapt.py  
+no_social_run.sh — Monte Carlo runs of gpu_no_social.py  
+null_run.sh — Monte Carlo runs of gpu_null.py  
+default_run_schemeA.sh — Monte Carlo runs of default_schemeA.py  
+default_run_schemeB.sh — Monte Carlo runs of default_schemeB.py  
+default_run_schemeSQ.sh — Monte Carlo runs of default_schemeSQ.py  
+no_social_run_schemeA.sh — Monte Carlo runs of no_social_schemeA.py  
+no_social_run_schemeB.sh — Monte Carlo runs of no_social_schemeB.py  
+no_social_run_schemeSQ.sh — Monte Carlo runs of no_social_schemeSQ.py  
+disruption_run_6.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.6 every fifth timestep  
+disruption_run_7.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.7 every fifth timestep  
+disruption_run_8.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.8 every fifth timestep  
+PyRun.sh — runs a Python script specified as an argument (e.g., data_processor.py)  
 
 ### Cluster-Specific Setup Tips
 - Check the CUDA module loads in the run scripts and modify as needed to match the cluster in use.
