@@ -2,10 +2,11 @@
 
 ## Description
 
-Included is all supporting code used in generating data for the preliminary, subsidy, and efficacy experiments with the Deep Graph Library Poverty Trap Model (DGL-PTM). This branch of the repository ("Experiments") serves as an archive of the DGL-PTM as it was applied in a manuscript (pending submission details). 
+Included is all supporting code used in generating data for the preliminary, subsidy, and efficacy experiments with the Deep Graph Library Poverty Trap Model (DGL-PTM). This branch of the repository ("Experiments") serves as an archive of the DGL-PTM as it was applied in a manuscript in "Pricing Adaptation: A Simulated Study of Poverty Intervention Strategies Under Climate Shocks" by V.M.Garibay & D. Roy (pending submission details). 
 
 An existing poverty trap model [1] was completely reimplemented in a way that accommodated agent populations on the order of millions and additional functionalities by leveraging the message passing capabilities of Deep Graph Library [2]. This is the preliminary phase and first practical implementation of [DGL-ABM](https://github.com/SDCCA/dgl_abm), a continuing project to develop a generalized framework for agent based modelling based on repurposed foundational elements from Deep Graph Library. 
 
+Data and summaries generated from the model runs are available on [Zenodo](https://doi.org/10.5281/zenodo.17163314).
 
 
 ## Table of Contents
@@ -36,6 +37,9 @@ Note that the model can be run with or without GPU access.
 The experiments were conducted using the GPU nodes on Snellius, the Dutch National Supercomputer and bash scripts would need to be modified to be compatible with a new system. 
 
 ### Overview of Relevant Files
+#### Manuscript Figures:
+Manuscript_Figures.ipynb — Notebook  recreating the figures used in the manuscript and supplement
+Note: requires csv files from the DataSummaries folder on [Zenodo](https://doi.org/10.5281/zenodo.17163314)
 #### Main Model Run Files (1,000,000 agents):
 gpu_default.py — Default specification (social exchange and adaptation options active)
 gpu_no_adapt.py — No Adaptation specification (social exchange active)
