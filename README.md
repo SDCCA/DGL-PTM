@@ -6,7 +6,7 @@ Included is all supporting code used in generating data for the preliminary, sub
 
 An existing poverty trap model [1] was completely reimplemented in a way that accommodated agent populations on the order of millions and additional functionalities by leveraging the message passing capabilities of Deep Graph Library [2]. This is the preliminary phase and first practical implementation of [DGL-ABM](https://github.com/SDCCA/dgl_abm), a continuing project to develop a generalized framework for agent based modelling based on repurposed foundational elements from Deep Graph Library. 
 
-Data and summaries generated from the model runs are available on [Zenodo](https://doi.org/10.5281/zenodo.17163314).
+Data and summaries generated from the model runs are available in the [Harvard Dataverse](https://doi.org/10.7910/DVN/H2IBDM).
 
 
 ## Table of Contents
@@ -39,7 +39,7 @@ The experiments were conducted using the GPU nodes on Snellius, the Dutch Nation
 ### Overview of Relevant Files
 #### Manuscript Figures:
 Manuscript_Figures.ipynb — Notebook  recreating the figures used in the manuscript and supplement  
-Note: requires csv files from the DataSummaries folder on [Zenodo](https://doi.org/10.5281/zenodo.17163314)  
+Note: requires csv files from the DataSummaries folder in the dataset ([Harvard Dataverse](https://doi.org/10.7910/DVN/H2IBDM)). 
 #### Main Model Run Files (1,000,000 agents):
 gpu_default.py — Default arrangement (social exchange and adaptation options active)  
 gpu_no_adapt.py — No Adaptation arrangement (social exchange active)  
