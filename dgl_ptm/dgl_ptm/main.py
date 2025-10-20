@@ -66,11 +66,11 @@ def main():
 
     args = parser.parse_args()
 
-    # --- STAGE 1: CREATE GRID (No changes needed) ---
+    # --- STAGE 1: CREATE GRID ---
     if args.stage == 'create-grid':
         create_and_save_realistic_grid()
 
-    # --- STAGE 2: PRECOMPUTE POLICIES (Updated to be more informative) ---
+    # --- STAGE 2: PRECOMPUTE POLICIES ---
     elif args.stage == 'precompute':
         print("--- Stage: Pre-computing Policies ---")
         # Calculate the ID that WILL be generated, so we can print it for the user.
@@ -93,7 +93,7 @@ def main():
         print(f"  uv run main.py simulate --policy-set-id {policy_set_id}")
 
 
-    # --- STAGE 3: RUN SIMULATION (Updated to use a specific policy set) ---
+    # --- STAGE 3: RUN SIMULATION ---
     elif args.stage == 'simulate':
         # Check for the required argument
         if not args.policy_set_id or not args.grid_id:
