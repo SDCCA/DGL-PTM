@@ -3,31 +3,26 @@ import torch
 import dgl 
 import dgl.function as fn
 
-def trade_money(agent_graph, device, method: str):
-    """ Trades money between the different connected agents based on 
+def exchange_capital(agent_graph, device, method: str):
+    """ Tr money between the different connected agents based on 
         wealth (k) and savings propensity (lambda). 
         
-        Two methods are provided for wealth exchange: 
+        Two methods are provided for capital exchange based on 
+        wealth (k) and savings propensity (lambda): 
         1 - Random weighted wealth transfer to all connected neigbours
-        2 - Choose one random neighbour for transfering wealth 
+        2 - Choose one random neighbour for transfering wealth
 
         Args:
             agent_graph: DGLGraph with agent nodes and edges connecting agents
+            device: Torch device for computations
             method: String with method choice of 'weighted_transfer' or 'singular_transfer'
-
-        Output:
-            agent_graph.ndata['net_trade']: Adds node attribute 'net_trade' with sum of
-                capital transfered from connected agent nodes to self minus the outflow
-                of capital to connected agent nodes in this time-step.
 
     NOTE: Assumes that the following properties are available already:
         k, lambda, w (for 'weighted_transfer'), zeros, ones, total neighbour count
     NOTE: All edges are bidirected with uniform weights 'w'
 
-    TODO: Rename variables as per Thijs' updates on notebook
     """
     # Calculating disposable wealth
-    print(f"k before:{agent_graph.ndata['wealth'][0:5]}")
     agent_graph.ndata['disposable_wealth'] = agent_graph.ndata['lambda']*agent_graph.ndata['wealth'] # TODO: declare what lambda is
     
     # Transfer of wealth
@@ -55,20 +50,16 @@ def _weighted_transfer(agent_graph, device):
     agent_graph.apply_edges(fn.e_div_u('weight','total_weight','percent_weight'))
 
     # Wealth transfer amount on each edge
-    agent_graph.apply_edges(fn.e_mul_u('percent_weight','disposable_wealth','trfr_wealth'))  # TODO: check what trfr_wealth actually is
+    agent_graph.apply_edges(fn.e_mul_u('percent_weight','disposable_wealth','transferred_wealth'))
 
     # Sum total incoming wealth
-    agent_graph.update_all(fn.v_add_e('zeros','trfr_wealth','net_trade_msg'), fn.sum('net_trade_msg', 'net_trade'))
-    print(f"Total In:{agent_graph.ndata['net_trade'][0:5]}")
+    agent_graph.update_all(fn.v_add_e('zeros','transferred_wealth','net_trade_msg'), fn.sum('net_trade_msg', 'net_trade'))
 
     # Subtract outgoing wealth
     agent_graph.ndata['net_trade'] = agent_graph.ndata['net_trade'] - agent_graph.ndata['disposable_wealth']
-    print(f"Disposable Wealth:{agent_graph.ndata['disposable_wealth'][0:5]}")  
-    print(f"Net Trade:{agent_graph.ndata['net_trade'][0:5]}")
 
     # Conduct exchange
     agent_graph.ndata['wealth'] = agent_graph.ndata['wealth'] + agent_graph.ndata['net_trade']
-    print(f"k after:{agent_graph.ndata['wealth'][0:5]}")
 
 def _singular_transfer(agent_graph, device):
     """
