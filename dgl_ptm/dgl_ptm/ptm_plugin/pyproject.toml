@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dgl_abm_ptm"
+version = "0.1.0"
+description = "A poverty trap model plugin for DGL-ABM"
+authors = [
+    {name = "Victoria M. Garibay", email = "v.m.garibay@uva.nl"},
+    {name = "Meiert W. Grootes", email = "m.grootes@esciencecenter.nl"},
+    {name = "Debraj Roy"},
+    {name = "Fakhereh Sarah Alidoost"},
+    {name = "Pranav Chandramouli"},
+    {name = "Thijs van Lankveld"},]
+dependencies = ["pluggy>=1.0.0"]
+
+[project.entry-points."dgl_abm.plugins"]
+dgl_ptm_step = "dgl_ptm.ptm_plugin.extensions.step_extension"
+dgl_ptm_agent_update = "dgl_ptm.ptm_plugin.extensions.agent_update_extension"

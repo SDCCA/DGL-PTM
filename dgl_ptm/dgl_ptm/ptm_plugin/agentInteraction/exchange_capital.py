@@ -4,7 +4,7 @@ import dgl
 import dgl.function as fn
 
 def exchange_capital(agent_graph, device, method: str):
-    """ Tr money between the different connected agents based on 
+    """ Exchange capital between the different connected agents based on 
         wealth (k) and savings propensity (lambda). 
         
         Two methods are provided for capital exchange based on 

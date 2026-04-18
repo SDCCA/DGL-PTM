@@ -2,9 +2,9 @@ import pluggy
 
 hookimpl = pluggy.HookimplMarker("dgl_abm")
 
-from dgl_ptm.ptm_plugin.ptm.capital_update import capital_update
-from dgl_abm.plugins.ptm.wealth_consumption import wealth_consumption
-from dgl_abm.plugins.ptm.income_generation import income_generation
+from dgl_ptm.ptm_plugin.agent.capital_update import capital_update
+from dgl_ptm.ptm_plugin.agent.wealth_consumption import wealth_consumption
+from dgl_ptm.ptm_plugin.agent.income_generation import income_generation
 
 @hookimpl
 def agent_update_methods():

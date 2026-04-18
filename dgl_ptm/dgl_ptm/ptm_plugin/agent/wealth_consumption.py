@@ -2,8 +2,8 @@ import torch
 import numpy as np
 from scipy.interpolate import interp1d
 from scipy.optimize import minimize_scalar
-from ..util.utils import load_consumption_model
-from ..util.utils import scale_input
+from dgl_ptm.ptm_plugin.util.utils import load_consumption_model
+from dgl_ptm.ptm_plugin.util.utils import scale_input
 #from dgl_ptm.util.nn_arch import parse_config
 
 
