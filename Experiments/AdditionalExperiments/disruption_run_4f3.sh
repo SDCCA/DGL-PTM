@@ -13,7 +13,7 @@ log_file="default_disrupt4_f3_run_times.log"
 > "$log_file" 
 
 # Environment (Snellius specific)
-source ${CONDA_HOME}/etc/profile.d/conda.sh
+source ${CONDA_PREFIX}/etc/profile.d/conda.sh
 #conda env create -f ../environment.yml --name dgl_ptm_gpu
 conda activate dgl_ptm_gpu
 
