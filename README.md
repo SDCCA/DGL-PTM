@@ -4,7 +4,7 @@
 
 Included is all supporting code used in generating data with the Deep Graph Library Poverty Trap Model (DGL-PTM) for the review response regarding the JOSCI article "Pricing Adaptation: A Simulated Study of Poverty Intervention Strategies Under Climate Shocks" by V.M.Garibay & D. Roy [citation pending]. This branch of the repository ("additional-experiments") was branched from "experiments" which is an archive of the DGL-PTM as it was applied in the originally submitted manuscript. Please see that branch for more details on the model and its original application, found [here](https://github.com/SDCCA/dgl_abm/tree/experiments). No changes were made to the model functionalities, but some very minor edits were made to `wealth_consumption.py` and `utils.py` to accommodate running on a local machine versus the cluster.
 
-Files pertaining to the additional experiments conducted in respnse to the review are available in the [Harvard Dataverse](https://doi.org/10.7910/DVN/SO1BZW). Data and summaries generated from original model runs used in the sensitivity analyisis are similarly available in the [original Harvard Dataverse dataset](https://doi.org/10.7910/DVN/H2IBDM).
+Files pertaining to the additional experiments conducted in response to the review are available in the [Harvard Dataverse](https://doi.org/10.7910/DVN/SO1BZW). Data and summaries generated from original model runs used in the sensitivity analysis are similarly available in the [original Harvard Dataverse dataset](https://doi.org/10.7910/DVN/H2IBDM).
 
 
 ## Table of Contents
@@ -35,7 +35,7 @@ AdditionalExperiments/default_reconstruction_run.sh — Monte Carlo runs of gpu_
 AdditionalExperiments/disruption_run_5f3.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.5 every third timestep  
 AdditionalExperiments/disruption_run_4f3.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.4 every third timestep
 
-#### Miscellenous:
+#### Miscellanous:
 AdditionalExperiments/default_reconstruction_seeds.txt — Seeds used in regeneration of missing data
 AdditionalExperiments/2026ReviewEnvironment.yml — Dump of the local environment used for the additional experiments
 
