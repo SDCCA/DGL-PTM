@@ -248,7 +248,7 @@ def  _nn_bellman_wealth_consumption(model_graph,model_params, device):
     with torch.no_grad():
 
         pred=estimator(input)
-
+    torch.cuda.empty_cache()
     #print(" went forward, writing values")
 
     
@@ -322,7 +322,7 @@ def  _nn_bellman_past_shock_consumption(model_graph,model_params, timestep, devi
     with torch.no_grad():
 
         pred=estimator(input)
-    
+    torch.cuda.empty_cache()
     model_graph.ndata['m'],model_graph.ndata['i_a']=model_graph.ndata['a_table'][torch.arange(model_graph.ndata['a_table'].size(0)),:,torch.argmin(torch.abs(pred[:, 0].unsqueeze(1)*i_a_scale - model_graph.ndata['a_table'][:,1,:]), dim=1)].unbind(dim=1)
     print(f"scaled i_a: {model_graph.ndata['i_a'][0:5]}")
     #print("Cleaning output and checking for violations")
@@ -407,7 +407,7 @@ def  _nn_bellman_past_shock_consumption_no_adapt(model_graph,model_params, times
     with torch.no_grad():
 
         pred=estimator(input)
-    
+    torch.cuda.empty_cache()
     #model_graph.ndata['m'],model_graph.ndata['i_a'] are initialized as zeros
     # print("Cleaning output and checking for violations")
 

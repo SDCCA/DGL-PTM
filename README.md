@@ -1,12 +1,10 @@
-# DGL-PTM: Experiment Branch
+# DGL-PTM: Additional Experiments Branch
 
 ## Description
 
-Included is all supporting code used in generating data for the preliminary, subsidy, and efficacy experiments with the Deep Graph Library Poverty Trap Model (DGL-PTM). This branch of the repository ("Experiments") serves as an archive of the DGL-PTM as it was applied in a manuscript in "Pricing Adaptation: A Simulated Study of Poverty Intervention Strategies Under Climate Shocks" by V.M.Garibay & D. Roy (pending submission details). 
+Included is all supporting code used in generating data with the Deep Graph Library Poverty Trap Model (DGL-PTM) for the review response regarding the JOSCI article "Pricing Adaptation: A Simulated Study of Poverty Intervention Strategies Under Climate Shocks" by V.M.Garibay & D. Roy [citation pending]. This branch of the repository ("additional-experiments") was branched from "experiments" which is an archive of the DGL-PTM as it was applied in the originally submitted manuscript. Please see that branch for more details on the model and its original application, found [here](https://github.com/SDCCA/dgl_abm/tree/experiments). No changes were made to the model functionalities, but some very minor edits were made to `wealth_consumption.py` and `utils.py` to accommodate running on a local machine versus the cluster.
 
-An existing poverty trap model [1] was completely reimplemented in a way that accommodated agent populations on the order of millions and additional functionalities by leveraging the message passing capabilities of Deep Graph Library [2]. This is the preliminary phase and first practical implementation of [DGL-ABM](https://github.com/SDCCA/dgl_abm), a continuing project to develop a generalized framework for agent based modelling based on repurposed foundational elements from Deep Graph Library. 
-
-Data and summaries generated from the model runs are available in the [Harvard Dataverse](https://doi.org/10.7910/DVN/H2IBDM).
+Files pertaining to the additional experiments conducted in respnse to the review are available in the [Harvard Dataverse](https://doi.org/10.7910/DVN/SO1BZW). Data and summaries generated from original model runs used in the sensitivity analyisis are similarly available in the [original Harvard Dataverse dataset](https://doi.org/10.7910/DVN/H2IBDM).
 
 
 ## Table of Contents
@@ -19,65 +17,28 @@ Data and summaries generated from the model runs are available in the [Harvard D
 
 
 ## Installation
+ Please see the [experiments branch](https://github.com/SDCCA/dgl_abm/tree/experiments) for details. 
 
-```bash
-# Clone the repository
-git clone https://github.com/SDCCA/DGL-PTM.git
-cd DGL-PTM
-
-# Create and activate conda environment
-conda env create -f environment.yaml
-conda activate dgl_ptm_gpu
-
-# Check Installation
-python -c "import dgl; print(dgl.__version__)"
-```
 ## Usage
-Note that the model can be run with or without GPU access.
-The experiments were conducted using the GPU nodes on Snellius, the Dutch National Supercomputer and bash scripts would need to be modified to be compatible with a new system. 
+Please see the [experiments branch](https://github.com/SDCCA/dgl_abm/tree/experiments) for details on general usage.
+These additional experiments were conducted locally on GPU using the included bash scripts. For the record, a full (inefficient) dump of the environment used for the local runs is included in the root directory of this branch as `2026ReviewEnvironment.yml`.
 
 ### Overview of Relevant Files
-#### Manuscript Figures:
-Manuscript_Figures.ipynb — Notebook  recreating the figures used in the manuscript and supplement  
-Note: requires csv files from the DataSummaries folder in the dataset ([Harvard Dataverse](https://doi.org/10.7910/DVN/H2IBDM)). 
-#### Main Model Run Files (1,000,000 agents):
-gpu_default.py — Default arrangement (social exchange and adaptation options active)  
-gpu_no_adapt.py — No Adaptation arrangement (social exchange active)  
-gpu_no_social.py — No Social arrangement (adaptation active)  
-gpu_null.py — Null arrangement (no social exchange or adaptation)  
-#### Experimental Model Run Files (10,000 agents):
-default_schemeA.py — Default arrangement, subsidized adaptation  
-default_schemeB.py — Default arrangement, increased adaptation efficacy  
-default_schemeSQ.py — Default arrangement  
-no_social_schemeA.py — No Social arrangement, subsidized adaptation  
-no_social_schemeB.py — No Social arrangement, increased adaptation efficacy  
-no_social_schemeSQ.py — No Social arrangement  
-#### Analysis Files:
-data_processor.py — Processes the data from the main runs  
-scheme_data_processor.py — Processes the data from the subsidy and efficacy experiments  
-disruption_data_processor.py — Processes the data from the scheduled disruption experiments  
-#### Supporting Scripts:
-default_run.sh — Monte Carlo runs of gpu_default.py  
-no_adapt_run.sh — Monte Carlo runs of gpu_no_adapt.py  
-no_social_run.sh — Monte Carlo runs of gpu_no_social.py  
-null_run.sh — Monte Carlo runs of gpu_null.py  
-default_run_schemeA.sh — Monte Carlo runs of default_schemeA.py  
-default_run_schemeB.sh — Monte Carlo runs of default_schemeB.py  
-default_run_schemeSQ.sh — Monte Carlo runs of default_schemeSQ.py  
-no_social_run_schemeA.sh — Monte Carlo runs of no_social_schemeA.py  
-no_social_run_schemeB.sh — Monte Carlo runs of no_social_schemeB.py  
-no_social_run_schemeSQ.sh — Monte Carlo runs of no_social_schemeSQ.py  
-disruption_run_6.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.6 every fifth timestep  
-disruption_run_7.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.7 every fifth timestep  
-disruption_run_8.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.8 every fifth timestep  
-PyRun.sh — runs a Python script specified as an argument (e.g., data_processor.py)  
 
-### Cluster-Specific Setup Tips
-- Check the CUDA module loads in the run scripts and modify as needed to match the cluster in use.
-- Set the conda location environment variable to use bash scripts.
-```bash
-export CONDA_HOME=/path/to/your/anaconda3  # Replace with your anaconda path
-```
+#### Analysis Files:
+nnbellman_stratification.py — Generates and processes the data from the neural network equation replacement
+agent_sensitivity.py — Generates PAWN analysis based on 25 1,000,000 agent runs from the original dataset
+frequent_severe_disruption.py — Processes the data from the scheduled disruption experiments  
+
+#### Supporting Scripts:
+AdditionalExperiments/default_reconstruction_run.sh — Monte Carlo runs of gpu_default.py  
+AdditionalExperiments/disruption_run_5f3.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.5 every third timestep  
+AdditionalExperiments/disruption_run_4f3.sh — Monte Carlo runs of gpu_default.py with scheduled shock of $\Theta$ = 0.4 every third timestep
+
+#### Miscellenous:
+AdditionalExperiments/default_reconstruction_seeds.txt — Seeds used in regeneration of missing data
+AdditionalExperiments/2026ReviewEnvironment.yml — Dump of the local environment used for the additional experiments
+
 
 ## Contributors and Acknowledgments
 This model code was designed and developed with support from the Netherlands eScience Center by the Dutch Research Council (NWO) under contract 27020G08, titled “Computing societal dynamics of climate change adaptation in cities” through the contributions of Meiert Grootes, Pranav Chandramouli, Sara Alidoost, and Victoria Garibay. Acknowledgements to Debraj Roy and Tatiana Filatova for consultation on the model design, Namitha Jopan for foundational work on the past model, and Thijs van Lankveld for contributions to later versions of the model.
@@ -85,8 +46,3 @@ This model code was designed and developed with support from the Netherlands eSc
 ## Contact
 Victoria Garibay, Ph.D. - [Contact Form](https://vmgaribay.github.io/portfolio/contact_form.html) | [GitHub Profile](https://github.com/vmgaribay)
 
-## References
-
-[1] Namitha T. Joppan. "Modelling Poverty Alleviation Strategies Using Resilience Thinking." Master’s thesis, University of Amsterdam, 2021. [https://scripties.uba.uva.nl/search?id=record_30354](https://scripties.uba.uva.nl/search?id=record_30354)
-
-[2] Minjie Wang, Da Zheng, Zihao Ye, Quan Gan, Mufei Li, Xiang Song, Jinjing Zhou, Chao Ma, Lingfan Yu, Yu Gai, Tianjun Xiao, Tong He, George Karypis, Jinyang Li, Zheng Zhang. "Deep Graph Library: A Graph-Centric, Highly-Performant Package for Graph Neural Networks." arXiv preprint arXiv:1909.01315, 2019. [https://arxiv.org/abs/1909.01315](https://arxiv.org/abs/1909.01315)

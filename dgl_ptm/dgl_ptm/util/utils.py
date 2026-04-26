@@ -3,7 +3,11 @@ import dgl_ptm.util.nn_arch.nn_arch as nn_arch
 
 
 import os
+import pathlib
+import sys
 
+if sys.platform == "win32":
+    pathlib.PosixPath = pathlib.WindowsPath
 
 def load_consumption_model(nn_path,device):
     '''Load a model from a particular .pth file and assemble using structure contained in nn_arch.py'''

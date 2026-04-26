@@ -1,27 +1,15 @@
 #!/bin/bash
-#SBATCH --job-name=disrpt4
-#SBATCH -p gpu
-#SBATCH --gpus=1
-
-#            d-hh:mm:ss
-#SBATCH --time=10:00:00
-module load 2023 
-module load CUDA/12.1.1 
-module load cuDNN/8.9.2.26-CUDA-12.1.1 
-
-log_file="default_disrupt4_f3_run_times.log"
-> "$log_file" 
-
-# Environment (Snellius specific)
-source ${CONDA_PREFIX}/etc/profile.d/conda.sh
-#conda env create -f ../environment.yml --name dgl_ptm_gpu
+source ${CONDA_HOME}/etc/profile.d/conda.sh
 conda activate dgl_ptm_gpu
+
+log_file="disruption_run_4f3.log"
+> "$log_file" 
 
 # Experimental setup
 
 # Read seeds from seeds.txt
 seeds=()
-readarray -t seeds < <(cat ../seeds.txt | tr ',' '\n' | tr -s ' ' '\n')
+readarray -t seeds < <(cat seeds.txt | tr ',' '\n' | tr -s ' ' '\n')
 
 total_runs=${#seeds[@]}
 counter=0
@@ -37,8 +25,8 @@ for seed in "${seeds[@]}"
             date=$(date)
             start=$(date +%s)
             echo "$date Started run $counter/$total_runs with seed: $seed" | tee -a "$log_file"
-            variation="--seed $seed --steps 51 --agents 10000 --root_path output/Disruption/disrupt_4_f3 --shocks [0.4,3]"
-            python ../gpu_default.py $variation 
+            variation="--seed $seed --steps 51 --agents 10000 --root_path D:/UvA-RD/2026ReviewResponse/output/Disruption/disrupt_4_f3 --shocks [0.4,3]"
+            python gpu_default.py $variation 
             finish=$(date +%s)
             date=$(date)
             echo "$date Finished run $counter/$total_runs with seed: $seed" | tee -a "$log_file"
